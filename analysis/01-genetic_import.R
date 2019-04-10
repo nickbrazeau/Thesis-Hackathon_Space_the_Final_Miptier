@@ -18,20 +18,21 @@ library(vcfR)
 #.................................
 # read in filtered big-barcode panel
 #.................................
-mipbigpanel <- readRDS(paste0(gdrive, "/data/derived_data/biallelic_distances.rds"))
+mipbigpanel <- readRDS(paste0(gdrive, "/data/raw_data/mip_genetic_data_from_Bob_big_barcode/biallelic_processed.rds"))
 #.................................
 # read in drug res panel
 #.................................
-mipDRpanel <- readRDS(paste0(gdrive, "...."))
+mipDRpanel <- readRDS(paste0(gdrive, "/data/raw_data/mip_genetic_data_from_Bob_big_barcode/dr_processed.rds"))
 
-biallelic_sites <- !stringr::str_detect(mipDRpanel$loci$ALT, ",")  # this works because we only have SNPs for now
+# TODO
+# this only works because this a SNP file (no INDEL); better corner case protection
+biallelic_sites <- !stringr::str_detect(mipDRpanel$loci$ALT, ",")
+
 # long way to subset to a biallelic from multiallelic vcf but checked in raw vcf on command line, this works fine for now
 mipDRpanel$loci <- mipDRpanel$loci[biallelic_sites, ]
 mipDRpanel$coverage <- mipDRpanel$coverage[,biallelic_sites]
-mipDRpanel$counts <- mipDRpanel$counts[2,,biallelic_sites] # this is the wsnraf which is typically stored in the biallelic mip analyzer object
+mipDRpanel$counts <- mipDRpanel$counts[1,,biallelic_sites] # this is the wsraf which is typically stored in the biallelic mip analyzer object
 class(mipDRpanel) <- "mipanalyzer_biallelic"
-
-
 
 #.................................
 # error handle the overlapping sites
@@ -44,13 +45,26 @@ if(any(
                 "overlapping sites between the DR panel and Big Panel VCF"))
 }
 
-mipBB_sub_repeats_loci <- which( paste0(mipbigpanel_sub$loci[,1], mipbigpanel_sub$loci[,2]) %in% paste0(mipDRpanel$loci[,1], mipDRpanel$loci[,2]) )
-mipDR_sub_repeats_loci <- which( paste0(mipDRpanel$loci[,1], mipDRpanel$loci[,2]) %in%  paste0(mipbigpanel_sub$loci[,1], mipbigpanel_sub$loci[,2]) )
+mipBB_repeats_loci <- which( paste0(mipbigpanel$loci[,1], mipbigpanel$loci[,2]) %in% paste0(mipDRpanel$loci[,1], mipDRpanel$loci[,2]) )
+mipDR_repeats_loci <- which( paste0(mipDRpanel$loci[,1], mipDRpanel$loci[,2]) %in%  paste0(mipbigpanel$loci[,1], mipbigpanel$loci[,2]) )
 
+# sanity check -- coerce to lowest level class (as.character)
+mipbigpanel$loci[mipBB_repeats_loci, c("CHROM", "POS", "ID", "REF", "ALT")]
+mipDRpanel$loci[mipDR_repeats_loci, c("CHROM", "POS", "ID", "REF", "ALT")]
+
+#..............
+# merge the reads from BB
+# and the DR panel
+# TODO this is a group discussion
+# on what to code this missing as
+# and how to combine these!!!!!
+#...............
 # merge the big barcode panel reads into DR reads
-tempcounts <- mipbigpanel_sub$counts[, mipBB_sub_repeats_loci]
-tempcounts[is.na(tempcounts)] <- 0
-mipDRpanel$counts[, mipDR_sub_repeats_loci] <- mipDRpanel$counts[, mipDR_sub_repeats_loci] + tempcounts
+tempcounts <- mipbigpanel$counts[, mipBB_repeats_loci]
+tempcounts[is.na(tempcounts)] <- 0 # set NA counts in BB to 0
+mipDRpanel$counts[, mipDR_repeats_loci]
+
+mipDRpanel$counts[, mipDR_repeats_loci] <- mipDRpanel$counts[, mipDR_repeats_loci] + tempcounts
 
 tempcov <- mipbigpanel_sub$coverage[, mipBB_sub_repeats_loci]
 tempcov[is.na(tempcov)] <- 0

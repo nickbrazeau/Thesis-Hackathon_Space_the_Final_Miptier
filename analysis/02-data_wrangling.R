@@ -35,6 +35,9 @@ bb <- osmdata::getbb("Democratic Republic of the Congo",
 # https://dhsprogram.com/pubs/pdf/DHSG4/Recode6_DHS_22March2013_DHSG4.pdf
 dt <- readRDS(paste0(gdrive, "/data/raw_data/cd2013_dhs_raw.rds"))
 
+# note subsetting to Mark Janko's "kids" for consistency of IDEEL publications
+dt <- dt %>%
+  dplyr::filter(markjankosubset == 1)
 
 # drop observations with missing geospatial data
 # dt <- dt %>%
@@ -304,6 +307,7 @@ dtsrvy <- makecd2013survey(survey = dt)
 #                                  COINFECTIONS/BIOMARKER VARIABLES
 #..........................................................................................
 Hbmiss <- dt[is.na(dt$hc53),]
+sum(is.na(dt$hc53))
 table(Hbmiss$hv001) # looks well dispersed among clusters
 
 coinfxnbiomrk <- dtsrvy %>%
@@ -421,7 +425,7 @@ dt <- dt %>%
 #.............
 # Distance to Water Source
 #.............
-wtrdist_out <- readRDS("data/derived_data/hotosm_waterways_dist.rds")
+wtrdist_out <- readRDS(paste0(gdrive, "/data/derived_data/hotosm_waterways_dist.rds"))
 dt <- dt %>%
   dplyr::left_join(x=., y = wtrdist_out, by = "hv001") %>%
   dplyr::mutate(wtrdist_cont_scale_clst = my.scale(log(wtrdist_cont_clst + tol), center = T, scale = T)
@@ -434,7 +438,7 @@ dt <- dt %>%
 #.............
 # Urbanicity
 #.............
-xtabs(~dt$urbanscore_fctm_clust + haven::as_factor(dt$hv025), addNA = T) # looks OK. Some rural places are now urban, which is consistent with what I expected
+xtabs(~haven::as_factor(dt$hv025), addNA = T) # looks OK. Some rural places are now urban, which is consistent with what I expected
 
 dt <- dt %>%
   dplyr::mutate(
@@ -447,7 +451,7 @@ dt <- dt %>%
 #.............
 # Distance to Health Site
 #.............
-hlthdist_out <- readRDS("data/derived_data/hotosm_healthsites_dist.rds")
+hlthdist_out <- readRDS(paste0(gdrive, "/data/derived_data/hotosm_healthsites_dist.rds"))
 dt <- dt %>%
   dplyr::left_join(x=., y = hlthdist_out, by = "hv001") %>%
   dplyr::mutate(hlthdist_cont_scale_clst = my.scale(log(hlthdist_cont_clst + tol), center = T, scale = T)
@@ -468,13 +472,13 @@ democlust <- dtsrvy %>%
   dplyr::group_by(hv001) %>%
   dplyr::summarise(
     hml20_cont_clst = srvyr::survey_mean(hml20, vartype = c("se")),
-    wlthrcde_fctm_clst = srvyr::survey_median(wlthrcde_fctm_ord_num, quantiles = c(0.5), vartype = c("se")),
-    hc62_cont_clst = srvyr::survey_median(hc62_cont, quantiles = c(0.5), vartype = c("se"), na.rm = T)
+   wlthrcde_fctm_clst = srvyr::survey_median(wlthrcde_fctm_ord_num, quantiles = c(0.5), vartype = c("se")),
+    hc62_cont_clst = srvyr::survey_mean(hc62_cont, vartype = c("se"), na.rm = T)
   ) %>%
   dplyr::mutate(
     hml20_cont_scale_clst = my.scale(logit(hml20_cont_clst, tol = tol), center = T, scale = T),
     hc62_cont_scale_clst = my.scale(log(hc62_cont_clst + tol), center = T, scale = T),
-    wlthrcde_fctm_clst_q50_fctm = factor(floor(wlthrcde_fctm_clst_q50), # taking lower bracket of wealth if median was split
+    wlthrcde_fctm_scale_clst = factor(floor(wlthrcde_fctm_clst_q50), # taking lower bracket of wealth if median was split
                                          levels = c(1,2,3,4,5),
                                          labels = c("poorest", "poor", "middle", "rich", "richest"))
   ) %>%
@@ -557,7 +561,7 @@ dt %>%
 # Cluster Level Kid RDT/Micro
 #.............
 # https://dhsprogram.com/data/Guide-to-DHS-Statistics/ Percentage of Children Classified in Two Test
-pr <- readRDS("data/raw_data/dhsdata/datasets/CDPR61FL.rds")
+pr <- readRDS(paste0(gdrive, "/data/raw_data/dhsdata/datasets/CDPR61FL.rds"))
 rdtmicro <- pr %>%
   dplyr::filter(hc1 < 60 & hc1 >= 6) %>% # age
   dplyr::filter(hv042 == 1) %>% # household selected for Hb

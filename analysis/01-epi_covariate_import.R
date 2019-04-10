@@ -32,8 +32,7 @@ datasets <- rdhs::dhs_datasets(surveyIds = survs$SurveyId,
 
 
 # download all DHS datsets
-downloads <- rdhs::get_datasets(
-  datasets$FileName[!grepl("GC", datasets$FileName)]) # still not reading GC correctly
+downloads <- rdhs::get_datasets(datasets$FileName)
 
 
 #---------------------------------------------------------------------------------
@@ -60,7 +59,7 @@ gepr <- left_join(x=pr, y=ge, by = "hv001")
 #---------------------------------------------------------------------------------
 # DHS Geospatial Covariates
 #---------------------------------------------------------------------------------
-gc <- readr::read_csv(paste0(gdrive, "/data/raw_data/dhsdata/CDGC62FL/CDGC62FL.csv")) %>%
+gc <- readRDS(paste0(gdrive, "/data/raw_data/dhsdata/datasets/CDGC62FL.rds")) %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::rename(hv001 = dhsclust) # for easier merge with PR
 
@@ -79,7 +78,8 @@ pfpcr <- readr::read_csv(file="/Volumes/share/1. Data/3. Data Sets/2013-14 Kids 
   dplyr::rename(pfldh = result,
                 pfctmean = pf_meanCt) %>%
   dplyr::mutate(sh312 = tolower(sh312),
-                sh312 = gsub(" ", "", sh312))
+                sh312 = gsub(" ", "", sh312),
+                markjankosubset = 1)
 
 
 gcgepr <- gcgepr %>%
@@ -102,9 +102,7 @@ if(nrow(snty) != sum(!is.na(gcgepr$pfldh))){
 gcgepr <- sf::st_as_sf(gcgepr)
 
 
-# subset to kids under 60 months
-gcgepr <- gcgepr %>%
-  dplyr::filter(hc1 < 60)
+
 saveRDS(gcgepr, file = paste0(gdrive, "/data/raw_data/cd2013_dhs_raw.rds"))
 
 
