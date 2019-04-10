@@ -8,8 +8,16 @@
 gdrive <- tcltk::tk_choose.dir()
 library(tidyverse)
 
+
+
 #...........................................................
-# Epi Data
+# Read in Genetic Data
+#...........................................................
+drcmips <- readRDS(paste0(gdrive, "/data/derived_data/cd2013_dhs_bigbarcodemips.rds"))
+
+
+#...........................................................
+# Read in Epi Data
 #...........................................................
 dt <- readRDS(paste0(gdrive, "/data/derived_data/cd2013_kids_dhs_recode.rds"))
 
@@ -21,28 +29,59 @@ drcmips$samples <- drcmips$samples %>%
 
 
 
+
 #...........................................................
-# Genetic Data
+# Calculate Genetic Distances
 #...........................................................
-# Bob Verity filtered this for the
-# big barcode paper
-mipbigpanel <- readRDS(paste0(gdrive, "/data/raw_data/mip_genetic_data_from_Bob_big_barcode/biallelic_processed.rds"))
-
-drcsmpls <- mipbigpanel$samples$Country == "DRC"
-
-# Subset to DRC Samples
-drcmips <- MIPanalyzer::filter_samples(x = mipbigpanel,
-                                       sample_filter = drcsmpls,
-                                       description = "Subset to DRC Samples")
-
-
 # using Bob Verity's MIPAnalyzer package to calculate genetic distance
 drcmips$gendistances <- list()
 drcmips$gendistances$IBS_verity_maskhets  <- MIPanalyzer::get_IBS_distance(     x = drcmips,
                                                                                 ignore_het = T)
 drcmips$gendistances$IBS_verity_majallele <- MIPanalyzer::get_IBS_distance(     x = drcmips,
-                                                                                ignore_het = T)
+                                                                                ignore_het = F)
 drcmips$gendistances$DAB_malariagen_wsaf  <- MIPanalyzer::get_genomic_distance( x = drcmips)
+
+
+
+
+
+#....................
+# Aggregate by admin level
+#.....................
+type = c("mean", "median", "trimmed")
+
+smpl_admin_key1 <- drcmips$samples %>%
+  dplyr::select(c("sh312", "ADM1NAME")) %>%
+  dplyr::mutate( item1 = as.character( seq(1, nrow(.)) )) %>% # key
+  dplyr::rename(smpl1 = sh312,
+                admin1_1 = ADM1NAME)
+
+
+smpl_admin_key2 <- drcmips$samples %>%
+  dplyr::select(c("sh312", "ADM1NAME")) %>%
+  dplyr::mutate( item2 = as.character( seq(1, nrow(.)) )) %>% # key
+  dplyr::rename(smpl2 = sh312,
+                admin1_2 = ADM1NAME)
+
+
+IBS_verity_maskhets.tidy <-
+  broom::tidy(as.dist( t( drcmips$gendistances$IBS_verity_maskhets) ))
+
+IBS_verity_maskhets.tidy <- IBS_verity_maskhets.tidy %>%
+  dplyr::left_join(x=., y =smpl_admin_key1, by = "item1")
+
+IBS_verity_maskhets.tidy <- IBS_verity_maskhets.tidy %>%
+  dplyr::left_join(x=., y =smpl_admin_key2, by = "item2")
+
+
+ret <- IBS_verity_maskhets.tidy %>%
+  dplyr::group_by(admin1_1, admin1_2) %>%
+  dplyr::summarise(
+    adim_dist = mean(distance, na.rm = T)
+  )
+
+
+
 
 #...........................................................
 # Spatial Data
