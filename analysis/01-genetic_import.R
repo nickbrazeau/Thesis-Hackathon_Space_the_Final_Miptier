@@ -21,6 +21,13 @@ drcmips <- MIPanalyzer::filter_samples(x = mipbigpanel,
                                        description = "Subset to DRC Samples")
 
 
+# Correct for names in the adm1name in dhs recode
+drcmips$samples$ADM1NAME <- gsub("Kongo Central", "Kongo-Central",
+                                 drcmips$samples$ADM1NAME)
+
+drcmips$samples$ADM1NAME <- gsub("Tanganyka", "Tanganyika",
+                                           drcmips$samples$ADM1NAME)
+
 saveRDS(drcmips, file = paste0(gdrive, "/data/derived_data/cd2013_dhs_bigbarcodemips.rds"))
 
 

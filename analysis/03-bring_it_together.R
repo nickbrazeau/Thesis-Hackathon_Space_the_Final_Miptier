@@ -70,6 +70,9 @@ drcmips$results$admin_gen_dist$DAB_malariagen_wsaf <- getadmin_gendist_summary(
 
 
 
+
+
+
 #...........................................................
 # Spatial Data
 #...........................................................

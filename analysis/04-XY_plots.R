@@ -18,7 +18,7 @@ dplyr::left_join(x = drcmips$results$admin_gen_dist$DAB_malariagen_wsaf,
                  by = c("admin1_1", "admin1_2")) %>%
   ggplot() +
   geom_point(aes(x= distance, y = adim_gen_dist)) +
-  facet_grid()
+  facet_wrap("admin1_1") +
   scale_x_log10() +
   theme_bw()
 
