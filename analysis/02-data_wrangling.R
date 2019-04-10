@@ -34,10 +34,7 @@ bb <- osmdata::getbb("Democratic Republic of the Congo",
 # recode map https://dhsprogram.com/pubs/pdf/DHSG4/Recode6_DHS_22March2013_DHSG4.pdf
 # https://dhsprogram.com/pubs/pdf/DHSG4/Recode6_DHS_22March2013_DHSG4.pdf
 dt <- readRDS(paste0(gdrive, "/data/raw_data/cd2013_dhs_raw.rds"))
-
-# note subsetting to Mark Janko's "kids" for consistency of IDEEL publications
-dt <- dt %>%
-  dplyr::filter(markjankosubset == 1)
+DRCprov <- readRDS(paste0(gdrive, "/data/map_bases/cd2013_drcprov.rds"))
 
 # drop observations with missing geospatial data
 # dt <- dt %>%
@@ -117,7 +114,7 @@ xtabs(~dt$hvyrmnth_dtmnth + dt$hvyrmnth_dtmnth_lag)
 #............
 summary(dt$hv002) # looks clean if we assume that households are numbered 1 - 34 in each cluster
 hs <- dt %>%
-  dplyr::group_by(hv001) %>%
+  dplyr::group_by(admin1) %>%
   dplyr::summarise(n = length(hv002),
                    housemax = max(hv002))
 
@@ -308,10 +305,10 @@ dtsrvy <- makecd2013survey(survey = dt)
 #..........................................................................................
 Hbmiss <- dt[is.na(dt$hc53),]
 sum(is.na(dt$hc53))
-table(Hbmiss$hv001) # looks well dispersed among clusters
+table(Hbmiss$admin1) # looks well dispersed among clusters
 
 coinfxnbiomrk <- dtsrvy %>%
-  dplyr::group_by(hv001) %>% # cluster level
+  dplyr::group_by(admin1) %>% # cluster level
   dplyr::summarise(
     pfldh_cont_clst = srvyr::survey_mean(x = pfldh, na.rm = T),
     hc53_cont_clst = srvyr::survey_quantile(hc53_cont, quantiles = c(0.5), vartype = c("se"), na.rm = T)) %>%
@@ -363,7 +360,7 @@ tempdf <- tibble::tibble(orignnames = names(temp),
 
 
 
-wthrnd <- dt[,c("hv001", "hvyrmnth_dtmnth_lag", "geometry", "urban_rura")] %>%
+wthrnd <- dt[,c("admin1", "hvyrmnth_dtmnth_lag", "geometry", "urban_rura")] %>%
   dplyr::mutate(buffer = ifelse(urban_rura == "R", 10, 2))
 wthrnd <- wthrnd[!duplicated(wthrnd),]
 
@@ -379,7 +376,7 @@ for(i in 1:nrow(wthrnd)){
   # precip
   wthrnd$precip_lag_cont_clst[i] <-
     raster::extract(x = wthrnd$precipraster[[i]],
-                    y = sf::as_Spatial(wthrnd$geometry[i]),
+                    y = sf::as_Spatial(DRCprov$geometry[i]),
                     buffer = wthrnd$buffer[i],
                     fun = mean,
                     sp = F
@@ -397,11 +394,11 @@ for(i in 1:nrow(wthrnd)){
 }
 
 wthrnd <- wthrnd %>%
-  dplyr::select(c("hv001", "hvyrmnth_dtmnth_lag", "precip_lag_cont_clst", "temp_lag_cont_clst")) %>%
+  dplyr::select(c("admin1", "hvyrmnth_dtmnth_lag", "precip_lag_cont_clst", "temp_lag_cont_clst")) %>%
   dplyr::mutate(hvyrmnth_dtmnth_lag = factor(hvyrmnth_dtmnth_lag))
 sf::st_geometry(wthrnd) <- NULL
 dt <- dt %>%
-  dplyr::left_join(., wthrnd, by = c("hv001", "hvyrmnth_dtmnth_lag")) %>%
+  dplyr::left_join(., wthrnd, by = c("admin1", "hvyrmnth_dtmnth_lag")) %>%
   dplyr::mutate(precip_lag_cont_log_clst = log(precip_lag_cont_clst + tol),
                 temp_lag_cont_log_clst = log(temp_lag_cont_clst + tol),
                 precip_lag_cont_scale_clst = my.scale(precip_lag_cont_log_clst, center = T, scale = T),
@@ -427,7 +424,7 @@ dt <- dt %>%
 #.............
 wtrdist_out <- readRDS(paste0(gdrive, "/data/derived_data/hotosm_waterways_dist.rds"))
 dt <- dt %>%
-  dplyr::left_join(x=., y = wtrdist_out, by = "hv001") %>%
+  dplyr::left_join(x=., y = wtrdist_out, by = "admin1") %>%
   dplyr::mutate(wtrdist_cont_scale_clst = my.scale(log(wtrdist_cont_clst + tol), center = T, scale = T)
   )
 
@@ -453,7 +450,7 @@ dt <- dt %>%
 #.............
 hlthdist_out <- readRDS(paste0(gdrive, "/data/derived_data/hotosm_healthsites_dist.rds"))
 dt <- dt %>%
-  dplyr::left_join(x=., y = hlthdist_out, by = "hv001") %>%
+  dplyr::left_join(x=., y = hlthdist_out, by = "admin1") %>%
   dplyr::mutate(hlthdist_cont_scale_clst = my.scale(log(hlthdist_cont_clst + tol), center = T, scale = T)
   )
 
@@ -469,7 +466,7 @@ democlust <- dtsrvy %>%
                                            levels = c("poorest", "poorer", "middle", "richer", "richest"),
                                            ordered = T),
                 wlthrcde_fctm_ord_num = as.numeric(wlthrcde_fctm_ord)) %>%
-  dplyr::group_by(hv001) %>%
+  dplyr::group_by(admin1) %>%
   dplyr::summarise(
     hml20_cont_clst = srvyr::survey_mean(hml20, vartype = c("se")),
    wlthrcde_fctm_clst = srvyr::survey_median(wlthrcde_fctm_ord_num, quantiles = c(0.5), vartype = c("se")),
@@ -547,14 +544,14 @@ kdsrv_fvr_clst <- kdsrv_fvr  %>%
     other_cont_scale_clst = my.scale(logit(other_cont_clst, tol = tol), center = T, scale = T),
     anyatm_cont_scale_clst = my.scale(logit(anyatm_cont_clst, tol = tol), center = T, scale = T)
   ) %>%
-  dplyr::rename(hv001 = v001)  %>%
-  dplyr::mutate(hv001 = as.numeric(hv001)) %>%
+  dplyr::rename(admin1 = v001)  %>%
+  dplyr::mutate(admin1 = as.numeric(admin1)) %>%
   dplyr::select(-c(dplyr::ends_with("_se")))
 
-dt <- dplyr::left_join(dt, kdsrv_fvr_clst, by = "hv001")
+dt <- dplyr::left_join(dt, kdsrv_fvr_clst, by = "admin1")
 
 dt %>%
-  group_by(hv001) %>%
+  group_by(admin1) %>%
   dplyr::summarise(n = sum(anyatm_cont_clst)) # some clusters missing kids with fevers, so have NAs
 
 #.............
@@ -581,13 +578,13 @@ rdtmicro <- pr %>%
   )
 
 
-rdtmicro_srvy <- rdtmicro %>% srvyr::as_survey_design(ids = hv001,
+rdtmicro_srvy <- rdtmicro %>% srvyr::as_survey_design(ids = admin1,
                                                       strata = hv023,
                                                       weights = hv005_wi)
 
 rdtmicro_sum <- rdtmicro_srvy %>%
   dplyr::mutate(count = 1) %>%
-  dplyr::group_by(hv001) %>%
+  dplyr::group_by(admin1) %>%
   dplyr::summarise(
     RDTprev_cont_clst = srvyr::survey_mean(hml35_numb, na.rm = T, vartype = c("se")),
     microprev_cont_clst = srvyr::survey_mean(hml32_numb, na.rm = T, vartype = c("se"))
@@ -595,9 +592,9 @@ rdtmicro_sum <- rdtmicro_srvy %>%
   dplyr::select(-c(dplyr::ends_with("_se"))) %>%
   dplyr::mutate(RDTprev_cont_scale_clst = my.scale(logit(RDTprev_cont_clst, tol = tol)),
                 microprev_cont_scale_clst = my.scale(logit(microprev_cont_clst, tol=tol)),
-                hv001 = as.numeric(hv001))
+                admin1 = as.numeric(admin1))
 
-dt <- dplyr::left_join(dt, rdtmicro_sum, by = "hv001")
+dt <- dplyr::left_join(dt, rdtmicro_sum, by = "admin1")
 
 
 
@@ -605,6 +602,6 @@ dt <- dplyr::left_join(dt, rdtmicro_sum, by = "hv001")
 #..........................................................................................
 #                               Final Write Out
 #..........................................................................................
-saveRDS(dt, file = paste0(gdrive, "/data/derived_data/cd2013_kids_dhs_recode.rds"))
+saveRDS(dt, file = paste0(gdrive, "/data/derived_data/cd2013_kids_dhs_admin1_recode.rds"))
 
 
