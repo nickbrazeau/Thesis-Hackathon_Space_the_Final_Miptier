@@ -13,11 +13,12 @@ summary(drcmips$results$admin_gen_dist$IBS_verity_majallele$adim_gen_dist)
 summary(drcmips$results$admin_gen_dist$DAB_malariagen_wsaf$adim_gen_dist)
 summary(drcmips$results$admin_gc_dist$distance)
 
-dplyr::left_join(x = drcmips$results$admin_gen_dist$IBS_verity_majallele,
+dplyr::left_join(x = drcmips$results$admin_gen_dist$DAB_malariagen_wsaf,
                  y = drcmips$results$admin_gc_dist,
                  by = c("admin1_1", "admin1_2")) %>%
   ggplot() +
   geom_point(aes(x= distance, y = adim_gen_dist)) +
+  facet_grid()
   scale_x_log10() +
   theme_bw()
 

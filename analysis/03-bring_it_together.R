@@ -105,9 +105,10 @@ adminkey_admin2 <- data.frame(
 )
 
 # Save spatial distance out as a result
-admin_gc_dist.tidy <- broom::tidy(as.dist(drcmips$spatialdist$gc)) %>%
+admin_gc_dist.tidy <- broom::tidy(as.dist(drcmips$spatialdist$admin_gc_dist)) %>%
   dplyr::mutate(item1 = gsub("admin_long", "", item1),
                 item2 = gsub("admin_long", "", item2))
+
 admin_gc_dist.tidy <- dplyr::left_join(admin_gc_dist.tidy, adminkey_admin1, by = "item1")
 admin_gc_dist.tidy <- dplyr::left_join(admin_gc_dist.tidy, adminkey_admin2, by = "item2")
 
