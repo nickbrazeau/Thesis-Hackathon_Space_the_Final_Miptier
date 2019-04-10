@@ -469,15 +469,15 @@ democlust <- dtsrvy %>%
   dplyr::group_by(admin1) %>%
   dplyr::summarise(
     hml20_cont_clst = srvyr::survey_mean(hml20, vartype = c("se")),
-   wlthrcde_fctm_clst = srvyr::survey_median(wlthrcde_fctm_ord_num, quantiles = c(0.5), vartype = c("se")),
+    wlthrcde_fctm_clst = srvyr::survey_median(wlthrcde_fctm_ord_num, quantiles = c(0.5), vartype = c("se")),
     hc62_cont_clst = srvyr::survey_mean(hc62_cont, vartype = c("se"), na.rm = T)
   ) %>%
   dplyr::mutate(
     hml20_cont_scale_clst = my.scale(logit(hml20_cont_clst, tol = tol), center = T, scale = T),
     hc62_cont_scale_clst = my.scale(log(hc62_cont_clst + tol), center = T, scale = T),
     wlthrcde_fctm_scale_clst = factor(floor(wlthrcde_fctm_clst_q50), # taking lower bracket of wealth if median was split
-                                         levels = c(1,2,3,4,5),
-                                         labels = c("poorest", "poor", "middle", "rich", "richest"))
+                                      levels = c(1,2,3,4,5),
+                                      labels = c("poorest", "poor", "middle", "rich", "richest"))
   ) %>%
   dplyr::select(-c(dplyr::ends_with("_se")))
 
@@ -603,5 +603,4 @@ dt <- dplyr::left_join(dt, rdtmicro_sum, by = "admin1")
 #                               Final Write Out
 #..........................................................................................
 saveRDS(dt, file = paste0(gdrive, "/data/derived_data/cd2013_kids_dhs_admin1_recode.rds"))
-
 

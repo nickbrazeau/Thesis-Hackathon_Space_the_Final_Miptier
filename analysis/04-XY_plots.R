@@ -18,6 +18,7 @@ dplyr::left_join(x = drcmips$results$admin_gen_dist$IBS_verity_majallele,
                  by = c("admin1_1", "admin1_2")) %>%
   ggplot() +
   geom_point(aes(x= distance, y = adim_gen_dist)) +
+  scale_x_log10() +
   theme_bw()
 
 
