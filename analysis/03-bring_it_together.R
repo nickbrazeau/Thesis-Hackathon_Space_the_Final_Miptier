@@ -35,12 +35,19 @@ drcmips$samples <- drcmips$samples %>%
 #...........................................................
 # using Bob Verity's MIPAnalyzer package to calculate genetic distance
 drcmips$gendistances <- list()
-drcmips$gendistances$IBS_verity_maskhets  <- MIPanalyzer::get_IBS_distance(     x = drcmips,
-                                                                                ignore_het = T)
-drcmips$gendistances$IBS_verity_majallele <- MIPanalyzer::get_IBS_distance(     x = drcmips,
-                                                                                ignore_het = F)
-drcmips$gendistances$DAB_malariagen_wsaf  <- MIPanalyzer::get_genomic_distance( x = drcmips)
 
+# all end up as either 1 or NA. Meaningless
+drcmips$gendistances$IBS_verity_maskhets  <- MIPanalyzer::get_IBS_distance(x = drcmips,ignore_het = T)
+
+# works out fine but forces everything to be similar by forcing hets
+drcmips$gendistances$IBS_verity_majallele <- MIPanalyzer::get_IBS_distance(x = drcmips,ignore_het = F)
+
+# dab distance
+drcmips$gendistances$DAB_malariagen_wsaf  <- MIPanalyzer::get_genomic_distance(x = drcmips)
+
+# mixture distance
+drcmips$gendistances$IBM_0  <- MIPanalyzer::get_IB_mixture(x = drcmips)
+drcmips$gendistances$IBM_05  <- MIPanalyzer::get_IB_mixture(x = drcmips,tol = 0.05)
 #....................
 # Aggregate by admin level
 #.....................
@@ -68,6 +75,26 @@ drcmips$results$admin_gen_dist$DAB_malariagen_wsaf <- getadmin_gendist_summary(
   type = "mean" # TODO fix matcharg
 )
 
+# MalariaGEN DAB
+drcmips$results$admin_gen_dist$IBM_0 <- getadmin_gendist_summary(
+  mipanalyzerobject_samples = drcmips$samples,
+  mipanalyzerobject_gendistmat = drcmips$gendistances$IBM_0,
+  type = "mean" # TODO fix matcharg
+)
+
+# IBM05
+drcmips$results$admin_gen_dist$IBM_0 <- getadmin_gendist_summary(
+  mipanalyzerobject_samples = drcmips$samples,
+  mipanalyzerobject_gendistmat = drcmips$gendistances$IBM_0,
+  type = "mean" # TODO fix matcharg
+)
+
+# IBM05
+drcmips$results$admin_gen_dist$IBM_05 <- getadmin_gendist_summary(
+  mipanalyzerobject_samples = drcmips$samples,
+  mipanalyzerobject_gendistmat = drcmips$gendistances$IBM_05,
+  type = "mean" # TODO fix matcharg
+)
 
 
 
@@ -108,7 +135,7 @@ adminkey_admin2 <- data.frame(
 )
 
 # Save spatial distance out as a result
-admin_gc_dist.tidy <- broom::tidy(as.dist(drcmips$spatialdist$admin_gc_dist)) %>%
+admin_gc_dist.tidy <- broom::tidy(as.dist(drcmips$spatialdist$admin_gc_dist, diag = TRUE,upper=TRUE)) %>%
   dplyr::mutate(item1 = gsub("admin_long", "", item1),
                 item2 = gsub("admin_long", "", item2))
 
@@ -117,9 +144,6 @@ admin_gc_dist.tidy <- dplyr::left_join(admin_gc_dist.tidy, adminkey_admin2, by =
 
 # save out
 drcmips$results$admin_gc_dist <- admin_gc_dist.tidy
-
-
-
 
 
 saveRDS(drcmips, paste0(gdrive, "/data/derived_data/cd2013_gen_space_epi_final.rds"))

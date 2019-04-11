@@ -5,14 +5,14 @@
 
   smpl_admin_key1 <- mipanalyzerobject_samples %>%
     dplyr::select(c("sh312", "ADM1NAME")) %>%
-    dplyr::mutate( item1 = as.character( seq(1, nrow(.)) )) %>% # key
+    dplyr::mutate( item1 = as.numeric( seq(1, nrow(.)) )) %>% # key
     dplyr::rename(smpl1 = sh312,
                   admin1_1 = ADM1NAME)
 
 
   smpl_admin_key2 <- mipanalyzerobject_samples %>%
     dplyr::select(c("sh312", "ADM1NAME")) %>%
-    dplyr::mutate( item2 = as.character( seq(1, nrow(.)) )) %>% # key
+    dplyr::mutate( item2 = as.numeric( seq(1, nrow(.)) )) %>% # key
     dplyr::rename(smpl2 = sh312,
                   admin1_2 = ADM1NAME)
 
