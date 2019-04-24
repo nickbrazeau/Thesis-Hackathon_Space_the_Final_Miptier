@@ -31,12 +31,6 @@ DRCprov$adm1name <- chartr(paste(names(unwanted_array), collapse=''),
 saveRDS(DRCprov, file = paste0(gdrive, "/data/map_bases/cd2013_drcprov.rds"))
 
 
-
-
-
-
-
-
 #.............
 # Accessibility from Weiss
 #.............
