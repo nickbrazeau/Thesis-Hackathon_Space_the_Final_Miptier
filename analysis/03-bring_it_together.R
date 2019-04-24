@@ -89,14 +89,14 @@ mipbigpanel <- add_genetic_distances(mipbigpanel)
 #...........................................................
 
 drcmips <- add_dist_summaries(drcmips, select = c("ADM1NAME","hv001","Barcode"), distances = drcmips$genetic_distances)
-drcmips <- add_dist_summaries(drcmips, select = "hv001",distances = drcmips$genetic_distances)
-drcmips <- add_dist_summaries(drcmips, select = "Barcode",distances = drcmips$genetic_distances)
-drcmips <- add_dist_summaries(drcmips, select = "DHSREGNA",distances = drcmips$genetic_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "hv001",distances = drcmips$genetic_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "Barcode",distances = drcmips$genetic_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "DHSREGNA",distances = drcmips$genetic_distances)
 
 drcmips <- add_dist_summaries(drcmips, select = c("ADM1NAME","hv001","Barcode"), distances = drcmips$spatial_distances)
-drcmips <- add_dist_summaries(drcmips, select = "hv001",distances = drcmips$spatial_distances)
-drcmips <- add_dist_summaries(drcmips, select = "Barcode",distances = drcmips$spatial_distances)
-drcmips <- add_dist_summaries(drcmips, select = "DHSREGNA",distances = drcmips$spatial_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "hv001",distances = drcmips$spatial_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "Barcode",distances = drcmips$spatial_distances)
+# drcmips <- add_dist_summaries(drcmips, select = "DHSREGNA",distances = drcmips$spatial_distances)
 
 mipbigpanel <- add_dist_summaries(mipbigpanel, select = "Barcode",distances = mipbigpanel$genetic_distances)
 mipbigpanel <- add_dist_summaries(mipbigpanel, select = "Barcode",distances = mipbigpanel$spatial_distances)

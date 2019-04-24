@@ -32,7 +32,9 @@ and also some preliminary analysis looking at how prevalence impacts the decay i
 
 ---
 
-There is still lots to do but with what is here, the next steps could be to bring in the functions in 00-distance_matric_munging.R and 01-plotting.R and adpat them to be brought into `MIPanalyzer`. The fork of `MIPanalyzer` at `OJWatson/MIPanalyzer` also contains one extra distnace function and the normalisation for `get_genomic_distance`. After that things to do could be:
+There is still lots to do but with what is here, the next steps could be to bring in the functions in 00-distance_matric_munging.R and 01-plotting.R and adpat them to be brought into `MIPanalyzer`. The fork of `MIPanalyzer` at `OJWatson/MIPanalyzer` also contains one extra distnace function and the normalisation for `get_genomic_distance`. Not sure how good we have been about calling `dplyr::` etc across all the functions. 
+
+After that things to do could be:
 
 
 1. Bring in the other genetic distnace written by Amy

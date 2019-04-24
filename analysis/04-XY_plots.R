@@ -8,12 +8,25 @@ library(tidyverse)
 
 # grab data and example couple of plots
 drcmips <- readRDS(paste0(gdrive, "/data/derived_data/cd2013_gen_space_epi_final.rds"))
+source("R/01-plotting.R")
 
-dist_grouped <- gen_spatial_dist_plot(drcmips,select = "Barcode",spatial_bins = 25)
+# look at all distance metric against space
+dist_grouped <- gen_spatial_dist_plot(drcmips,select = "ADM1NAME",facet_x="ADM1NAME_1",
+                                      facet_y = "genetic_distances_variable",spatial_bins=NULL)
+cowplot::save_plot(paste0(gdrive, "/plots/all_dists.png"),
+                   dist_grouped +
+                     theme(legend.position = "",
+                           strip.text.x = element_text(angle=90),
+                           axis.text.x = element_text(angle=90, vjust = 0.5)) +
+                     scale_x_continuous(breaks = scales::pretty_breaks(n = 1)),
+                   base_height = 9, base_width = 12)
+
+# and looking just at IBD at admins
 admin_plot_mle <- gen_spatial_dist_plot(drcmips, select = "ADM1NAME", genetic_measures = "MLE_IBD",
                                     spatial_bins = NULL, facet_y = "ADM1NAME_1")
-
-cowplot::save_plot(paste0(gdrive, "/plots/ibd.png"), admin_plot_mle + ggtitle("") + ylab("Relatedness (F)"))
+cowplot::save_plot(paste0(gdrive, "/plots/ibd.png"),
+                   admin_plot_mle + ggtitle("") + ylab("Relatedness (F)"),
+                   base_height = 8, base_width = 8, dpi=300)
 
 # ---------------------------
 
@@ -47,13 +60,14 @@ markham_seasonality_index <- function(an_vec) {
   return(sqrt(sum(I * sin(rads))^2 + sum(I * cos(rads))^2)/sum(I))
 }
 vecs <- lapply(unique(dat$dhs_region),magenta:::seasonal_profile,"Democratic Republic of the Congo")
+midpoints <- function(a){a[-length(a)] + diff(a)/2}
 dat$msi <- unlist(lapply(vecs, markham_seasonality_index))[match(dat$dhs_region, unique(dat$dhs_region))]
 
 # MODEL SELECTION
 # ---------------------------------
 
 # Start with what we talked about as sensible model using just the prevalence difference
-pd_mod <- lme4::glmer(gen_dist ~ spat_dist_scale + prev_diff + (1+spat_dist_scale|ADM1NAME_1),
+pd_mod <- lme4::glmer(gen_dist ~ spat_dist_scale*prev_diff + (1+spat_dist_scale|ADM1NAME_1),
   data = dat, family=gaussian(link="log"),
   weights = length)
 
@@ -78,11 +92,15 @@ dat <- cbind(dat, merTools::predictInterval(pd_mod,type="probability"))
 
 fit_plot <- admin_plot_mle +
   geom_line(data = dat, mapping = aes(x=spat_dist,y=fit),color="red",lwd=1)
+cowplot::save_plot(paste0(gdrive, "/plots/ibd_fit.png"),
+                   fit_plot + ggtitle("IBD Distance with Model Fit in Red"),
+                   base_height = 8, base_width = 8, dpi=300)
 
 # our model suggests that a given region, r1, if r1 has higher prevalence than
 # r2 then the greater the prevalence difference the less related they are. If r2 has a higher
 # prevalence relationship then the inverse is found.
 summary(pd_mod)
+stargazer::stargazer(pd_mod, type="text")
 
 ## as demonstrated with the following
 newdata = expand.grid(spat_dist_scale=seq(0.01,0.99,0.01),prev_diff=seq(-0.75,0.75,0.01))
@@ -103,4 +121,4 @@ cont <- ggplot(newdata, aes(x=spat_dist_scale*max(dat$spat_dist),y=prev_diff,z=p
   scale_y_continuous(expand=c(0,0)) +
   ylab("Microscopy Prevalence Difference") +
   xlab("Greater Circle Distance (km)")
-cowplot::save_plot(paste0(gdrive, "/plots/contour.png"), cont)
+cowplot::save_plot(paste0(gdrive, "/plots/contour.png"), cont, base_height = 6, base_width = 6, dpi=300)

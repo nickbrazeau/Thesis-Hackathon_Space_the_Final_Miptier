@@ -164,8 +164,18 @@ gen_spatial_dist_plot <- function(x,
       }
     }
 
-    summarised_res <- rbind(full_res %>% mutate(bin = interaction(full_res[, paste(select, 2:1, sep = "_")], sep = "|")),
-                            full_res) %>%
+    nms_swap <- grep("[[:punct:]][[:digit:]]", names(full_res))
+    l <- length(nms_swap)/2
+    nms_swap <- c(nms_swap[c((l+1) : (2*l),1:l)], ((l*2)+1):length(names(full_res)))
+
+    summarised_res <- data.table::rbindlist(
+      list(
+      full_res,
+      full_res %>%
+        set_names(names(full_res)[nms_swap]) %>%
+        mutate(bin = interaction(full_res[, paste(select, 2:1, sep = "_")], sep = "|"))
+      ),
+      use.names = TRUE) %>%
       group_by_at(vars(bin,
                        !!facet_x,
                        !!facet_y,
