@@ -7,16 +7,10 @@
 .RData
 
 # Data files I'm generating
-*.rda
-*.rds
-*.csv
-report_obj/
 datasets/
 db/
 data/
 rdhs.json
-figures/
-# internal_datamap_files/
 
 # RStudio files
 .Rproj.user/
@@ -37,5 +31,3 @@ figures/
 
 # MAC files
 .DS_Store
-
-

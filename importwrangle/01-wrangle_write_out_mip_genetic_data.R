@@ -1,0 +1,19 @@
+#................................................................................................................................
+# Purpose of this script is to write out the big barcode data
+#................................................................................................................................
+library(vcfR)
+library(MIPanalyzer)
+
+#....................
+# Write out VCF
+#....................
+bigbarcode <- readRDS(file = "data/raw_data/bigbarcode_genetic_data/biallelic_processed.rds")
+bb.vcfR <- MIPanalyzer::MIPanalyzerbi2vcfR(bigbarcode,
+                                           cutoff = 0.5) # force to monoclonal like Big Barcode MS did
+vcfR::write.vcf(x=bb.vcfR, file = "data/raw_data/bigbarcode_genetic_data/biallelic_processed.vcf")
+
+#....................
+# Write out BB sample metadata
+#....................
+smplmtdt <- bigbarcode$samples
+saveRDS(smplmtdt, file = "data/derived_data/sample_metadata.rds")
