@@ -1,33 +1,19 @@
 #................................................................................................................................
-# Purpose of this script is to recode urbanicity to better
-# reflect DRC boundaries/continuum
+# Purpose of this script is to recode urbanicity based on several
+# collinear cluster variables. Collinearity can be handled by some
+# methods but not by others (e.g. glmms). So we will use a PCA
+# to extract out the signal
 #................................................................................................................................
 
-# IMPORTS and dependencies
 library(tidyverse)
 library(sf)
 library(plotly)
-source("R/basics.R")
 tol <- 1e-3
-set.seed(48)
-
-# Notes on Lonely PSUs
-# http://r-survey.r-forge.r-project.org/survey/exmample-lonely.html
-options(survey.lonely.psu="adjust")
-
-# spatial from the DHS -- these are cluster level vars
-dt <- readRDS("~/Documents/GitHub/VivID_Epi/data/raw_data/vividpcr_dhs_raw.rds")  %>%
-  dplyr::filter(latnum != 0 & longnum != 0) %>%
-  dplyr::filter(!is.na(latnum) & !is.na(longnum))
-sf::st_geometry(dt) <- NULL
-#.............
-# weights
-#.............
-dt <- dt %>%
-  dplyr::mutate(hv005_wi = hv005/1e6
-  )
+source("R/basics.R")
 
 
+
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 ge <- sf::st_as_sf(readRDS(file = "data/raw_data/dhsdata/datasets/CDGE61FL.rds"))
 ge <- ge %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
@@ -35,56 +21,46 @@ ge <- ge %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum))
 
-DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+gc <- readRDS("data/raw_data/dhsdata/datasets/CDGC62FL.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(hv001 = dhsclust)
 
+ge_gc <- left_join(ge, gc, by = "hv001")
 
 #..............................
-#### A note on urbanicity ####
+# A note on urbanicity
 #..............................
-
-# Potential (significant) misclassification bias in the DHS DRC-II coding of
-# urban vs. rural as has been noted here https://journals.sagepub.com/doi/10.1177/0021909617698842
-# and can be seen by comparing hv025/026 with population density, light density, build, etc.
-
-# #.............
-# # Urban from DHS
-# #.............
-# levels(factor(haven::as_factor(dt$hv025))) # no missing
-# dt$hv025_fctb <- haven::as_factor(dt$hv025)
-# dt$hv025_fctb = forcats::fct_relevel(dt$hv025_fctb, "rural")
-# # check
-# xtabs(~hv025 + hv025_fctb, data = dt, addNA = T)
-
+# Going to use four variables to get at urbanicity: Build, night-light density, worldpop densities, and travel times
 
 #.............
 # cluster degree of "build"
 #.............
 # see explanation in the DHS GC manual
 # NOTE, this is from 2014
-summary(dt$built_population_2014)
-hist(dt$built_population_2014)
-sum(dt$built_population_2014 < 0.01)
-median( dt$built_population_2014[dt$built_population_2014 < 0.05] )
-hist( dt$built_population_2014[dt$built_population_2014 < 0.05] )
+summary(ge_gc$built_population_2014)
+hist(ge_gc$built_population_2014)
+sum(ge_gc$built_population_2014 < 0.01)
+median( ge_gc$built_population_2014[ge_gc$built_population_2014 < 0.05] )
+hist( ge_gc$built_population_2014[ge_gc$built_population_2014 < 0.05] )
 # DECISION: Will use a logit transformation to get back to the real-line (and scale)
 # large number of 0s
-dt$built_population_2014_scale <- my.scale(logit(dt$built_population_2014, tol = tol), center = T, scale = T) # use logit to transform to real line
-hist(dt$built_population_2014_scale)
-summary(dt$built_population_2014_scale); sd(dt$built_population_2014_scale) # despite skew, scale seems to work
+ge_gc$built_population_2014_scale <- my.scale(logit(ge_gc$built_population_2014, tol = tol), center = T, scale = T) # use logit to transform to real line
+hist(ge_gc$built_population_2014_scale)
+summary(ge_gc$built_population_2014_scale); sd(ge_gc$built_population_2014_scale) # despite skew, scale seems to work
 
 #.............
 # cluster night-time light density
 #.............
 # see explanation in the DHS GC manual
 # NOTE, this is from 2015
-summary(dt$nightlights_composite)
-hist(dt$nightlights_composite)
-hist( dt$nightlights_composite[dt$nightlights_composite < 0.05] )
-hist( dt$nightlights_composite[dt$nightlights_composite > 0.05] )
+summary(ge_gc$nightlights_composite)
+hist(ge_gc$nightlights_composite)
+hist( ge_gc$nightlights_composite[ge_gc$nightlights_composite < 0.05] )
+hist( ge_gc$nightlights_composite[ge_gc$nightlights_composite > 0.05] )
 # large number of 0s (again)
-dt$nightlights_composite_scale <- my.scale(log(dt$nightlights_composite + tol), center = T, scale = T)
-hist(dt$nightlights_composite_scale)
-summary(dt$nightlights_composite_scale); sd(dt$nightlights_composite_scale) # despite skew, scale seems to work
+ge_gc$nightlights_composite_scale <- my.scale(log(ge_gc$nightlights_composite + tol), center = T, scale = T)
+hist(ge_gc$nightlights_composite_scale)
+summary(ge_gc$nightlights_composite_scale); sd(ge_gc$nightlights_composite_scale) # despite skew, scale seems to work
 
 
 #.............
@@ -92,14 +68,14 @@ summary(dt$nightlights_composite_scale); sd(dt$nightlights_composite_scale) # de
 #.............
 # see explanation in the DHS GC manual
 # NOTE, this is from 2015
-summary(dt$all_population_count_2015)
-hist(dt$all_population_count_2015)
-hist( dt$all_population_count_2015[dt$all_population_count_2015 < 5e4] )
-hist( dt$all_population_count_2015[dt$all_population_count_2015 > 5e4] )
+summary(ge_gc$all_population_count_2015)
+hist(ge_gc$all_population_count_2015)
+hist( ge_gc$all_population_count_2015[ge_gc$all_population_count_2015 < 5e4] )
+hist( ge_gc$all_population_count_2015[ge_gc$all_population_count_2015 > 5e4] )
 # no 0s here but a lot of small pops
-dt$all_population_count_2015_scale <- my.scale(log(dt$all_population_count_2015 + tol), center = T, scale = T)
-hist(dt$all_population_count_2015_scale)
-summary(dt$all_population_count_2015_scale); sd(dt$all_population_count_2015_scale) # scale here seems to compensate
+ge_gc$all_population_count_2015_scale <- my.scale(log(ge_gc$all_population_count_2015 + tol), center = T, scale = T)
+hist(ge_gc$all_population_count_2015_scale)
+summary(ge_gc$all_population_count_2015_scale); sd(ge_gc$all_population_count_2015_scale) # scale here seems to compensate
 
 
 #.............
@@ -107,14 +83,14 @@ summary(dt$all_population_count_2015_scale); sd(dt$all_population_count_2015_sca
 #.............
 # see explanation in the DHS GC manual
 # NOTE, this is from 2015
-summary(dt$travel_times_2015)
-hist(dt$travel_times_2015)
-dt <- dt %>%
+summary(ge_gc$travel_times_2015)
+hist(ge_gc$travel_times_2015)
+ge_gc <- ge_gc %>%
   dplyr::mutate(travel_times_2015_scale = my.scale(log(travel_times_2015 + tol), center = T, scale = T))
 
-hist(dt$travel_times_2015_scale) # many, many 0s -- these are urban centers/places near big towns
-hist(dt$travel_times_2015_scale) # standardization doesn't look as good, but should capture urban v. rural well
-summary(dt$travel_times_2015_scale); sd(dt$travel_times_2015_scale)
+hist(ge_gc$travel_times_2015_scale) # many, many 0s -- these are urban centers/places near big towns
+hist(ge_gc$travel_times_2015_scale) # standardization doesn't look as good, but should capture urban v. rural well
+summary(ge_gc$travel_times_2015_scale); sd(ge_gc$travel_times_2015_scale)
 
 
 
@@ -124,9 +100,10 @@ summary(dt$travel_times_2015_scale); sd(dt$travel_times_2015_scale)
 #.............
 # compute PCA, drop to single observations (since clusters all have some obs)
 # Otherwise inflate our degree of certainty in our PCA
-urbanmat <- dt[!duplicated(dt$hv001),
-               c("hv001", "hv025", "built_population_2014_scale", "nightlights_composite_scale",
+urbanmat <- ge_gc[,
+               c("hv001", "urban_rura", "built_population_2014_scale", "nightlights_composite_scale",
                  "all_population_count_2015_scale", "travel_times_2015_scale")]
+sf::st_geometry(urbanmat) <- NULL
 
 urbanmatpca <- prcomp(urbanmat[, c("built_population_2014_scale", "nightlights_composite_scale",
                                    "all_population_count_2015_scale", "travel_times_2015_scale")])
@@ -141,7 +118,7 @@ urbanmatpca$loadings <- sweep(urbanmatpca$loadings, 2, colSums(urbanmatpca$loadi
 # Analyze PCA Seperation
 #.............
 # make a plot
-pcaeigplot <- tibble(rururb = haven::as_factor(urbanmat$hv025),
+pcaeigplot <- tibble(rururb = haven::as_factor(urbanmat$urban_rura),
                      pc1 = urbanmatpca$x[,1], pc2 =urbanmatpca$x[,2], pc3 = urbanmatpca$x[,3])
 
 plotly::plot_ly(pcaeigplot, x = ~pc1, y = ~pc3, z = ~pc2, color = ~rururb)%>%
@@ -160,48 +137,30 @@ ggplot2::autoplot(urbanmatpca,
 
 
 #.............
-# K-means Clustering of Urbanicity
-#.............
-# Apply k-means with k=4
-k <- kmeans(urbanmatpca$x[,1:4], 2, nstart=25, iter.max=1000)
-k # the explanation of between SS versus total SS is ~65.9%
-
-
-# plot new designations
-pcaeig_newrural <- tibble(rururb_new = factor(k$cluster),
-                          rururb_orig = haven::as_factor(urbanmat$hv025),
-                          pc1 = urbanmatpca$x[,1], pc2 =urbanmatpca$x[,2], pc3 = urbanmatpca$x[,3])
-
-# seems reasonable for what I want, a lot of the originally coded urban centers
-# are recoded to rural, which is more in line with what we would expect
-ggplot() +
-  geom_jitter(data = pcaeig_newrural, aes(x=pc1, y = pc2, shape = rururb_orig, color = rururb_new))
-
-
-
-#.............
 # Degree of Urbanicity
 #.............
-urbanicity <- cbind(urbanmat[,c("hv001", "hv025")],
-                    urbanpcascore_cont_scale_clst = urbanmatpca$x[,1],
-                    urban_rural_pca_fctb_clst = factor(k$cluster, levels = c(1,2), labels = c("rural", "urban"))
-)
-urbanicity$urban_rural_pca_fctb_clst <- relevel(urbanicity$urban_rural_pca_fctb_clst, "urban")
+ge_gc <- ge_gc %>%
+  dplyr::mutate(urbanpcascore = urbanmatpca$x[,1])
 
-
-urbanicity.plot <- urbanicity %>%
-  left_join(x = ., y = ge, by = "hv001")
 
 ggplot() +
   geom_sf(data = DRCprov) +
-  geom_point(data = urbanicity.plot,
+  geom_point(data = ge_gc,
              aes(x = longnum, y = latnum,
-                 color = urbanpcascore_cont_scale_clst,
-                 shape = urban_rural_pca_fctb_clst)) +
+                 color = urbanpcascore,
+                 shape = haven::as_factor(urban_rura))) +
   viridis::scale_color_viridis("viridis")
+
+
 
 
 #.............
 # write out
 #.............
-saveRDS(urbanicity, file = "data/derived_data/DHS_urbanicity_recode.rds")
+ret <- ge_gc %>%
+  dplyr::select(c("hv001", "built_population_2014_scale", "nightlights_composite_scale",
+                  "all_population_count_2015_scale", "travel_times_2015_scale", "urbanpcascore"))
+
+sf::st_geometry(ret) <- NULL
+
+saveRDS(ret, file = "data/derived_data/DRC_urbanicity.rds")

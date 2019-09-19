@@ -92,13 +92,6 @@ kdsrv_fvr_clst <- kdsrv_fvr  %>%
   dplyr::group_by(v001) %>%
   dplyr::summarise(
     n = srvyr::survey_total(count),
-    # fansidar_cont_clst = srvyr::survey_mean(ml13a),
-    # chloroquine_cont_clst = srvyr::survey_mean(ml13b),
-    # amodiaquine_cont_clst = srvyr::survey_mean(ml13c),
-    # quinine_cont_clst = srvyr::survey_mean(ml13d),
-    # act_cont_clst = srvyr::survey_mean(ml13e),
-    # otherartm_cont_clst = srvyr::survey_mean(ml13f),
-    # other_cont_clst = srvyr::survey_mean(ml13h),
   anyatmperc = srvyr::survey_mean(anyatm)) %>%
   dplyr::rename(hv001 = v001)  %>%
   dplyr::mutate(hv001 = as.numeric(hv001)) %>%
@@ -111,15 +104,15 @@ kdsrv_fvr_clst <- kdsrv_fvr  %>%
 # Need to impute 8 missing clusters
 #-----------------------------------------------------------
 # find missing clusters
-clst.all <- readRDS("~/Documents/GitHub/VivID_Epi/data/raw_data/vividpcr_dhs_raw.rds") %>%
+ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum)) %>%
-  dplyr::filter(hv103 == 1) %>%
-  dplyr::select(c("hv001", "latnum", "longnum", "geometry")) %>%
-  dplyr::filter(!duplicated(.))
+  dplyr::rename(hv001 = dhsclust) %>%
+  dplyr::select(c("hv001", "latnum", "longnum", "geometry"))
 
 
-kdsrv_fvr_clst.imp <- dplyr::left_join(clst.all, kdsrv_fvr_clst, by = "hv001")
+kdsrv_fvr_clst.imp <- dplyr::left_join(ge, kdsrv_fvr_clst, by = "hv001")
 
 sum(is.na(kdsrv_fvr_clst.imp$anyatmperc))
 

@@ -6,18 +6,6 @@ logit <- function(x, tol=1e-4){
   return( log(((x+tol)/(1-x+tol))) )
 }
 
-#----------------------------------------------------------------------------------------------------
-# Make final Survey Object to account for DHS Survey Weights
-#----------------------------------------------------------------------------------------------------
-makecd2013survey <- function(survey = dt){
-  # Notes on Lonely PSUs
-  # http://r-survey.r-forge.r-project.org/survey/exmample-lonely.html
-  options(survey.lonely.psu="adjust")
-  dtsrvy <- survey %>% srvyr::as_survey_design(ids = hv001,
-                                               strata = hv023,
-                                               weights = hv005_wi)
-  return(dtsrvy)
-}
 
 #----------------------------------------------------------------------------------------------------
 # Change return from scale

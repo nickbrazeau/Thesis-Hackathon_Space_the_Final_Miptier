@@ -1,0 +1,10 @@
+﻿hml32,microvalue,microscopyresult
+0,negative,0
+1,positive,1
+3,unreadable,NA
+4,not present,NA
+5,refused,NA
+6,others,NA
+7,test undetermined,NA
+8,sample not found in lab database,NA
+9,missing,NA
