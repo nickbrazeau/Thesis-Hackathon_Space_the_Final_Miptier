@@ -1,6 +1,10 @@
 #............................................................................................................
-# Purpose
+# Purpose of this script is to run on cluster and get
+# the nearest point along a line segment with respect to each dhsclust
 #............................................................................................................
+library(sf)
+library(tidyverse)
+library(geosphere)
 
 ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%

@@ -30,7 +30,7 @@ wtrlns <- sf::read_sf("data/raw_data/hotosm_waterway/hotosm_cod_waterways_grass_
 # pull out network of longest connection
 wtr.connected <- shp2graph::nt.connect(sf::as_Spatial(wtrlns))
 proj4string(wtr.connected) <- "+proj=longlat +datum=WGS84 +no_defs"
-saveRDS(object = wtr.connected, file = "data/derived_data/waterway_connected.rds")
+saveRDS(object = wtr.connected, file = "data/derived_data/waterway_connected.rds") # for cluster
 
 # quick view
 ggplot() +
@@ -45,7 +45,8 @@ ggplot() +
 # From Connect DRC Cluster Points to Riverways
 #............................................................................................................
 # find nearest line per point
-# note, ran this on the cluster and return hered
+# note, ran this on the cluster and return here
+ge2line <- readRDS("data/derived_data/ge2line.rds")
 
 ge.start <- data.frame( sf::st_coordinates(ge) )
 ge.end <- data.frame(X = ge2line$lon, Y = ge2line$lat)
