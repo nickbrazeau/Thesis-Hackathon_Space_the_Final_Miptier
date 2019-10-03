@@ -18,4 +18,4 @@ ge2line <- geosphere::dist2Line(p = sf::as_Spatial(ge),
                                 line = sf::as_Spatial(wtr.connected),
                                 distfun = geosphere::distHaversine)
 
-saveRDS("data/derived_data/ge2line.rds")
+saveRDS(object = ge2line, file = "data/derived_data/ge2line.rds")
