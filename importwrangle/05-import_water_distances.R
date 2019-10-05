@@ -1,6 +1,8 @@
 #---------------------------------------------------------------------------------------------------------------------------------------
 # Purpose of this script is to calculate the water distanc between clusters
 # Following this tutorial https://www.r-spatial.org/r/2019/09/26/spatial-networks.html
+# to get shorest distances along the river network
+# Above allows us to make a tidy spatial network
 #---------------------------------------------------------------------------------------------------------------------------------------
 library(tidyverse)
 library(sf)
@@ -8,6 +10,7 @@ library(tidygraph)
 library(igraph)
 library(shp2graph)
 library(raster)
+source("R/themes.R")
 
 #............................................................................................................
 # IMPORT DATA
@@ -26,50 +29,30 @@ DRCprov <- readRDS("data/map_bases/vivid_DRCprov.rds")
 #...............................
 # Waterways
 #...............................
-wtrlns <- sf::read_sf("data/raw_data/hotosm_waterway/hotosm_cod_waterways_grass_qgis_cleaned.shp")
-# pull out network of longest connection
-wtr.connected <- shp2graph::nt.connect(sf::as_Spatial(wtrlns))
-proj4string(wtr.connected) <- "+proj=longlat +datum=WGS84 +no_defs"
-saveRDS(object = wtr.connected, file = "data/derived_data/waterway_connected.rds") # for cluster
+wtrlns <- sf::read_sf("data/raw_data/hotosm_cod_waterways_lines_shp/hotosm_cod_waterways_lines.shp")
+wtrlns <- wtrlns %>%
+  dplyr::filter(waterway == "river" & !is.na(name)) %>%
+  dplyr::select(c("name", "geometry"))
 
-# quick view
-ggplot() +
-  geom_sf(data=DRCprov, color = "#f0f0f0") +
-  geom_sf(data = wtr.connected, color = "#3288bd") +
-  geom_sf(dat = ge, color = "#f22121") +
-  theme_minimal()
-
-
+wtrpolys <- sf::read_sf("data/raw_data/hotosm_cod_waterways_polygons_shp/hotosm_cod_waterways_polygons.shp")
+wtrpolys <- wtrpolys %>%
+  dplyr::filter(name == "Lake Tanganyika") %>%
+  dplyr::select(c("name", "geometry"))
 
 #............................................................................................................
-# From Connect DRC Cluster Points to Riverways
+# write out and manipulate in qgis
 #............................................................................................................
-# find nearest line per point
-# note, ran this on the cluster and return here
-ge2line <- readRDS("data/derived_data/ge2line.rds")
 
-ge.start <- data.frame( sf::st_coordinates(ge) )
-ge.end <- data.frame(X = ge2line$lon, Y = ge2line$lat)
+drc.rivers <- rbind.data.frame(wtrlns, wtrpolys)
 
+dir.create("data/raw_data/drc_rivers_simplified/")
+sf::write_sf(obj = drc.rivers,
+             dsn = "data/raw_data/drc_rivers_simplified/drc_rivers_init.shp") # for cluster
 
-clusterlines <- data.frame(osm_id = NA, name = "dhsclustnode",
-                           waterway = NA, geometry = rep(NA, nrow(ge.end)) )
-
-for(i in 1:nrow(ge.start)){
-  start <- sf::st_point(x = c(ge.start$X[i], ge.start$Y[i]))
-  end <- sf::st_point(x = c(ge.end$X[i], ge.end$Y[i]))
-  startend <- sf::st_combine(c(start, end))
-  clusterlines$geometry[i] <- sf::st_cast(startend, "LINESTRING")
-}
-
-clusterlines <- sf::st_as_sf(clusterlines)
+# read back in
+drc.rivers <- sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
 
 
-# now combine
-wtr.connected <- sf::st_as_sf(wtr.connected) %>%
-  dplyr::select(c("osm_id", "name", "waterway", "geometry"))
-
-wtr.connected <- rbind.data.frame(wtr.connected, clusterlines)
 
 #............................................................................................................
 # Manipulate Shapes to Prepare for Network
@@ -80,7 +63,7 @@ wtr.connected <- rbind.data.frame(wtr.connected, clusterlines)
 # Edges
 # Give each line a unique ID
 #...............................
-edges <- wtr.connected %>%
+edges <- drc.rivers %>%
   mutate(edgeID = c(1:n()))
 
 
@@ -131,11 +114,96 @@ nodes <- nodes %>%
 #.............................
 # Label cluster nodes
 #.............................
-# use sf::st intersect or somehing to figure out write nodes for clusters
+dhsclust <- ge %>%
+  dplyr::select(c("dhsclust", "geometry"))
+
 
 #............................................................................................................
-# Make Network
+# Make (and plot) Network
 #............................................................................................................
+rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
+                                     edges = tibble::as_tibble(edges),
+                                     directed = FALSE)
+
+#.............................
+# Plot DRC Clusters
+# and the rivernetowrk edges
+# and nodes (that we will snap to)
+#.............................
+rivernetworkplotObj <- ggplot() +
+  geom_sf(data = DRCprov, color = "#f0f0f0", fill = "#d9d9d9") +
+  geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(), color = "#1f78b4") +
+  geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.25, color = "#b2df8a") +
+  geom_sf(data = dhsclust, color = "#33a02c", alpha = 0.5) +
+  map_theme +
+  theme(legend.position = "none") +
+  coord_sf(datum = NA)
+
+
+jpeg("results/figures/rivernetwork_clusters.jpg",
+     height = 12, width = 8, units = "in", res = 300)
+plot(rivernetworkplotObj)
+graphics.off()
+
+
+
+
+
+#............................................................................................................
+# Find nearest point in network for DRC Clusters
+#............................................................................................................
+
+ge.start <- data.frame( sf::st_coordinates(ge) )
+
+
+
+
+#............................................................................................................
+# Get Length of Each Edge for Short Distance
+# and Calculate Shortest Distance
+#............................................................................................................
+rivernetwork <- rivernetwork %>%
+  tidygraph::activate(edges) %>%
+  dplyr::mutate(length = sf::st_length(geometry))
+
+
+## make this distance matrix manageable
+
+get_shortest_distance_length <- function(to, from){
+  dist <- igraph::shortest_paths(
+    graph = rivernetwork,
+    from = from,
+    to = to,
+    output = 'both',
+    weights = rivernetwork %>% activate(edges) %>% pull(length)) %>%
+    subgraph.edges(eids = path$epath %>% unlist()) %>%
+    as_tbl_graph() %>%
+    activate(edges) %>%
+    as_tibble() %>%
+    summarise(length = sum(length)) %>%
+    dplyr::pull(length)
+
+  return(dist)
+}
+
+
+dhsclustnodes <- rivernetwork %>%
+  activate(nodes) %>%
+  dplyr::filter(!is.na(dhsclust))
+
+dhsclust.nodeid <- dhsclustnodes %>%
+  dplyr::pull(nodeID)
+
+dhsclust.tofrom <- tibble::as_tibble( t( combn(x = dhsclust.nodeid, m = 2) ) )
+colnames(dhsclust.tofrom) <- c("to", "from")
+
+dhsclust.tofrom$riverdist <- purrr::pmap(dhsclust.tofrom,
+                                         get_shortest_distance_length)
+
+
+
+saveRDS(dhsclust.tofrom,
+        file = "data/distance_data/river_distance_forclusters.rds")
 
 
 

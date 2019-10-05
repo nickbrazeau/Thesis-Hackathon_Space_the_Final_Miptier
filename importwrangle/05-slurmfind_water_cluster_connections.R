@@ -11,11 +11,10 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum))
 
-wtr.connected <- readRDS("data/derived_data/waterway_connected.rds")
-
+drc.rivers <-  sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
 
 ge2line <- geosphere::dist2Line(p = sf::as_Spatial(ge),
-                                line = sf::as_Spatial(wtr.connected),
+                                line = sf::as_Spatial(drc.rivers),
                                 distfun = geosphere::distHaversine)
 
 saveRDS(object = ge2line, file = "data/derived_data/ge2line.rds")
