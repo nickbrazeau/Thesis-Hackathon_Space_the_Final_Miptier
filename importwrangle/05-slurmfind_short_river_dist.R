@@ -28,15 +28,16 @@ get_shortest_distance_length <- function(to, from){
 
 
 #..................................................
-# Read in Data
+# Read in Data and run main
 #..................................................
-
+rivernetwork <- readRDS("data/derived_data/rivernetwork.rds")
+dhsclust.tofrom <- readRDS("data/derived_data/dhsclust.tofrom.rds")
 
 
 dhsclust.tofrom$riverdist <- purrr::pmap(dhsclust.tofrom,
                                          get_shortest_distance_length)
 
-
 dhsclust.tofrom <- dhsclust.tofrom %>%
   tidyr::unnest(col = riverdist)
 
+readRDS("data/distance_data/indexed_river_dist_long.rds")
