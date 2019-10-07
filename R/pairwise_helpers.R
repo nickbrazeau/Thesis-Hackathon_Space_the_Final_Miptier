@@ -8,7 +8,12 @@ long_distance_matrix_join <- function(x, y, by){
   # assert that by is in both x and y
 
   yexpand <- y
-  colnames(yexpand) <- colnames(y)[c(2,1,3:ncol(y))]
+  if(ncol(y) > 2){
+    colnames(yexpand) <- colnames(y)[c(2,1,3:ncol(y))]
+    } else{
+    colnames(y)[c(2,1)]
+    }
+
 
   yexpand <- rbind.data.frame(y, yexpand) # now have all pairwise possibilities
 

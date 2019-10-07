@@ -11,6 +11,7 @@ library(igraph)
 library(shp2graph)
 library(raster)
 source("R/themes.R")
+source("R/pairwise_helpers.R")
 
 #............................................................................................................
 # IMPORT DATA
@@ -53,12 +54,9 @@ sf::write_sf(obj = drc.rivers,
 drc.rivers <- sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
 
 
-
 #............................................................................................................
 # Manipulate Shapes to Prepare for Network
 #............................................................................................................
-
-
 #...............................
 # Edges
 # Give each line a unique ID
@@ -111,13 +109,6 @@ nodes <- nodes %>%
 
 
 
-#.............................
-# Label cluster nodes
-#.............................
-dhsclust <- ge %>%
-  dplyr::select(c("dhsclust", "geometry"))
-
-
 #............................................................................................................
 # Make (and plot) Network
 #............................................................................................................
@@ -125,20 +116,17 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
                                      edges = tibble::as_tibble(edges),
                                      directed = FALSE)
 
-#.............................
-# Plot DRC Clusters
-# and the rivernetowrk edges
-# and nodes (that we will snap to)
-#.............................
+
+
+
 rivernetworkplotObj <- ggplot() +
   geom_sf(data = DRCprov, color = "#f0f0f0", fill = "#d9d9d9") +
   geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(), color = "#1f78b4") +
   geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.25, color = "#b2df8a") +
-  geom_sf(data = dhsclust, color = "#33a02c", alpha = 0.5) +
+  geom_sf(data = ge, color = "#33a02c") +
   map_theme +
   theme(legend.position = "none") +
   coord_sf(datum = NA)
-
 
 jpeg("results/figures/rivernetwork_clusters.jpg",
      height = 12, width = 8, units = "in", res = 300)
@@ -146,15 +134,25 @@ plot(rivernetworkplotObj)
 graphics.off()
 
 
-
-
-
 #............................................................................................................
-# Find nearest point in network for DRC Clusters
+# Get nearest neighbors for river network
 #............................................................................................................
+gecoords <- sf::st_coordinates(ge)
 
-ge.start <- data.frame( sf::st_coordinates(ge) )
+rivercoords <- rivernetwork %>%
+  activate(nodes) %>%
+  as_tibble() %>%
+  st_as_sf() %>%
+  sf::st_coordinates()
 
+nn <- nabor::knn(data = rivercoords, query = gecoords, k=1)
+
+dhsclust.dict <- ge$dhsclust
+names(dhsclust.dict) <- unlist(nn$nn.idx)
+
+# make tibble for search
+dhsclust.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
+colnames(dhsclust.tofrom) <- c("to", "from")
 
 
 
@@ -167,40 +165,28 @@ rivernetwork <- rivernetwork %>%
   dplyr::mutate(length = sf::st_length(geometry))
 
 
-## make this distance matrix manageable
+#............................................................................................................
+# Write out and run get shorest distance on LL
+#............................................................................................................
+saveRDS(rivernetwork, "data/derived_data/rivernetwork.rds")
+saveRDS(dhsclust.tofrom, "data/derived_data/dhsclust.tofrom.rds")
 
-get_shortest_distance_length <- function(to, from){
-  dist <- igraph::shortest_paths(
-    graph = rivernetwork,
-    from = from,
-    to = to,
-    output = 'both',
-    weights = rivernetwork %>% activate(edges) %>% pull(length)) %>%
-    subgraph.edges(eids = path$epath %>% unlist()) %>%
-    as_tbl_graph() %>%
-    activate(edges) %>%
-    as_tibble() %>%
-    summarise(length = sum(length)) %>%
-    dplyr::pull(length)
 
-  return(dist)
+
+
+# find dhsclusts from dictionary
+
+
+
+
+find_replace_dictionary <- function(dict, replacevect){
+
+  for(i in 1:nrow(dict)){
+    replacevect[replacevect = names(dict)[i]] <- dict[i]
+  }
+
+
 }
-
-
-dhsclustnodes <- rivernetwork %>%
-  activate(nodes) %>%
-  dplyr::filter(!is.na(dhsclust))
-
-dhsclust.nodeid <- dhsclustnodes %>%
-  dplyr::pull(nodeID)
-
-dhsclust.tofrom <- tibble::as_tibble( t( combn(x = dhsclust.nodeid, m = 2) ) )
-colnames(dhsclust.tofrom) <- c("to", "from")
-
-dhsclust.tofrom$riverdist <- purrr::pmap(dhsclust.tofrom,
-                                         get_shortest_distance_length)
-
-
 
 saveRDS(dhsclust.tofrom,
         file = "data/distance_data/river_distance_forclusters.rds")
