@@ -6,4 +6,4 @@
 #SBATCH --mail-type=all
 #SBATCH --mail-user=nbrazeau@med.unc.edu
 
-R -e "setwd('/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier'); source('importwrangle/05-05-slurmfind_short_river_dist.R')"
+R -e "setwd('/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier'); source('importwrangle/05-slurmfind_short_river_dist.R')"
