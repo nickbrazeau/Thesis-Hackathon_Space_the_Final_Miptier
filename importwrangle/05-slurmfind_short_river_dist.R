@@ -40,4 +40,8 @@ dhsclust.tofrom$riverdist <- purrr::pmap(dhsclust.tofrom,
 dhsclust.tofrom <- dhsclust.tofrom %>%
   tidyr::unnest(col = riverdist)
 
-readRDS("data/distance_data/indexed_river_dist_long.rds")
+saveRDS(object = dhsclust.tofrom,
+        file = "data/distance_data/indexed_river_dist_long.rds")
+
+
+
