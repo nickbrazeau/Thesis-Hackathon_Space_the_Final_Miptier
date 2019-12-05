@@ -6,6 +6,9 @@ logit <- function(x, tol=1e-4){
   return( log(((x+tol)/(1-x+tol))) )
 }
 
+expit <- function(x, tol=1e-4){
+  return( 1/(1+exp(-x + tol)) )
+}
 
 #----------------------------------------------------------------------------------------------------
 # Change return from scale

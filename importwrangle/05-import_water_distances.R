@@ -1,5 +1,7 @@
 #---------------------------------------------------------------------------------------------------------------------------------------
-# Purpose of this script is to calculate the water distanc between clusters
+# Purpose of this script is to calculate the water distanc between
+# (1) clusters
+# (2) Provinces
 # Following this tutorial https://www.r-spatial.org/r/2019/09/26/spatial-networks.html
 # to get shorest distances along the river network
 # Above allows us to make a tidy spatial network
@@ -8,24 +10,24 @@ library(tidyverse)
 library(sf)
 library(tidygraph)
 library(igraph)
-library(shp2graph)
 library(raster)
 source("R/themes.R")
 source("R/pairwise_helpers.R")
 
 #............................................................................................................
-# IMPORT DATA
+# IMPORT DATA for CLUSTER SECTION
 #............................................................................................................
 #...............................
 # Ge import
 #...............................
+DRCprov <- readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")
 # read in GE as import
 ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum))
 
-DRCprov <- readRDS("data/map_bases/vivid_DRCprov.rds")
+
 
 #...............................
 # Waterways
@@ -43,7 +45,6 @@ wtrpolys <- wtrpolys %>%
 #............................................................................................................
 # write out and manipulate in qgis
 #............................................................................................................
-
 drc.rivers <- rbind.data.frame(wtrlns, wtrpolys)
 
 dir.create("data/raw_data/drc_rivers_simplified/")
@@ -118,12 +119,13 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
 
 
 
-
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
 rivernetworkplotObj <- ggplot() +
   geom_sf(data = DRCprov, color = "#f0f0f0", fill = "#d9d9d9") +
   geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(), color = "#1f78b4") +
   geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.25, color = "#b2df8a") +
   geom_sf(data = ge, color = "#33a02c") +
+  prettybasemap_nodrc +
   map_theme +
   theme(legend.position = "none") +
   coord_sf(datum = NA)
@@ -169,32 +171,124 @@ rivernetwork <- rivernetwork %>%
 # Write out and run get shorest distance on LL
 #............................................................................................................
 saveRDS(rivernetwork, "data/derived_data/rivernetwork.rds")
-saveRDS(dhsclust.tofrom, "data/derived_data/dhsclust.tofrom.rds")
+saveRDS(dhsclust.tofrom, "data/distance_data/dhsclust.tofrom.rds")
 
 #............................................................................................................
 # Read in from LL
 #............................................................................................................
+LLdhsclust.tofrom <- readRDS(file = "data/distance_data/indexed_river_dist_long.rds")
+
+fromjoin = tibble::tibble(from = as.numeric( names(dhsclust.dict) ), dhsclustfrom = dhsclust.dict)
+tojoin = tibble::tibble(to = as.numeric( names(dhsclust.dict) ), dhsclustto = dhsclust.dict)
+
+LLdhsclust.tofrom <- LLdhsclust.tofrom %>%
+  dplyr::left_join(., fromjoin, by = "from") %>%
+  dplyr::left_join(., tojoin, by = "to")
+
+LLdhsclust.tofrom <- LLdhsclust.tofrom[!duplicated(LLdhsclust.tofrom), ] # nearest neighbor result can be duplicate for multiple clusters
 
 
-
-# find dhsclusts from dictionary
-
-
-
-
-find_replace_dictionary <- function(dict, replacevect){
-
-  for(i in 1:nrow(dict)){
-    replacevect[replacevect = names(dict)[i]] <- dict[i]
-  }
-
-
-}
-
-saveRDS(dhsclust.tofrom,
+saveRDS(LLdhsclust.tofrom,
         file = "data/distance_data/river_distance_forclusters.rds")
 
 
 
+#............................................................................................................
+# IMPORT DATA for PROVINCE SECTION
+#............................................................................................................
+# read in DRCprov as import
+drcpov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")) %>%
+  dplyr::mutate(provcentroid = sf::st_centroid(geometry))
+
+
+drcpov <- drcpov %>%
+  dplyr::select(c("adm1name", "provcentroid"))
+# make centroid geom
+sf::st_geometry(drcpov) <- NULL
+drcpov <- sf::st_as_sf(drcpov) # make centroids dominating geom
+
+#............................................................................................................
+# Get nearest neighbors for river network
+#............................................................................................................
+drcpovcoords <- sf::st_coordinates(drcpov)
+
+nn <- nabor::knn(data = rivercoords,
+                 query = drcpovcoords,
+                 k=1)
+
+drcpovcoords.dict <- drcpov$adm1name
+names(drcpovcoords.dict) <- unlist(nn$nn.idx)
+
+# make tibble for search
+drcpovcoords.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
+colnames(drcpovcoords.tofrom) <- c("to", "from")
+
+
+
+#............................................................................................................
+# Get Length of Each Edge for Short Distance
+# and Calculate Shortest Distance
+#............................................................................................................
+rivernetwork <- rivernetwork %>%
+  tidygraph::activate(edges) %>%
+  dplyr::mutate(length = sf::st_length(geometry))
+
+
+
+get_shortest_distance_length <- function(to, from){
+  path <- igraph::shortest_paths(
+    graph = rivernetwork,
+    from = from,
+    to = to,
+    output = 'both',
+    weights = rivernetwork %>% activate(edges) %>% pull(length))
+
+  dist <- subgraph.edges(rivernetwork, eids = path$epath %>% unlist()) %>%
+    as_tbl_graph() %>%
+    activate(edges) %>%
+    as_tibble() %>%
+    summarise(length = sum(length)) %>%
+    dplyr::pull(length)
+
+  return(dist)
+}
+
+# run function
+drcpovcoords.tofrom$riverdist <- purrr::pmap(drcpovcoords.tofrom,
+                                             get_shortest_distance_length)
+
+drcpovcoords.tofrom <- drcpovcoords.tofrom %>%
+  tidyr::unnest(cols = riverdist)
+
+#..............................................................
+# LIFTOVER to from table to prov names
+#..............................................................
+
+fromjoin = tibble::tibble(from = as.numeric( names(drcpovcoords.dict) ),
+                          dhsprovfrom = drcpovcoords.dict)
+tojoin = tibble::tibble(to = as.numeric( names(drcpovcoords.dict) ),
+                        dhsprovto = drcpovcoords.dict)
+
+drcpovcoords.tofrom <- drcpovcoords.tofrom %>%
+  dplyr::left_join(., fromjoin, by = "from") %>%
+  dplyr::left_join(., tojoin, by = "to")
+
+# liftover
+# prov dict
+provname.dict <- tibble::tibble(item1 = 1:26,
+                                dhsprovfrom = drcpov$adm1name)
+drcpovcoords.tofrom <- dplyr::left_join(drcpovcoords.tofrom, provname.dict,
+                                        by = "dhsprovfrom")
+
+provname.dict <- tibble::tibble(item2 = 1:26,
+                                dhsprovto = drcpov$adm1name)
+drcpovcoords.tofrom <- dplyr::left_join(drcpovcoords.tofrom, provname.dict,
+                                        by = "dhsprovto")
+
+drcpovcoords.tofrom <- drcpovcoords.tofrom[!duplicated(drcpovcoords.tofrom), ] # nearest neighbor result can be duplicate for multiple clusters
+
+
+saveRDS(drcpovcoords.tofrom,
+        file = "data/distance_data/river_distance_forprovinces.rds")
 
 

@@ -2,8 +2,8 @@ library(tidyverse)
 library(sf)
 #---------------------------------------------------------------------------------------------------------------------------------------
 # Purpose of this script is to  use OSRM to calculate road network distances
-#     (1) All clusters
-#     (2) All samples
+#     (1) for clusters
+#     (2) All provs
 #---------------------------------------------------------------------------------------------------------------------------------------
 
 #.......................................................................................................
@@ -34,7 +34,7 @@ clstrtrvldists <- osrm::osrmTable(loc = ge.osrm,
                                   measure = "distance") # in meters
 
 
-diag(clstrtrvldists$distances) <- 1e6 # set this to really high to avoid self compare
+diag(clstrtrvldists$distances) <- .Machine$double.xmax # set this to really high to avoid self compare
 #-----------------------------------------------------------------
 # Process OSRM Outs
 #-----------------------------------------------------------------
@@ -86,8 +86,8 @@ col.err <- sf::st_as_sf(col.err)
 # Get GC Distance
 gc.err <- rep(NA, nrow(row.err))
 for(i in 1:nrow(row.err)){
-  gc.err[i] <- geosphere::distHaversine(p1 = sf::as_Spatial(row.err[i,]),
-                                        p2 = sf::as_Spatial(col.err[i,]))
+  gc.err[i] <- geosphere::distGeo(p1 = sf::as_Spatial(row.err[i,]),
+                                  p2 = sf::as_Spatial(col.err[i,]))
 }
 
 
@@ -113,6 +113,7 @@ clstr313 <- clstrtrvldists.long %>%
 
 clstr313$distance <- clstr313$distance + 2e4
 
+
 # don't rearrange here
 clstr469 <- clstrtrvldists.long %>%
   dplyr::filter(item1 == 469 | item2 == 469) %>%
@@ -126,6 +127,10 @@ clstr469 <- left_join(clstr469, clstr313, by = "newitem2")
 #..................
 clstrtrvldists.long$distance[is.na(clstrtrvldists.long$distance)] <- clstr469$distance.y
 
+# finally, find 313 and 469 comparison and set to 2e4
+clstrtrvldists.long$distance[clstrtrvldists.long$item1 == 469 & clstrtrvldists.long$item2 == 313] <- 2e4
+
+
 #..................
 # save out
 #..................
@@ -133,4 +138,50 @@ clstrtrvldists.long <- clstrtrvldists.long %>%
   dplyr::rename(roaddistance = distance)
 
 saveRDS(clstrtrvldists.long, file = "data/distance_data/clstr_road_distmeters_long.rds")
+
+
+
+#.......................................................................................................
+# Province Level
+#.......................................................................................................
+# read in DRCprov as import
+drcpov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")) %>%
+  dplyr::mutate(provcentroid = sf::st_centroid(geometry))
+
+
+drcpov.osrm <- drcpov %>%
+  dplyr::select(c("adm1name", "provcentroid"))
+# make centroid geom
+sf::st_geometry(drcpov.osrm) <- NULL
+drcpov.osrm <- sf::st_as_sf(drcpov.osrm) # now point is geom
+
+
+# altering the centroid for the Mai-Ndombe Province, which has an odd shape is
+# having a hard time being resolved by OSRM
+# to -2.529588, 19.050577
+crs <- sf::st_crs(drcpov.osrm$provcentroid[drcpov.osrm$adm1name == "Mai-Ndombe"])
+drcpov.osrm$provcentroid[drcpov.osrm$adm1name == "Mai-Ndombe"] <- sf::st_sfc(st_point(c(19.3506,
+                                                                                        -2.5240)),
+                                                                   crs = crs)
+
+
+
+# now access API
+provlvldists <- osrm::osrmTable(loc = drcpov.osrm,
+                                  measure = "distance") # in meters
+
+
+
+#..................
+# save out
+#..................
+provlvldists.long <- provlvldists %>%
+  .$distances %>%
+  as.dist(.) %>%
+  broom::tidy(.) %>%
+  dplyr::rename(roaddistance = distance)
+
+saveRDS(provlvldists.long, file = "data/distance_data/prov_road_distmeters_long.rds")
+
+
 

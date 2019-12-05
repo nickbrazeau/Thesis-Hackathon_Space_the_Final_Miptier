@@ -1,0 +1,230 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Traditional Epidemiological Approach
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+```{r}
+#---------------------------------------------------------------------------
+# Purpose of this script is to do basic epi analyses
+#----------------------------------------------------------------------------
+library(tidyverse)
+library(MuMIn)
+library(merTools)
+library(stargazer)
+library(raster)
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/basics.R")
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
+
+```
+
+```{r}
+
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("id", "hv001")) %>% 
+  dplyr::rename(name = id)
+
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(name = id) %>% 
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% drcsmpls$name)
+
+# drc prov for plot
+DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds")) 
+
+# load pretty map aesthetics 
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+```
+
+```{r}
+#....................................................................................
+# Import Genetic Data
+#....................................................................................
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+
+# log2 IBD measure
+ibD <- ibD %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens)
+
+
+ibD.long <- expand_distance_matrix(ibD)
+```
+
+
+## Epi Considerations
+Here we will analyze IBD using a traditional epidemiological approach. _Outcome_: pairwise IBD comparisons; _Covariates_: Differences among observations; _Spatial Autocorrelation_: Random Intercepts (Province). Gaussian Process (Cluster). _Link/family_: Given that we can normalize the IBD pairwise outcome, we will use a log-link and the Gaussian probability family for our generalized linear models. A log-link will be used given the expected exponential relationship of IBD and distance/covariates.   
+  
+NB, all covariates were taken from open sources including: Malaria Atlas Project, European Space Agency, LAADS/NASA, and OSM (this include prevalence which is not from our lab but from MAP).
+
+
+
+### Outcome
+When considering pairwise IBD as the outcome, we can use a log-base-2 tranformation to normalize the IBD measure. Log-base-2 represents the number of generations ago to samples were IBD (or coalesced) under an assumption of outcrossing. N.B. larger numbers mean more generations (less related).
+```{r, results='asis'}
+ibD.long %>% 
+  dplyr::filter(malecotf_gens != Inf) %>% 
+  ggplot() + 
+  geom_histogram(aes(x = malecotf_gens, y = ..count.. )) + 
+  plot_theme +
+  xlab("Generations") + ylab("")
+
+```
+Looks relatively normal considering... 
+
+
+## Province Models
+### Covariate Considerations
+```{r}
+#..............................................................
+# Get Covariates for Province
+#..............................................................
+covarrstr <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_raw.RDS")
+
+extract_agg_raster_polygon <- function(rstrlyr, plygn){
+  vals <- raster::extract(x = rstrlyr, y = sf::as_Spatial(plygn),
+                          fun = mean,
+                          na.rm = T, 
+                          sp = F
+                          )
+  return(as.vector(vals))
+  
+}
+
+adm1 <- DRCprov %>% 
+  dplyr::select(c("adm1name", "geometry"))
+adm1.list <- split(adm1, 1:nrow(adm1))
+
+provCovar <- lapply(adm1.list, extract_agg_raster_polygon, rstrlyr = covarrstr)
+provCovar <- do.call("rbind.data.frame", provCovar)
+colnames(provCovar) <- names(covarrstr)
+
+# add back in geometry and ad1names
+provCovar <- cbind.data.frame(adm1, provCovar)
+provCovar <- sf::st_as_sf(provCovar)
+
+```
+
+Here you can visualize the covariate by province. 
+```{r}
+# this nonsense since sf and tidyr get upset 
+provCovar.nosf <- provCovar
+sf::st_geometry(provCovar.nosf) <- NULL
+
+provCovar.geo <- provCovar %>% 
+  dplyr::select(c("adm1name", "geometry"))
+
+provCovar.nosf <- provCovar.nosf %>% 
+  tidyr::gather(., key = "covar", value = "val", 2:ncol(.)) 
+provCovar.geo <- dplyr::left_join(provCovar.nosf, 
+                                  y = provCovar.geo, by = "adm1name") 
+
+provCovar.geo <- sf::st_as_sf(provCovar.geo)
+
+# end of nonsense
+provCovar.geo %>% 
+  ggplot() + 
+  geom_sf(aes(fill = val)) +
+  facet_wrap(covar ~ .) + 
+  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
+  map_theme +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+```
+
+### Distribution of IBD-Gens by Prov
+```{r, results='asis'}
+
+p1 <- mtdt %>% 
+  dplyr::select(c("name", "adm1name")) %>% 
+  dplyr::rename(smpl1 = name)
+
+p2 <- mtdt %>% 
+  dplyr::select(c("name", "adm1name")) %>% 
+  dplyr::rename(smpl2 = name)
+
+ibD.long %>% 
+  dplyr::left_join(., y = p1, by = "smpl1") %>% 
+  dplyr::left_join(., y = p2, by = "smpl2") %>% 
+  expand_distance_matrix() %>% 
+  dplyr::filter(malecotf_gens != Inf) %>% 
+  ggplot() + 
+  ggridges::stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = T,
+    quantiles = 4, quantile_lines = T, 
+    aes(x = malecotf_gens, y = adm1name.x, fill = factor(..quantile..))
+  ) +
+  scale_fill_viridis_d("Quantiles") +
+  ylab("Province") + xlab("Distribution of Generations") +
+  plot_theme 
+  
+```
+
+### Modeling 
+Going to fixed mixed models here using a random intercept for Province and a random slope for **geographical space** while also allowing for correlation allowing between the two (in `lmer/lme4` speak: `Y ~ (1+Space|Prov) + Covars`). This will then model the effect of "space" with respect to Province as random effects with the other covariates considered as fixed effects.  
+  
+  
+We will fit these models first (saturated and base for each distance).
+```{r}
+mods <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/Provglmm_modfits.RDS")
+```
+
+```{r, results='asis'}
+knitr::kable(mods[,c("class", "space", "covars")])
+```
+
+####  Model Fits
+```{r, results='asis'}
+stargazer::stargazer(mods$fitout, 
+                     no.space=F,
+                     ci=F, ci.level=0.95, 
+                     single.row=F,
+                     align=T, 
+                     type = "html")
+
+```
+
+##### Covar P-values
+```{r, results='asis'}
+stargazer(mods$fitout,
+          title = "Pvalues of Coef from GLMMs",
+          report=('vc*p'),
+          align=T, 
+          type = "html")
+
+```
+
+####  Model Summarys
+```{r, results='asis'}
+
+for(i in 1:nrow(mods)){
+  merTools::fastdisp(mods$fitout[[i]])
+  cat("\n ******************************************************************* \n")
+}
+
+
+
+```
+
+<!-- #### Model Dredging  -->
+<!-- ```{r} -->
+
+<!-- ``` -->
+
+<!-- #### Best Model Fit PIs -->
+<!-- ```{r} -->
+<!-- # best fit and sensible m is our original pd_mod -->
+<!-- dat <- cbind(dat, merTools::predictInterval(pd_mod, type="probability")) -->
+
+<!-- ``` -->
+
+
+

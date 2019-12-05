@@ -12,6 +12,7 @@ db/
 data/
 rdhs.json
 sandbox/
+results/
 
 # RStudio files
 .Rproj.user/

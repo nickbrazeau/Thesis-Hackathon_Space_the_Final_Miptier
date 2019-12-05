@@ -1,106 +1,196 @@
 #................................................................................................................................
-# Purpose of this script is to pull together covariates
+# Purpose of this script is to pull together covariate rasters
 #................................................................................................................................
-library(tidyverse)
-library(sf)
+library(raster)
 source("R/basics.R")
-
-# read in GE as import
-ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::filter(latnum != 0 & longnum != 0) %>%
-  dplyr::filter(!is.na(latnum) & !is.na(longnum)) %>%
-  dplyr::rename(hv001 = dhsclust)
-
+DRC <- readRDS("data/map_bases/gadm/gadm36_COD_0_sp.rds")
 #.............
 # Pf Prevalence
 #.............
-rdtliftover <- readr::read_csv("internal_datamap_files/RDT_liftover.csv")
-microliftover <- readr::read_csv("internal_datamap_files/microscopy_liftover.csv")
-pr.prev <- readRDS("data/derived_data/DHS_qPCR_allkids_geo.rds") %>%
-  dplyr::select(c("hv001", "hml32", "hml35", "pfldh"))
-pr.prev <- pr.prev %>%
-  dplyr::left_join(., y=rdtliftover, by = "hml35") %>%
-  dplyr::left_join(., y=microliftover, by = "hml32") %>%
-  dplyr::group_by(hv001) %>%
-  dplyr::summarise(
-    n = n(),
-    qPCRprev = mean(pfldh, na.rm = T),
-    qPCRse = sd(pfldh, na.rm = T)/sqrt(n),
+parasiterate <- raster::raster("data/derived_data/MAPrasters/parasiterate.grd")
 
-    rdtprev = mean(RDTresult, na.rm = T),
-    rdtse = sd(RDTresult, na.rm = T)/sqrt(n),
+#................................
+# Malaria Interventions
+#................................
+actuse <- raster::raster("data/derived_data/MAPrasters/actuse.grd")
+netuse <- raster::raster("data/derived_data/MAPrasters/netuse.grd")
+houseuse <- raster::raster("data/derived_data/MAPrasters/houseuse.grd")
 
-    microprev = mean(microscopyresult, na.rm = T),
-    microprevse = sd(microscopyresult, na.rm = T)/sqrt(n)
-
-  )
-
-pr.prev.scaled <- pr.prev %>%
-  dplyr::mutate(
-    qPCRprev_scale = my.scale(logit(qPCRprev, tol = 1e-3)),
-    rdtprev_scale =  my.scale(logit(rdtprev, tol = 1e-3)),
-    microprev_scale =  my.scale(logit(microprev, tol = 1e-3))
-  ) %>%
-  dplyr::select(c("hv001", "qPCRprev_scale", "rdtprev_scale", "microprev_scale")) %>%
-  dplyr::mutate(hv001 = as.numeric(hv001))
-
-
-
-#.............
-# Net Use
-#.............
-netuse <- readRDS("data/derived_data/DHS_kids_net_use.rds") %>%
-  dplyr::select(c("hv001", "ITNperc_logit_scale"))
-
-#.............
-# ACT Use
-#.............
-rxuse <- readRDS("data/derived_data/DHS_kids_act_use_imputed.rds") %>%
-  dplyr::select("hv001", "anyatmperc_logit_scale")
-
-#.............
-# Distance Hospital
-#.............
-hospdist <- readRDS("data/derived_data/hlthdist_out_minduration.rds") %>%
-  dplyr::mutate(hlthdist_log_scale = my.scale(log(hlthst_nrst_duration))) %>%
-  dplyr::select(-c("hlthst_nrst_duration"))
-
-#.............
+#................................
 # Urbanicity
-#.............
-urb <- readRDS("data/derived_data/DRC_urbanicity.rds")
+#................................
+urban <- raster::raster("data/derived_data/urbanicity_raster/urbanicity.grd")
 
 #.............
 # Weather
 #.............
-wthr <- readRDS("data/derived_data/vividep_weather_recoded_mean.rds") %>%
-  dplyr::mutate(precip_mean_scale = my.scale(precip_mean_cont_clst),
-                temp_mean_scale = my.scale(temp_mean_cont_clst)) %>%
-  dplyr::select(-c("precip_mean_cont_clst", "temp_mean_cont_clst"))
+precip <- raster::raster("data/derived_data/weather/precipitation.grd")
+temp <- raster::raster("data/derived_data/weather/temperature.grd")
 
 #.............
 # Cluster-Level Altitude
 #.............
-alt <- ge %>%
-  dplyr::select("hv001", "alt_dem") %>%
-  dplyr::mutate(alt_dem_log_scale = my.scale(log(alt_dem))) %>%
-  dplyr::select(-c("alt_dem"))
+elev <- raster::raster("data/derived_data/elevation/drc_elevation.grd")
+
+#.............
+# Cropland
+#.............
+crops <- raster::raster("data/derived_data/crops/cropland_surface.grd")
+crops <- raster::aggregate(crops, fact = 18, fun = mean)
 
 
 #..........................................................
-# Join and save
+# Join
 #..........................................................
-covariatematrix <- dplyr::left_join(pr.prev.scaled, netuse, by ="hv001") %>%
-  dplyr::left_join(., rxuse, by = "hv001") %>%
-  dplyr::left_join(., hospdist, by = "hv001") %>%
-  dplyr::left_join(., urb, by = "hv001") %>%
-  dplyr::left_join(., wthr, by = "hv001") %>%
-  dplyr::left_join(., alt, by = "hv001")
+# make raster stack
+rstrscovars <- list(
+  parasiterate, # prev
+  precip, temp, elev, # ecological
+  crops, actuse, netuse, houseuse, # malaria interv/risk
+  urban
+)
 
-# 492 to 490 because clusters 70 and 510 didn't have under 5s?
+
+#..........................................................
+# Let's make same resolution and extent
+# want 0.05 which is precip, so will use that one
+#..........................................................
+rstrscovars.res <- lapply(rstrscovars, function(x){
+  ret <- raster::projectRaster(x,
+                               precip)
+  return(ret)
+  })
 
 
-saveRDS(object = covariatematrix, "data/derived_data/covariatematrix.rds")
+#..........................................................
+# Save out Raw Format
+#..........................................................
+covar.rasterstack.raw <- raster::stack(rstrscovars.res)
+names(covar.rasterstack.raw) <- c("prev", "precip", "temp", "elev",
+                                  "crops", "actuse", "netuse", "housing",
+                                  "urban")
+
+# force crops to binary
+values(covar.rasterstack.raw$crops)[!values(covar.rasterstack.raw$crops) %in% c(0,1)] <- round(values(covar.rasterstack.raw$crops)[!values(covar.rasterstack.raw$crops) %in% c(0,1)], 0)
+saveRDS(covar.rasterstack.raw, "data/derived_data/covar_rasterstack_raw.RDS")
+
+
+#..........................................................
+# Transformation of Values
+#..........................................................
+covar.rasterstack.derived <- covar.rasterstack.raw
+# proportion back to real line
+values(covar.rasterstack.derived$prev) <-  logit(values(covar.rasterstack.derived$prev), tol = 1e-3)
+
+# weather and elev
+values(covar.rasterstack.derived$precip) <- my.scale(values(covar.rasterstack.derived$precip))
+values(covar.rasterstack.derived$temp) <- my.scale(values(covar.rasterstack.derived$temp))
+values(covar.rasterstack.derived$elev) <- my.scale(values(covar.rasterstack.derived$elev))
+
+
+# crops are binary, no transform
+
+# proportion back to real line
+values(covar.rasterstack.derived$actuse) <- my.scale( logit(values(covar.rasterstack.derived$actuse), tol = 1e-3) )
+ # proportion back to real line
+values(covar.rasterstack.derived$netuse) <- my.scale( logit(values(covar.rasterstack.derived$netuse), tol = 1e-3) )
+# proportion back to real line
+values(covar.rasterstack.derived$housing) <- my.scale( logit(values(covar.rasterstack.derived$housing), tol = 1e-3) )
+
+
+# note urbanicity from PCA so already scaled
+
+#..........................
+#  save out
+#..........................
+saveRDS(covar.rasterstack.derived, "data/derived_data/covar_rasterstack_derived.RDS")
+
+#..............................................................
+# Extract out for covariates at sampling locations
+#..............................................................
+ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(hv001 = dhsclust) %>%
+  dplyr::select(c("hv001", "urban_rura")) %>%
+  dplyr::mutate(urban_rura_ext = ifelse(urban_rura == "R", 10000, 2000))
+sf::st_geometry(ge) <- NULL
+
+
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("id", "hv001")) %>%
+  dplyr::rename(name = id)
+
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(name = id) %>%
+  dplyr::filter(name %in% drcsmpls$name) %>%
+  dplyr::select(c("hv001", "longnum", "latnum")) %>%
+  dplyr::left_join(., ge) %>%
+  dplyr::filter(!duplicated(.))
+
+mtdt.sf <- sf::st_as_sf(mtdt, coords = c("longnum", "latnum"), crs = 4326)
+
+
+
+#.........................
+# Raw Covariates
+#.........................
+covar.raw.extract <- matrix(NA, nrow = nrow(mtdt.sf),
+                            ncol = length(names(covar.rasterstack.raw)))
+for (i in 1:nrow(mtdt.sf)){
+  covar.raw.extract[i, ] <- raster::extract(x = covar.rasterstack.raw,
+                                            y = sf::as_Spatial(mtdt.sf$geometry[i]),
+                                            buffer = mtdt$urban_rura_ext[i],
+                                            fun = mean,
+                                            na.rm = T)
+}
+
+# 301 clusters has missing values around it -- impute mean
+impvalues <- apply(covar.raw.extract, 2, function(x){
+  if (any(is.na(x))) {
+    ret <- mean(x, na.rm = T)
+    return(ret)
+  }
+})
+
+covar.raw.extract[is.na(covar.raw.extract)] <- unlist(impvalues)
+
+
+
+covar.raw.extract <- cbind.data.frame(hv001 = mtdt.sf$hv001, covar.raw.extract)
+colnames(covar.raw.extract) <- c("hv001", names(covar.rasterstack.raw))
+saveRDS(covar.raw.extract, "data/derived_data/covar_rasterstack_samplinglocations_raw.RDS")
+
+#.........................
+# Scaled Covariates
+#.........................
+covar.scaled.extract <- matrix(NA, nrow = nrow(mtdt.sf),
+                            ncol = length(names(covar.rasterstack.derived)))
+for (i in 1:nrow(mtdt.sf)){
+  covar.scaled.extract[i, ] <- raster::extract(x = covar.rasterstack.derived,
+                                            y = sf::as_Spatial(mtdt.sf$geometry[i]),
+                                            buffer = mtdt.sf$urban_rura_ext[i],
+                                            fun = mean,
+                                            na.rm = T)
+}
+
+
+# 301 clusters has missing values around it -- impute mean
+impvalues <- apply(covar.scaled.extract, 2, function(x){
+  if (any(is.na(x))) {
+    ret <- mean(x, na.rm = T)
+    return(ret)
+  }
+})
+
+covar.scaled.extract[is.na(covar.scaled.extract)] <- unlist(impvalues)
+
+
+covar.scaled.extract <- cbind.data.frame(hv001 = mtdt.sf$hv001, covar.scaled.extract)
+colnames(covar.scaled.extract) <- c("hv001", names(covar.rasterstack.derived))
+saveRDS(covar.scaled.extract, "data/derived_data/covar_rasterstack_samplinglocations_scaled.RDS")
+
+
 
 

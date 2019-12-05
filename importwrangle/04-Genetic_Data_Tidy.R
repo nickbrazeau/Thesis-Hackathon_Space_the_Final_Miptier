@@ -10,6 +10,11 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::filter(country == "DRC")
 
+# subset to samples with non-missing GPS data
+dt <- readRDS("data/derived_data/DHS_qPCR_allkids_geo.rds")
+
+mtdt <- mtdt %>%
+  dplyr::filter(hv001 %in% dt$hv001)
 
 
 #............................................................
@@ -18,29 +23,6 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
 vcf <- vcfR::read.vcfR(file = "data/derived_data/bigbarcode_genetic_data/polarized_biallelic_processed.wsaf.vcf.bgz")
 vcf.DRC <- vcfRmanip::select_samples(vcf, smplvctr = unlist(mtdt$id))
 saveRDS(object = vcf.DRC, file = "data/derived_data/bigbarcode_genetic_data/polarized_biallelic_processed_wsaf_DRC_VCFR.rds")
-
-#............................................................
-# Subset and Tidy IBD/S matrices
-# from VCFDO
-#............................................................
-# ibd
-ibd.vcfdo <- readr::read_tsv("data/derived_data/bigbarcode_genetic_data/IBD_polarized_biallelic_processed.long.tab.txt", col_names = F) %>%
-  magrittr::set_colnames(c("smpl1", "smpl2", "nsites", "malecotf")) %>%
-  dplyr::filter(smpl1 %in% mtdt$id & smpl2 %in% mtdt$id)
-
-saveRDS(ibd.vcfdo, "data/derived_data/bigbarcode_genetic_data/vcfdo.IBD_polarized_biallelic_processed.long.rds")
-
-# ibs
-ibs.vcdo <- read.table("data/derived_data/bigbarcode_genetic_data/IBS_polarized_biallelic_processed.long.tab.txt",
-                  header = T, stringsAsFactors = F)
-rownames(ibs.vcdo) <- unlist(ibs.vcdo[,1])
-ibs.vcdo <- ibs.vcdo[,-1]
-ibs.vcdo <- broom::tidy( as.dist(ibs.vcdo) ) %>%
-  magrittr::set_colnames(c("smpl1", "smpl2", "hammingibs"))  %>%
-  dplyr::filter(smpl1 %in% mtdt$id & smpl2 %in% mtdt$id)
-
-saveRDS(ibs.vcdo, "data/derived_data/bigbarcode_genetic_data/vcfdo.IBS_polarized_biallelic_processed.long.rds")
-
 
 #............................................................
 # Subset and Tidy IBD/S matrices
@@ -54,7 +36,7 @@ DRCmp <- DRCmp %>%
   MIPanalyzer::filter_samples(., sample_filter = drc.smpls, description = "Subset to DRC Samples")
 
 # get ibD
-DRCmp.ibD <- MIPanalyzer::inbreeding_mle(DRCmp, f = seq(0.01, 0.99, 0.01),
+DRCmp.ibD <- MIPanalyzer::inbreeding_mle(DRCmp, f = seq(0.001, 0.999, 0.001),
                                          ignore_het = FALSE)
 diag(DRCmp.ibD$mle) <- 1
 colnames(DRCmp.ibD$mle) <- rownames(DRCmp.ibD$mle) <- mtdt$id

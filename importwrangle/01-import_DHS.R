@@ -93,10 +93,12 @@ dt.geo <- dt %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum))
 
-
+spacemipsge <- dt.geo %>%
+  dplyr::select(c("adm1name", "hv001", "latnum", "longnum", "geometry")) %>%
+  dplyr::filter(!duplicated(.))
 
 # save out the final product
-
+saveRDS(spacemipsge, file = "data/derived_data/spacemips_GE.rds")
 saveRDS(dt.geo, file = "data/derived_data/DHS_qPCR_allkids_geo.rds")
 
 

@@ -25,5 +25,6 @@ vcfR::write.vcf(x=mipbivcfR, file = "data/raw_data/bigbarcode_genetic_data/biall
 #....................
 # Write out BB sample metadata
 #....................
+bigbarcode <- readRDS(file = "data/raw_data/bigbarcode_genetic_data/biallelic_processed.rds")
 smplmtdt <- bigbarcode$samples
 saveRDS(smplmtdt, file = "data/derived_data/sample_metadata.rds")

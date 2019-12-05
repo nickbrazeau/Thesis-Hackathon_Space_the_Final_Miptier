@@ -4,7 +4,20 @@
 # consistent with theory and has one paramater, lambda
 # that can desribe it
 #............................
-
+library(GSIF)
+library(rgdal)
+library(raster)
+library(geoR)
+library(ranger)
+library(gstat)
+library(intamap)
+library(plyr)
+library(plotKML)
+library(scales)
+library(RCurl)
+library(parallel)
+library(lattice)
+library(gridExtra)
 #............................
 # Extract DRC Samples
 #............................

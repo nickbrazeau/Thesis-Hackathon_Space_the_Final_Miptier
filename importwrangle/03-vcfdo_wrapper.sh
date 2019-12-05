@@ -19,15 +19,3 @@ vcfdo polarize -f $FASTA | bgzip >  $vcfoutdir/polarized_biallelic_processed.vcf
 # wsaf and fws
 bcftools concat $vcfoutdir/polarized_biallelic_processed.vcf.bgz  | \
 vcfdo wsaf | bgzip >  $vcfoutdir/polarized_biallelic_processed.wsaf.vcf.bgz
-
-# ibs calculations out
-bcftools concat $vcfoutdir/polarized_biallelic_processed.wsaf.vcf.bgz  | \
-vcfdo ibs > $vcfoutdir/IBS_polarized_biallelic_processed.long.tab.txt
-
-# ibd calculations out
-bcftools concat $vcfoutdir/polarized_biallelic_processed.wsaf.vcf.bgz  | \
-vcfdo ibd > $vcfoutdir/IBD_polarized_biallelic_processed.long.tab.txt
-
-# sfs calculations out
-bcftools concat $vcfoutdir/polarized_biallelic_processed.wsaf.vcf.bgz  | \
-vcfdo sfs --reads > $vcfoutdir/sfs_polarized_biallelic_processed.long.tab.txt

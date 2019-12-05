@@ -1,0 +1,327 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# IBD  for Above Meiotic Siblings
+Here, let's look at pairs that have more level of relatedness than would be expected for a recombining pathogen (e.g. more than 0.5 relatedness, so more than meiotic siblings).
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+```{r}
+library(tidyverse)
+library(raster)
+library(tidygraph)
+library(ggraph)
+```
+
+```{r}
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("id", "hv001")) %>% 
+  dplyr::rename(name = id)
+
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(name = id) %>% 
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% drcsmpls$name)
+
+# drc prov for plot
+DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+# load pretty map aesthetics 
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+
+```
+```{r}
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+
+# log2 IBD measure
+ibD <- ibD %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens)
+
+
+```
+
+```{r}
+#..............................................................
+# Idenity samples with IBD that are greater than half the
+# genome (i.e. at or above meiotic siblings)
+# These represent likely recent transmission events
+#..............................................................
+ibD.meiotic <- ibD %>% 
+  dplyr::filter(malecotf_gens <= 1)
+ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
+ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
+# coord pts
+coords.pts <- mtdt %>% 
+  dplyr::select(c("name", "hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% ibdmeioticsmpls)
+# add spatial jitter
+coords.pts$long_jitter <- coords.pts$long + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
+coords.pts$lat_jitter <- coords.pts$lat + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
+
+# long connections
+colnames(coords.pts)[1] <- "smpl1"
+ibD.meiotic <- dplyr::left_join(ibD.meiotic, coords.pts, by = "smpl1")
+colnames(coords.pts)[1] <- "smpl2"
+ibD.meiotic <- dplyr::left_join(ibD.meiotic, coords.pts, by = "smpl2")
+colnames(coords.pts)[1] <- "name"
+
+
+ibD.meiotic_plot <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter), color = "#d9d9d9", size = 2, show.legend = F) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic.jpg",
+     height = 8, width = 8, units = "in", res = 500)
+plot(ibD.meiotic_plot)
+graphics.off()
+
+
+```
+
+```{r, results='asis'}
+plot(ibD.meiotic_plot)
+```
+
+
+### IBD Network for Above Meiotic Siblings and some city data
+Here, let's look at pairs that have more level of relatedness than would be expected for a recombining pathogen (e.g. more than 0.5 relatedness, so more than meiotic siblings) but now color clusters by nightlight density. 
+```{r}
+# extra for plotting
+drccities <- readxl::read_excel("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/DRC_city_coordinates.xlsx") %>% 
+  dplyr::mutate(latnum = as.numeric( stringr::str_split_fixed(coordinates, ",", n=2)[,1] ),
+                longnum = as.numeric( stringr::str_split_fixed(coordinates, ",", n=2)[,2] ) 
+                )
+ge <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>% 
+  dplyr::rename(hv001 = dhsclust) %>% 
+  dplyr::select(c("hv001", "urban_rura"))
+sf::st_geometry(ge) <- NULL
+
+# extract out coordinate information and join in urban rural data
+coords.pts <- sf::st_as_sf(coords.pts, coords = c("longnum", "latnum"), crs = 4326)
+coords.pts <- coords.pts %>% 
+  dplyr::left_join(., ge, by = "hv001") %>% 
+  dplyr::mutate(urban_rura_ext = ifelse(urban_rura == "R", 10000, 2000))
+
+
+urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
+
+
+urbanmean <- rep(NA, nrow(coords.pts)) 
+for (i in 1:nrow(coords.pts)) {
+  urbanmean[i] <-  raster::extract(x = urban,
+                                   y = sf::as_Spatial(coords.pts$geometry[i]),
+                                   buffer = coords.pts$urban_rura_ext[i],
+                                   fun = mean, na.rm = T
+  )
+}
+  
+coords.pts <- coords.pts %>% 
+  dplyr::mutate(long = sf::st_coordinates(geometry)[,1],
+                lat = sf::st_coordinates(geometry)[,2],
+                urbanmean = urbanmean)
+
+
+ibD.meiotic_plot <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter, 
+                                    fill = urbanmean, shape = factor(urban_rura)), 
+             size = 2) +
+  geom_point(data = drccities, aes(x = longnum, y=latnum), color = "#f0f0f0") + 
+  geom_text(data = drccities, aes(label = city, x = longnum, y=latnum), 
+            hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") +
+  scale_shape_manual("Urban-Rural", values = c(21, 24))
+
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic_citylights_cites_dhsurbanrural.jpg",
+     height = 8, width = 8, units = "in", res = 500)
+plot(ibD.meiotic_plot)
+graphics.off()
+
+
+```
+
+```{r, results='asis'}
+plot(ibD.meiotic_plot)
+```
+
+```{r}
+
+ibD.meiotic_plot <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter, 
+                                    fill = urbanmean), 
+             size = 2, shape = 21, stroke = 0) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") 
+
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic_citylights.jpg",
+     height = 8, width = 8, units = "in", res = 500)
+plot(ibD.meiotic_plot)
+graphics.off()
+
+
+```
+
+```{r, results='asis'}
+plot(ibD.meiotic_plot)
+```
+
+
+### Meiotic Network
+```{r, results='asis'}
+# convert to network
+meioticnetworkplot <- ibD.meiotic %>% 
+  tidygraph::as_tbl_graph(., directed = F) %>%
+  tidygraph::activate("nodes") %>% 
+  dplyr::left_join(., y = mtdt, by = "name") %>% 
+  ggraph(layout = 'kk') +
+  geom_edge_link(aes(width  = malecotf), color = "#969696", alpha = 0.5) +
+  geom_node_point(aes(color = factor(hv001)), size = 1) +
+  theme_graph()
+
+plot(meioticnetworkplot)
+```
+
+
+## Local vs. Long-Range Transmission
+```{r}
+local_trans <- ibD.meiotic %>% 
+  dplyr::filter(hv001.x == hv001.y)
+
+long_trans <- ibD.meiotic %>% 
+  dplyr::filter(hv001.x != hv001.y)
+
+```
+
+### Local Transmission Events
+```{r, results='asis'}
+ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  geom_jitter(data = local_trans, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 color = malecotf_gens),
+             width = 0.05, height = 0.05) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+```
+
+
+### Long-Range Transmission Events and Urbanicity
+```{r, results='asis'}
+
+coords.pts.longrange <- coords.pts %>% 
+  dplyr::filter(hv001 %in% c(unique(long_trans$hv001.x), unique(long_trans$hv001.y)))
+
+ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = long_trans, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts.longrange, aes(x = long_jitter, y = lat_jitter, 
+                                    fill = urbanmean), 
+             size = 2, shape = 21, stroke = 0) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") 
+
+```
+
+```{r, results='asis'}
+
+coords.pts.longrange <- coords.pts %>% 
+  dplyr::filter(hv001 %in% c(unique(long_trans$hv001.x), unique(long_trans$hv001.y)))
+urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
+
+ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  scale_fill_distiller("Urbanicity Score", type = "div", palette = "RdYlBu") +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = long_trans, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts.longrange, aes(x = long_jitter, y = lat_jitter), 
+             size = 2, shape = 21, stroke = 0.1, fill = NA) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+
+```
+
+**Consider Urbanicity as a Binary**. 
+Urbanitity in the top third percentile is city and below is rural. 
+
+```{r, results='asis'}
+
+urbancatch <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity_binary.grd")
+
+
+ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  ggspatial::layer_spatial(data = urbancatch, aes(fill = stat(band1))) +
+  scale_fill_distiller("Urbanicity Binary", type = "div", palette = "RdYlBu") +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = long_trans, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts.longrange, aes(x = long_jitter, y = lat_jitter), 
+             size = 2, shape = 21, stroke = 0.1, fill = NA) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+
+```
+
+
+### Meiotic Siblings and Prevalence
+```{r, results='asis'}
+
+#.............
+# Pf Prevalence
+#.............
+parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/parasiterate.grd")
+
+ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
+  scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
+  #prettybasemap_nodrc_dark +
+  geom_curve(data = long_trans, alpha = 0.5, size = 1.1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf_gens)) +
+  geom_point(data = coords.pts.longrange, aes(x = long_jitter, y = lat_jitter), 
+             size = 2, shape = 21, stroke = 0.1, fill = NA) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+
+```
+
