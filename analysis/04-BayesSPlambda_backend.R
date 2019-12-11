@@ -180,7 +180,7 @@ mods <- lapply(mods, function(x){
 #..............................................................
 mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
-                           n.sample = 1e6 + 1e4,
+                           n.sample = 1e5 + 1e4,
                            W = list(W))
 
 # rep this out three times for three levels of data
@@ -233,7 +233,7 @@ sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                                                  output = "%A_%a.out",
                                                  time = "12:00:00"))
 
-cat("*************************** \n Submitted Pv Power Calc Models \n *************************** ")
+cat("*************************** \n Submitted Carbayes Models \n *************************** ")
 
 
 

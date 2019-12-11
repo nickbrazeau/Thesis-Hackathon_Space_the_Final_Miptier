@@ -250,6 +250,7 @@ NB. Using the _Leroux et al. 2000_ specifiation of the Gaussian Markov Random Fi
 
 # read in results
 
+mod.framework.sp$MCMC #
 
 ```
 
