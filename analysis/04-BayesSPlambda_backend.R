@@ -180,7 +180,7 @@ mods <- lapply(mods, function(x){
 #..............................................................
 mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
-                           n.sample = 1e5 + 1e4,
+                           n.sample = 1e7 + 1e4,
                            W = list(W))
 
 # rep this out three times for three levels of data
@@ -199,6 +199,9 @@ mod.framework.sp <- dplyr::left_join(mod.framework.sp, mod.data.provCovar, by = 
 #..............................................................
 wrap_S.CARleroux <- function(distcat, formula, W, data, burnin, n.sample){
 
+  #..............................................................
+  # fit model
+  #..............................................................
   formvec <- paste(deparse(formula), collapse = "")
   betacount <- stringr::str_count(formvec, "\\+") + 1 # plus one for intercept
   prior.var.betavec <- rep(5e4, betacount) # note prior setting here
@@ -212,6 +215,34 @@ wrap_S.CARleroux <- function(distcat, formula, W, data, burnin, n.sample){
                                prior.tau2 = c(1, 0.01),
                                n.sample = n.sample)
   # note, rho by default is NULL which allows it to be estimated in the model
+
+
+  #-------------------------------------------------------------------------
+  # MCMC Diagnostics
+  #-------------------------------------------------------------------------
+  ret <- tibble::tibble(MCMC = list(ret))
+  ret$mcmc.modsum <- purrr::map(ret$MCMC, print)  # note, print is overloaded here
+  ret$summresults <- purrr::map(ret$mcmc.modsum, "summary.results")
+  ret$summresults <- purrr::map(ret$summresults, function(x){
+    pars <- rownames(x)
+    ret <- cbind.data.frame(pars = pars, as.data.frame(x))
+    return(ret)
+  })
+
+  #..............................................................
+  # DIC for fits
+  #..............................................................
+  ret$modfit <- purrr::map(ret$mcmc.modsum, "modelfit")
+  ret$DIC <- purrr::map(ret$modfit, "DIC")
+
+  #..............................................................
+  # Keep smaller piece
+  #..............................................................
+  ret <- ret %>%
+    dplyr::select(c("summresults", "DIC")) %>%
+    tidyr::unnest(cols = c("summresults", "DIC"))
+
+  return(ret)
 
 }
 # for slurm on LL

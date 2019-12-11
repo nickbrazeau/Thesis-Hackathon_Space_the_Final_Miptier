@@ -246,36 +246,13 @@ provCovar.geo %>%
 ### Make Model Framework
 NB. Using the _Leroux et al. 2000_ specifiation of the Gaussian Markov Random Field, we will allow  $\rho$ to be estimated under the model.
 
-```{r, results='asis'}
-
-# read in results
-
-mod.framework.sp$MCMC #
-
-```
 
 ### MCMC Diagnostics
 Note, our goal is to have the effective sample sizes (`n.effective`) to be at least 500 for all parameters. In addition, we will visually check for convergence among the four chains.
 
 
 ```{r}
-#-------------------------------------------------------------------------
-# MCMC Diagnostics
-#-------------------------------------------------------------------------
-mod.framework.sp$mcmc.modsum <- purrr::map(mod.framework.sp$MCMC, print)  # note, print is overloaded here
-mod.framework.sp$summresults <- purrr::map(mod.framework.sp$mcmc.modsum, "summary.results")
-mod.framework.sp$summresults <- purrr::map(mod.framework.sp$summresults, function(x){
-  pars <- rownames(x)
-  ret <- cbind.data.frame(pars = pars, as.data.frame(x))
-  return(ret)
-})
-
-#..............................................................
-# DIC for fits
-#..............................................................
-
-mod.framework.sp$modfit <- purrr::map(mod.framework.sp$mcmc.modsum, "modelfit")
-mod.framework.sp$DICs <- purrr::map(mod.framework.sp$modfit, "DIC")
+mod.framework.sp$MCMC #
 
 ```
 
