@@ -53,7 +53,7 @@ ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl2")
 #..............................................................
 # Import geographic distance and combine with genetic
 #..............................................................
-distancematrix.cluster <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_bycluster.rds")
+distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 
 ibDdist <- long_distance_matrix_join(x=ibD, y=distancematrix.cluster,
                                      by = c("hv001.x", "hv001.y")) %>%
@@ -121,7 +121,7 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 #..............................................................
 # Import Covariates for Province
 #..............................................................
-provCovar <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
+provCovar <- readRDS("data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
 
 #..............................................................
 # Combine outcome and covariate data
