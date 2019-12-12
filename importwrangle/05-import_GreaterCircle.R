@@ -8,13 +8,9 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%
   dplyr::filter(!is.na(latnum) & !is.na(longnum))
-ge.nosf <- ge
-sf::st_geometry(ge.nosf) <- NULL
 
+gc <- sf::st_distance(ge, which = "Great Circle")
 
-gc <- ge.nosf %>%
-  dplyr::select(c("longnum", "latnum")) %>%
-  geosphere::distm(x =., fun = geosphere::distGeo)
 
 dim(gc)
 length( unique(ge$dhsclust) )
@@ -31,14 +27,8 @@ saveRDS(gc.long, file = "data/distance_data/greater_circle_distance_forclusters.
 #---------------------------------------------------------------------------------------------------------------------------------------
 drcpov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")) %>%
   dplyr::mutate(provcentroid = sf::st_centroid(geometry))
-drcpov.nosf <- drcpov
-sf::st_geometry(drcpov.nosf) <- NULL
 
-gc <- drcpov.nosf %>%
-  dplyr::mutate(longnum = sf::st_coordinates(provcentroid)[,1],
-                latnum = sf::st_coordinates(provcentroid)[,2]) %>%
-  dplyr::select(c("longnum", "latnum")) %>%
-  geosphere::distm(x =., fun = geosphere::distGeo)
+gc <- sf::st_distance(drcpov, which = "Great Circle")
 
 dim(gc)
 length( unique(drcpov.nosf$adm1name) )

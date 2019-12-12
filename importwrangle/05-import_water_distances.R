@@ -121,11 +121,13 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
 
 load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
 rivernetworkplotObj <- ggplot() +
-  geom_sf(data = DRCprov, color = "#f0f0f0", fill = "#d9d9d9") +
-  geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(), color = "#1f78b4") +
-  geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.25, color = "#b2df8a") +
+  geom_sf(data = DRCprov, fill = "#525252", color = "#737373") +
+  geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
+          color = "#9ecae1") +
+  geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
+          size = 0.25, color = "#2171b5") +
   geom_sf(data = ge, color = "#33a02c") +
-  prettybasemap_nodrc +
+  prettybasemap_nodrc_dark +
   map_theme +
   theme(legend.position = "none") +
   coord_sf(datum = NA)

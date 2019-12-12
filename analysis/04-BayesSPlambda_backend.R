@@ -180,7 +180,7 @@ mods <- lapply(mods, function(x){
 #..............................................................
 mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
-                           n.sample = 1e7 + 1e4,
+                           n.sample = 1e6 + 1e4,
                            W = list(W))
 
 # rep this out three times for three levels of data
