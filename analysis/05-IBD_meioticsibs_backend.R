@@ -7,12 +7,12 @@ library(tidyverse)
 #..............................................................
 # Read in metadata
 #..............................................................
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::select(c("id", "hv001")) %>%
   dplyr::rename(name = id)
 
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>%
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::rename(name = id) %>%
   dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
@@ -20,7 +20,7 @@ mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sa
 #..............................................................
 # Read in IBD data
 #..............................................................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
 
 # log2 IBD measure
 ibD <- ibD %>%
@@ -96,7 +96,7 @@ meiotic_sib_wrapper <- function(nsmpls, IBDdistrib, covardistrib){
 #..............................................................
 # Bring in covariates for NULLs
 #..............................................................
-clstcovar <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_samplinglocations_raw.RDS")
+clstcovar <- readRDS("data/derived_data/covar_rasterstack_samplinglocations_raw.RDS")
 prevdistrib <- clstcovar$prev
 citydistrib <- clstcovar$urban
 # find distribution of samples that are from same cluster

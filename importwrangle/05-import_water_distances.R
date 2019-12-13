@@ -125,12 +125,10 @@ rivernetworkplotObj <- ggplot() +
   geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
           color = "#9ecae1") +
   geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
-          size = 0.25, color = "#2171b5") +
-  geom_sf(data = ge, color = "#33a02c") +
+          size = 0.25, color = "#9ecae1") +
+  geom_sf(data = ge, color = "#ff2e2e") +
   prettybasemap_nodrc_dark +
-  map_theme +
-  theme(legend.position = "none") +
-  coord_sf(datum = NA)
+  theme(legend.position = "none")
 
 jpeg("results/figures/rivernetwork_clusters.jpg",
      height = 12, width = 8, units = "in", res = 300)
