@@ -3,7 +3,7 @@
 # meiotic siblings with prevalence differences
 #..............................................................
 library(tidyverse)
-
+library(rslurm)
 #..............................................................
 # Read in metadata
 #..............................................................
@@ -129,8 +129,8 @@ sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
                             jobname = 'meiotic_null',
                             nodes = ntry,
                             cpus_per_node = 1,
-                            submit = T,
-                            slurm_options = list(mem = 4000,
+                            submit = F,
+                            slurm_options = list(mem = 32000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
                                                                  128),

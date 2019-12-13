@@ -121,14 +121,17 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
 
 load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
 rivernetworkplotObj <- ggplot() +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373") +
   geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
           color = "#9ecae1") +
   geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
           size = 0.25, color = "#9ecae1") +
   geom_sf(data = ge, color = "#ff2e2e") +
-  prettybasemap_nodrc_dark +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
+           datum = NA)
 
 jpeg("results/figures/rivernetwork_clusters.jpg",
      height = 12, width = 8, units = "in", res = 300)
