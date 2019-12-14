@@ -109,38 +109,15 @@ simdf <- tibble::tibble(
   IBDdistrib = list(ibD$malecotf),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e3
+iters <- 1e4
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)
 
-#ret <- purrr::pmap(simdf, meiotic_sib_wrapper)
-
-
-# for slurm on LL
+simdf$ret <- purrr::pmap(simdf, meiotic_sib_wrapper)
+simdf <- simdf %>%
+  dplyr::select(c("name", "ret"))
 dir.create("results/meiotic_null_dist", recursive = T)
-setwd("results/meiotic_null_dist/")
-ntry <- 1028 # max number of nodes
-sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
-                            params = simdf,
-                            jobname = 'meiotic_null',
-                            nodes = ntry,
-                            cpus_per_node = 1,
-                            submit = T,
-                            slurm_options = list(mem = 32000,
-                                                 array = sprintf("0-%d%%%d",
-                                                                 ntry,
-                                                                 128),
-                                                 'cpus-per-task' = 1,
-                                                 error =  "%A_%a.err",
-                                                 output = "%A_%a.out",
-                                                 time = "1:00:00"))
-
-cat("*************************** \n Submitted Permutation Sims \n *************************** ")
-
-
-
-
-
+saveRDS(simdf, file = "results/meiotic_null_dist/meoitic_null_distrib.RDS")
 
 

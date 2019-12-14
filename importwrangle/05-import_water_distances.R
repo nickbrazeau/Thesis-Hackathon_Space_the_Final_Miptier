@@ -137,7 +137,7 @@ jpeg("results/figures/rivernetwork_clusters.jpg",
      height = 12, width = 8, units = "in", res = 300)
 plot(rivernetworkplotObj)
 graphics.off()
-
+saveRDS(rivernetworkplotObj, file = "data/distance_data/rivernetworkplotObj.RDS")
 
 #............................................................................................................
 # Get nearest neighbors for river network

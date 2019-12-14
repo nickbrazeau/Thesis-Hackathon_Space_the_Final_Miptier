@@ -82,7 +82,7 @@ meiotic_sib_wrapper <- function(nsmpls, IBDdistrib, covardistrib){
   if (max(smpl.pair.IBD$simibd) >= 0.5) {
     smpl.pair.IBD.meiotic <- smpl.pair.IBD %>%
       dplyr::filter(simibd >= 0.5) %>%
-      dplyr::mutate(covardiff = abs(covar.x) - abs(covar.y)) # make magnitude same always
+      dplyr::mutate(covardiff = (covar.x - covar.y)^2 ) # sum of square so magnitude is captured
 
     return(smpl.pair.IBD.meiotic$covardiff)
 

@@ -631,7 +631,7 @@ obsurb <- dplyr::left_join(obsurb, urban.pts, by = "hv001.y") %>%
   dplyr::select(c(dplyr::starts_with("malecot"),
                   "hv001.x", "hv001.y",
                   "urbanmean.x", "urbanmean.y")) %>% 
-  dplyr::mutate(urbandiff =  urbanmean.x - urbanmean.y)
+  dplyr::mutate(urbandiff =  (urbanmean.x - urbanmean.y)^2)
 
 
 obsurb.urbnmeandiff <- mean(obsurb$urbandiff)
@@ -786,7 +786,7 @@ obsprev <- dplyr::left_join(obsprev, prev.pts, by = "hv001.y") %>%
   dplyr::select(c(dplyr::starts_with("malecot"),
                   "hv001.x", "hv001.y",
                   "prevmean.x", "prevmean.y")) %>% 
-  dplyr::mutate(prevdiff =  prevmean.x - prevmean.y)
+  dplyr::mutate(prevdiff =  (prevmean.x - prevmean.y)^2)
 
 
 obsprev_meandiff <- mean(obsprev$prevdiff)

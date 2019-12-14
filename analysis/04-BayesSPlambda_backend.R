@@ -121,7 +121,6 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 #..............................................................
 # Get within IBD for the Prov
 #..............................................................
-
 ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
   ret <- x %>%
     dplyr::filter(geodist == 0) %>%
@@ -135,6 +134,23 @@ ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, functi
 ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
   tidyr::unnest(cols = c("withinprovIBD"))
 
+
+#..............................................................
+# Get mean IBD for the Prov
+#..............................................................
+ibDdist.prov.lambda$meanprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
+  ret <- x %>%
+    dplyr::filter(malecotf_gens != Inf) %>%
+    dplyr::summarise(
+      meangens = mean(malecotf_gens)
+    )
+  return(as.numeric(ret))
+})
+
+ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
+  tidyr::unnest(cols = c("meanprovIBD"))
+
+
 #..............................................................
 # Import Covariates for Province
 #..............................................................
@@ -146,25 +162,26 @@ provCovar <- readRDS("data/derived_data/covar_rasterstack_provlocations_scaled.R
 # housekeeping
 riskvar <- colnames(provCovar)[!colnames(provCovar) %in% "adm1name"]
 ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
-  dplyr::rename(adm1name = adm1name.x)
+  dplyr::rename(adm1name = adm1name.x) %>%
+  dplyr::select(c("adm1name", "distcat", "genbase2_slope", "withinprovIBD", "meanprovIBD"))
 
-# slopes
-mod.data.provCovar.slope <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
-                                       by = "adm1name") %>%
-  dplyr::select(c("adm1name", "distcat", "genbase2_slope", riskvar)) %>%
-  dplyr::group_by(distcat) %>%
-  tidyr::nest()
 
-# within
-mod.data.provCovar.withinIBD <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
-                                             by = "adm1name") %>%
-  dplyr::select(c("adm1name", "distcat", "withinprovIBD", riskvar)) %>%
-  dplyr::group_by(distcat) %>%
+# model framework
+mod.IBD.provCovar <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
+                                       by = "adm1name")
+
+
+mod.IBD.provCovar <- mod.IBD.provCovar %>%
+  dplyr::select("adm1name", "distcat", riskvar, "genbase2_slope", "withinprovIBD", "meanprovIBD")
+
+mod.IBD.provCovar.nest <- mod.IBD.provCovar %>%
+  tidyr::gather(., key = "outcome", value = "ibd", 12:14) %>%
+  dplyr::group_by(distcat, outcome) %>%
   tidyr::nest()
 
 
 #-------------------------------------------------------------------------
-# Conditional Autoregressive Spatial Model for SLOPES
+# Conditional Autoregressive Spatial Model
 #-------------------------------------------------------------------------
 #......................
 # Make Adjacency Matrix for Pv
@@ -173,7 +190,7 @@ W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
 W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
 
 #..............................................................
-# Make Model Framework for SLOPE
+# Make Model Framework
 #..............................................................
 prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 
@@ -183,61 +200,25 @@ prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 # this model fit isn't important
 #.........................
 options(na.action = "na.fail")
-dat <- mod.data.provCovar.slope$data[[1]]
-mod.setup.slope <- lm(
-  as.formula(paste("genbase2_slope", "~", paste(prov.covar.names, collapse = "+"))),
+dat <- mod.IBD.provCovar.nest$data[[1]]
+mod <- lm(
+  as.formula(paste("ibd", "~", paste(prov.covar.names, collapse = "+"))),
   data = dat)
 
 # dredge
-mods <- MuMIn::dredge(mod.setup.slope, evaluate = F,
+mods <- MuMIn::dredge(mod, evaluate = F,
                       m.lim = c(1,10))
 
 # formula to string manipulation
 mods <- lapply(mods, function(x){
   charform <- paste(deparse(x), collapse = "")
-  ret <- str_match(charform, "genbase2_slope (.*?) 1")[1,1]
+  ret <- str_match(charform, "ibd (.*?) 1")[1,1]
   ret <- as.formula(ret)
   return(ret)
 })
 
 # add in intercept only models
-# MAKE MODELS for SLOPE
-mods.slope <- append(mods, as.formula("genbase2_slope ~ 1"))
-
-
-#..............................................................
-# Make Model Framework for Within Prov IBD
-#..............................................................
-prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
-
-#........................
-# Setup here is to just
-# get model form for dredges
-# this model fit isn't important
-#.........................
-options(na.action = "na.fail")
-dat <- mod.data.provCovar.withinIBD$data[[1]]
-mod.setup.wthnibd <- lm(
-  as.formula(paste("withinprovIBD", "~", paste(prov.covar.names, collapse = "+"))),
-  data = dat)
-
-# dredge
-mods <- MuMIn::dredge(mod.setup.wthnibd, evaluate = F,
-                      m.lim = c(1,10))
-
-# formula to string manipulation
-mods <- lapply(mods, function(x){
-  charform <- paste(deparse(x), collapse = "")
-  ret <- str_match(charform, "withinprovIBD (.*?) 1")[1,1]
-  ret <- as.formula(ret)
-  return(ret)
-})
-
-# add in intercept only models
-# MAKE MODELS for within ibd
-mods.wthnibd <- append(mods, as.formula("withinprovIBD ~ 1"))
-
-
+mods <- append(mods, as.formula("ibd ~ 1"))
 
 
 #..............................................................
@@ -293,23 +274,25 @@ wrap_S.CARleroux <- function(distcat, formula, W, data, burnin, n.sample){
 }
 
 #..............................................................
-# Spatial random effects Models for SLOPE
+# Spatial random effects Models
 #..............................................................
-mod.framework.sp.slope <- tibble(formula = mods.slope,
+mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
                            n.sample = 1e6 + 1e4,
                            W = list(W))
 
-# rep this out three times for three levels of data
-mod.framework.sp.slope <- lapply(1:3, function(x) return(mod.framework.sp.slope)) %>%
+# rep this out three times for levels of spatial data
+mod.framework.sp <- lapply(1:3, function(x) return(mod.framework.sp)) %>%
   dplyr::bind_rows() %>%
-  dplyr::mutate(distcat = c( rep("gcdistance", times = length(mods.slope)),
-                             rep("roaddistance", times = length(mods.slope)),
-                             rep("riverdistance", times = length(mods.slope))
+  dplyr::mutate(distcat = c( rep("gcdistance", times = nrow(mod.framework.sp)),
+                             rep("roaddistance", times = nrow(mod.framework.sp)),
+                             rep("riverdistance", times = nrow(mod.framework.sp))
                           )
   )
 
-mod.framework.sp.slope <- dplyr::left_join(mod.framework.sp.slope, mod.data.provCovar.slope, by = "distcat")
+mod.IBD.provCovar.nest.framework.sp <- dplyr::left_join(mod.IBD.provCovar.nest,
+                                                        mod.framework.sp,
+                                                        by = "distcat")
 
 
 # for slurm on LL
@@ -317,8 +300,8 @@ dir.create("results/carbayes_sp_dics", recursive = T)
 setwd("results/carbayes_sp_dics/")
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
-                            params = mod.framework.sp.slope,
-                            jobname = 'CARleroux_DICs_slope',
+                            params = mod.IBD.provCovar.nest,
+                            jobname = 'CARleroux_DICs',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
@@ -331,52 +314,5 @@ sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                                                  output = "%A_%a.out",
                                                  time = "12:00:00"))
 
-cat("*************************** \n Submitted Carbayes Slope Models \n *************************** ")
-
-
-#..............................................................
-# Spatial random effects Models for within IBD
-#..............................................................
-mod.framework.sp.wthnibd <- tibble(formula = mods.wthnibd,
-                                 burnin = 1e4,
-                                 n.sample = 1e6 + 1e4,
-                                 W = list(W))
-
-# rep this out three times for three levels of data
-mod.framework.sp.wthnibd <- lapply(1:3, function(x) return(mod.framework.sp.wthnibd)) %>%
-  dplyr::bind_rows() %>%
-  dplyr::mutate(distcat = c( rep("gcdistance", times = length(mods.wthnibd)),
-                             rep("roaddistance", times = length(mods.wthnibd)),
-                             rep("riverdistance", times = length(mods.wthnibd))
-  )
-  )
-
-mod.framework.sp.wthnibd <- dplyr::left_join(mod.framework.sp.wthnibd, mod.data.provCovar.withinIBD,
-                                             by = "distcat")
-
-# for slurm on LL
-dir.create("results/carbayes_sp_dics", recursive = T)
-setwd("results/carbayes_sp_dics/")
-ntry <- 1028 # max number of nodes
-sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
-                            params = mod.framework.sp.wthnibd,
-                            jobname = 'CARleroux_DICs_withinIBD',
-                            nodes = ntry,
-                            cpus_per_node = 1,
-                            submit = T,
-                            slurm_options = list(mem = 16000,
-                                                 array = sprintf("0-%d%%%d",
-                                                                 ntry,
-                                                                 128),
-                                                 'cpus-per-task' = 1,
-                                                 error =  "%A_%a.err",
-                                                 output = "%A_%a.out",
-                                                 time = "12:00:00"))
-
-cat("*************************** \n Submitted Carbayes Slope Models \n *************************** ")
-
-
-
-
-
+cat("*************************** \n Submitted Carbayes Models \n *************************** ")
 

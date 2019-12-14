@@ -184,4 +184,47 @@ provlvldists.long <- provlvldists %>%
 saveRDS(provlvldists.long, file = "data/distance_data/prov_road_distmeters_long.rds")
 
 
+#..............................................................
+# Make plot Obj for Road Network
+#..............................................................
+# README: I exported out the pdf lines portion of the
+# congo-democratic-republic-latest lines and to a shape file
+# and am reading it in below
+roads <- sf::st_read("data/raw_data/osrm/congo-democratic-republic-latest_shape_LINES_fromPbf.shp")
+
+roads.filt <- roads %>%
+  dplyr::filter( highway %in% c(
+    "primary", "secondary",
+    "primary_link", "secondary_link",
+    "tertiary", "tertiary_link",
+    "trunk", "trunk_link", "motorway", "road"
+  ))
+
+#...............................
+# map import
+#...............................
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+DRCprov <- readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")
+# read in GE as import
+ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::filter(latnum != 0 & longnum != 0) %>%
+  dplyr::filter(!is.na(latnum) & !is.na(longnum))
+
+# plot
+roadnetworkplotObj <- ggplot() +
+  prettybasemap_nodrc_dark +
+  geom_sf(data = DRCprov, fill = "#525252", color = "#737373", size = 0.05) +
+  geom_sf(data = roads.filt, fill = "#f0f0f0", color = "#f0f0f0") +
+  geom_sf(data = ge, color = "#ff2e2e") +
+  theme(legend.position = "none") +
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
+           datum = NA)
+
+jpeg("results/figures/roadnetwork_clusters.jpg",
+     height = 12, width = 8, units = "in", res = 300)
+plot(roadnetworkplotObj)
+graphics.off()
+saveRDS(roadnetworkplotObj, file = "data/distance_data/roadnetworkplotObj.RDS")
 
