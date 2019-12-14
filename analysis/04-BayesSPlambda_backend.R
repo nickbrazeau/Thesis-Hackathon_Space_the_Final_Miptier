@@ -124,9 +124,8 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
   ret <- x %>%
     dplyr::filter(geodist == 0) %>%
-    dplyr::filter(malecotf_gens != Inf) %>%
     dplyr::summarise(
-      meangens = mean(malecotf_gens)
+      meangens = mean(malecotf)
     )
   return(as.numeric(ret))
 })
@@ -140,9 +139,8 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 #..............................................................
 ibDdist.prov.lambda$meanprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
   ret <- x %>%
-    dplyr::filter(malecotf_gens != Inf) %>%
     dplyr::summarise(
-      meangens = mean(malecotf_gens)
+      meangens = mean(malecotf)
     )
   return(as.numeric(ret))
 })
