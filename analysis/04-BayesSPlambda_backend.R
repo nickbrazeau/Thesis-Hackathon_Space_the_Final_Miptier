@@ -298,7 +298,7 @@ dir.create("results/carbayes_sp_dics", recursive = T)
 setwd("results/carbayes_sp_dics/")
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
-                            params = mod.IBD.provCovar.nest,
+                            params = mod.IBD.provCovar.nest.framework.sp,
                             jobname = 'CARleroux_DICs',
                             nodes = ntry,
                             cpus_per_node = 1,
