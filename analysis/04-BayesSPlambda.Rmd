@@ -94,6 +94,7 @@ ibDdist.long <- ibDdist %>%
 
 ```
 
+<!-- TODO make above imported in already -->
 
 ## Epi Considerations
 Here we will analyze IBD using a traditional epidemiological approach. _Outcome_: pairwise IBD comparisons; _Covariates_: Differences among observations; _Spatial Autocorrelation_: Random Intercepts (Province). Gaussian Process (Cluster). _Link/family_: Given that we can normalize the IBD pairwise outcome, we will use a log-link and the Gaussian probability family for our generalized linear models. A log-link will be used given the expected exponential relationship of IBD and distance/covariates.   
@@ -252,15 +253,50 @@ Note, our goal is to have the effective sample sizes (`n.effective`) to be at le
 
 
 ```{r}
-mod.framework.sp$MCMC #
+provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/params.RDS") %>% 
+  dplyr::select(c("formula", "distcat"))
+
+# get all files
+provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/",
+                           pattern = ".RDS", full.names = T)
+provformlist <- provformlist[!grepl("f.RDS|params.RDS", provformlist)]
+
+
+provformlistdf <- tibble::tibble(
+  path = provformlist
+  ) %>% 
+  dplyr::mutate(fileord = stringr::str_extract(path, "[0-9]+"),
+                fileord = as.numeric(fileord)) %>% 
+  dplyr::arrange(fileord)
+
+# now get results
+provformlistdf$results <- purrr::map(provformlistdf$path, readRDS) 
+provmodels$results <- unlist(provformlistdf$results, recursive = F)
+
+# now examine models
+provmodels$min_nEff <- purrr::map(provmodels$results, function(x){
+  return(min(x$n.effective))
+})
+
+provmodels$DIC <- purrr::map(provmodels$results, function(x){
+  return(unique(x$DIC))
+})
+
+# select out what we need
+provmodels <- provmodels %>% 
+  dplyr::select(-c("results")) %>% 
+  tidyr::unnest(cols = c("min_nEff", "DIC")) %>% 
+  dplyr::mutate(formula = purrr::map(formula, function(x){
+    return(paste(deparse(x), collapse = ""))
+  }))
 
 ```
 
 #### Greater Circle DICs 
 ```{r, results='asis'}
 
-mod.framework.sp %>% 
-  dplyr::select(c("formula", "distcat", "DICs")) %>% 
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
   dplyr::filter(distcat == "gcdistance") %>% 
   dplyr::mutate(formula = deparse(formula)) %>% 
   DT::datatable(.,
@@ -276,8 +312,8 @@ mod.framework.sp %>%
 #### Road DICs 
 ```{r, results='asis'}
 
-mod.framework.sp %>% 
-  dplyr::select(c("formula", "distcat", "DICs")) %>% 
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
   dplyr::filter(distcat == "roaddistance") %>% 
   dplyr::mutate(formula = deparse(formula)) %>% 
   DT::datatable(.,
@@ -293,8 +329,8 @@ mod.framework.sp %>%
 #### River DICs 
 ```{r, results='asis'}
 
-mod.framework.sp %>% 
-  dplyr::select(c("formula", "distcat", "DICs")) %>% 
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
   dplyr::filter(distcat == "riverdistance") %>% 
   dplyr::mutate(formula = deparse(formula)) %>% 
   DT::datatable(.,

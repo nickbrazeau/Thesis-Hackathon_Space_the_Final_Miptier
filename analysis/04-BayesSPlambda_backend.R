@@ -119,6 +119,23 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 
 
 #..............................................................
+# Get within IBD for the Prov
+#..............................................................
+
+ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
+  ret <- x %>%
+    dplyr::filter(geodist == 0) %>%
+    dplyr::filter(malecotf_gens != Inf) %>%
+    dplyr::summarise(
+      meangens = mean(malecotf_gens)
+    )
+  return(as.numeric(ret))
+})
+
+ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
+  tidyr::unnest(cols = c("withinprovIBD"))
+
+#..............................................................
 # Import Covariates for Province
 #..............................................................
 provCovar <- readRDS("data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
@@ -126,18 +143,28 @@ provCovar <- readRDS("data/derived_data/covar_rasterstack_provlocations_scaled.R
 #..............................................................
 # Combine outcome and covariate data
 #..............................................................
-ibDdist.prov.lambda_out <- ibDdist.prov.lambda %>%
-  dplyr::select(c("adm1name.x", "distcat", "genbase2_slope")) %>%
+# housekeeping
+riskvar <- colnames(provCovar)[!colnames(provCovar) %in% "adm1name"]
+ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
   dplyr::rename(adm1name = adm1name.x)
 
-mod.data.provCovar <- dplyr::left_join(ibDdist.prov.lambda_out, provCovar,
+# slopes
+mod.data.provCovar.slope <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
                                        by = "adm1name") %>%
+  dplyr::select(c("adm1name", "distcat", "genbase2_slope", riskvar)) %>%
+  dplyr::group_by(distcat) %>%
+  tidyr::nest()
+
+# within
+mod.data.provCovar.withinIBD <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
+                                             by = "adm1name") %>%
+  dplyr::select(c("adm1name", "distcat", "withinprovIBD", riskvar)) %>%
   dplyr::group_by(distcat) %>%
   tidyr::nest()
 
 
 #-------------------------------------------------------------------------
-# Conditional Autoregressive Spatial Model
+# Conditional Autoregressive Spatial Model for SLOPES
 #-------------------------------------------------------------------------
 #......................
 # Make Adjacency Matrix for Pv
@@ -146,7 +173,7 @@ W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
 W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
 
 #..............................................................
-# Make Model Framework
+# Make Model Framework for SLOPE
 #..............................................................
 prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 
@@ -156,13 +183,13 @@ prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 # this model fit isn't important
 #.........................
 options(na.action = "na.fail")
-dat <- mod.data.provCovar$data[[1]]
-mod.setup <- lm(
+dat <- mod.data.provCovar.slope$data[[1]]
+mod.setup.slope <- lm(
   as.formula(paste("genbase2_slope", "~", paste(prov.covar.names, collapse = "+"))),
   data = dat)
 
 # dredge
-mods <- MuMIn::dredge(mod.setup, evaluate = F,
+mods <- MuMIn::dredge(mod.setup.slope, evaluate = F,
                       m.lim = c(1,10))
 
 # formula to string manipulation
@@ -173,26 +200,45 @@ mods <- lapply(mods, function(x){
   return(ret)
 })
 
+# add in intercept only models
+# MAKE MODELS for SLOPE
+mods.slope <- append(mods, as.formula("genbase2_slope ~ 1"))
 
 
 #..............................................................
-# Spatial random effects Models
+# Make Model Framework for Within Prov IBD
 #..............................................................
-mod.framework.sp <- tibble(formula = mods,
-                           burnin = 1e4,
-                           n.sample = 1e6 + 1e4,
-                           W = list(W))
+prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 
-# rep this out three times for three levels of data
-mod.framework.sp <- lapply(1:3, function(x) return(mod.framework.sp)) %>%
-  dplyr::bind_rows() %>%
-  dplyr::mutate(distcat = c( rep("gcdistance", times = length(mods)),
-                             rep("roaddistance", times = length(mods)),
-                             rep("riverdistance", times = length(mods))
-                          )
-  )
+#........................
+# Setup here is to just
+# get model form for dredges
+# this model fit isn't important
+#.........................
+options(na.action = "na.fail")
+dat <- mod.data.provCovar.withinIBD$data[[1]]
+mod.setup.wthnibd <- lm(
+  as.formula(paste("withinprovIBD", "~", paste(prov.covar.names, collapse = "+"))),
+  data = dat)
 
-mod.framework.sp <- dplyr::left_join(mod.framework.sp, mod.data.provCovar, by = "distcat")
+# dredge
+mods <- MuMIn::dredge(mod.setup.wthnibd, evaluate = F,
+                      m.lim = c(1,10))
+
+# formula to string manipulation
+mods <- lapply(mods, function(x){
+  charform <- paste(deparse(x), collapse = "")
+  ret <- str_match(charform, "withinprovIBD (.*?) 1")[1,1]
+  ret <- as.formula(ret)
+  return(ret)
+})
+
+# add in intercept only models
+# MAKE MODELS for within ibd
+mods.wthnibd <- append(mods, as.formula("withinprovIBD ~ 1"))
+
+
+
 
 #..............................................................
 # Run Leroux model in parallel on slurm
@@ -245,13 +291,34 @@ wrap_S.CARleroux <- function(distcat, formula, W, data, burnin, n.sample){
   return(ret)
 
 }
+
+#..............................................................
+# Spatial random effects Models for SLOPE
+#..............................................................
+mod.framework.sp.slope <- tibble(formula = mods.slope,
+                           burnin = 1e4,
+                           n.sample = 1e6 + 1e4,
+                           W = list(W))
+
+# rep this out three times for three levels of data
+mod.framework.sp.slope <- lapply(1:3, function(x) return(mod.framework.sp.slope)) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate(distcat = c( rep("gcdistance", times = length(mods.slope)),
+                             rep("roaddistance", times = length(mods.slope)),
+                             rep("riverdistance", times = length(mods.slope))
+                          )
+  )
+
+mod.framework.sp.slope <- dplyr::left_join(mod.framework.sp.slope, mod.data.provCovar.slope, by = "distcat")
+
+
 # for slurm on LL
 dir.create("results/carbayes_sp_dics", recursive = T)
 setwd("results/carbayes_sp_dics/")
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
-                            params = mod.framework.sp,
-                            jobname = 'CARleroux_DICs',
+                            params = mod.framework.sp.slope,
+                            jobname = 'CARleroux_DICs_slope',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
@@ -264,7 +331,49 @@ sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                                                  output = "%A_%a.out",
                                                  time = "12:00:00"))
 
-cat("*************************** \n Submitted Carbayes Models \n *************************** ")
+cat("*************************** \n Submitted Carbayes Slope Models \n *************************** ")
+
+
+#..............................................................
+# Spatial random effects Models for within IBD
+#..............................................................
+mod.framework.sp.wthnibd <- tibble(formula = mods.wthnibd,
+                                 burnin = 1e4,
+                                 n.sample = 1e6 + 1e4,
+                                 W = list(W))
+
+# rep this out three times for three levels of data
+mod.framework.sp.wthnibd <- lapply(1:3, function(x) return(mod.framework.sp.wthnibd)) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate(distcat = c( rep("gcdistance", times = length(mods.wthnibd)),
+                             rep("roaddistance", times = length(mods.wthnibd)),
+                             rep("riverdistance", times = length(mods.wthnibd))
+  )
+  )
+
+mod.framework.sp.wthnibd <- dplyr::left_join(mod.framework.sp.wthnibd, mod.data.provCovar.withinIBD,
+                                             by = "distcat")
+
+# for slurm on LL
+dir.create("results/carbayes_sp_dics", recursive = T)
+setwd("results/carbayes_sp_dics/")
+ntry <- 1028 # max number of nodes
+sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
+                            params = mod.framework.sp.wthnibd,
+                            jobname = 'CARleroux_DICs_withinIBD',
+                            nodes = ntry,
+                            cpus_per_node = 1,
+                            submit = T,
+                            slurm_options = list(mem = 16000,
+                                                 array = sprintf("0-%d%%%d",
+                                                                 ntry,
+                                                                 128),
+                                                 'cpus-per-task' = 1,
+                                                 error =  "%A_%a.err",
+                                                 output = "%A_%a.out",
+                                                 time = "12:00:00"))
+
+cat("*************************** \n Submitted Carbayes Slope Models \n *************************** ")
 
 
 

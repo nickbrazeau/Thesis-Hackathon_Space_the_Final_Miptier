@@ -38,9 +38,6 @@ ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
 ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 
 
-
-
-
 #..............................................................
 # Permutation Testing
 #..............................................................
@@ -112,12 +109,12 @@ simdf <- tibble::tibble(
   IBDdistrib = list(ibD$malecotf),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e4
+iters <- 1e3
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)
 
-
+#ret <- purrr::pmap(simdf, meiotic_sib_wrapper)
 
 
 # for slurm on LL
@@ -129,7 +126,7 @@ sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
                             jobname = 'meiotic_null',
                             nodes = ntry,
                             cpus_per_node = 1,
-                            submit = F,
+                            submit = T,
                             slurm_options = list(mem = 32000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
