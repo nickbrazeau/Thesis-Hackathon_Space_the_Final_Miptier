@@ -38,12 +38,51 @@ ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/big
 ibD <- ibD %>%
   dplyr::mutate(malecotf_gens = -log2(malecotf),
                 malecotf_gens_inv = 1/malecotf_gens)
-
-
 ibD.long <- expand_distance_matrix(ibD)
 
+
 #..............................................................
-# Get Covariates for Province
+# Wrangle outcomes
+#..............................................................
+# liftover IBD
+mtdt.prov <- mtdt %>%
+  dplyr::select(c("name", "adm1name"))
+
+colnames(mtdt.prov)[1] <- "smpl1"
+ibD.long <- dplyr::left_join(ibD.long, mtdt.prov, by = "smpl1")
+
+colnames(mtdt.prov)[1] <- "smpl2"
+ibD.long <- dplyr::left_join(ibD.long, mtdt.prov, by = "smpl2")
+
+
+# loop through IBD now
+adm1name.pairs <- tibble::as_tibble(
+expand.grid(list(DRCprov$adm1name, DRCprov$adm1name)) ) %>%
+  magrittr::set_colnames(c("adm1name.x", "adm1name.y")) %>%
+  dplyr::filter(adm1name.x != adm1name.y)
+# function for mean IBD btwn provs
+get_mean_IBD_prov <- function(adm1name.x, adm1name.y){
+  x = adm1name.x
+  y = adm1name.y
+  ret <- ibD.long %>%  dplyr::filter(adm1name.x == as.character(x) &
+                                       adm1name.y == as.character(y)) %>%
+    dplyr::summarise(
+      n = n(),
+      meanIBD = mean(malecotf),
+      seIBD = sd(malecotf)/sqrt(n),
+      LLIBD = meanIBD - 1.96 * seIBD,
+      ULIBD = meanIBD + 1.96 * seIBD
+    )
+  return(ret)
+}
+
+adm1name.pairs$meanIBD <- purrr::pmap(adm1name.pairs, get_mean_IBD_prov)
+adm1name.pairs <- adm1name.pairs %>%
+  tidyr::unnest(cols = meanIBD)
+
+
+#..............................................................
+# Get Covariates for Provinces
 #..............................................................
 covarrstr <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_raw.RDS")
 
@@ -65,47 +104,42 @@ provCovar <- lapply(adm1.list, extract_agg_raster_polygon, rstrlyr = covarrstr)
 provCovar <- do.call("rbind.data.frame", provCovar)
 colnames(provCovar) <- names(covarrstr)
 
-# add back in geometry and ad1names
+#......................................
+# Wrangle -- add back in for modeling
+#......................................
 provCovar <- cbind.data.frame(adm1, provCovar)
-provCovar <- sf::st_as_sf(provCovar)
+colnames(provCovar)[1] <- "adm1name.x"
+adm1name.pairs <- dplyr::left_join(adm1name.pairs, provCovar, by = "adm1name.x")
 
-#..............................................................
-# Wrangle Covariates for and outcomes
-#..............................................................
-mtdt.prov <- mtdt %>%
-  dplyr::select(c("name", "adm1name"))
+colnames(provCovar)[1] <- "adm1name.y"
+adm1name.pairs <- dplyr::left_join(adm1name.pairs, provCovar, by = "adm1name.y")
 
-# liftover IBD
-colnames(mtdt.prov)[1] <- "smpl1"
-ibD.long <- dplyr::left_join(ibD.long, mtdt.prov, by = "smpl1")
 
-colnames(mtdt.prov)[1] <- "smpl2"
-ibD.long <- dplyr::left_join(ibD.long, mtdt.prov, by = "smpl2")
-
-# liftover covar
-provCovar.nosf <- provCovar
-sf::st_geometry(provCovar.nosf) <- NULL
-colnames(provCovar.nosf)[1] <- "adm1name.x"
-ibD.long <- dplyr::left_join(ibD.long, provCovar.nosf, by = "adm1name.x")
-
-colnames(provCovar.nosf)[1] <- "adm1name.y"
-ibD.long <- dplyr::left_join(ibD.long, provCovar.nosf, by = "adm1name.y")
-
-#......................................
-# Wrangle
-#......................................
-ibD.provdiff <- ibD.long %>%
+adm1name.pairs.diff <- adm1name.pairs %>%
   dplyr::mutate(
-    prevdiff = prev.x - prev.y,
-    precipdiff = precip.x - precip.y,
-    tempdiff = temp.x - temp.y,
-    elevdiff = elev.x - elev.y,
-    cropsdiff = crops.x - crops.y,
-    actusediff = actuse.x - actuse.y,
-    netusediff = netuse.x - netuse.y,
-    housingdiff = housing.x - housing.y
+    prevdiff = (prev.x - prev.y)^2,
+    precipdiff = (precip.x - precip.y)^2,
+    tempdiff = (temp.x - temp.y)^2,
+    elevdiff = (elev.x - elev.y)^2,
+    cropsdiff = (crops.x - crops.y)^2,
+    actusediff = (actuse.x - actuse.y)^2,
+    netusediff = (netuse.x - netuse.y)^2,
+    housingdiff = (housing.x - housing.y)^2
   ) %>%
-  dplyr::select(c("adm1name.x", "adm1name.y",  dplyr::starts_with("malecot"), dplyr::ends_with("diff")))
+  dplyr::select(c("adm1name.x", "adm1name.y",
+                  "n", "meanIBD", "seIBD", "LLIBD", "ULIBD",
+                  dplyr::ends_with("diff"))) %>%
+  dplyr::mutate(
+    # rescale everything
+    prevdiff = my.scale(prevdiff),
+    precipdiff = my.scale(precipdiff),
+    tempdiff = my.scale(tempdiff),
+    elevdiff = my.scale(elevdiff),
+    cropsdiff = my.scale(cropsdiff),
+    actusediff = my.scale(actusediff),
+    netusediff = my.scale(netusediff),
+    housingdiff = my.scale(housingdiff)
+  )
 
 
 #..............................................................
@@ -122,9 +156,9 @@ covars <- c("prevdiff", "precipdiff", "tempdiff",
 
 mods <- tibble(
   class = rep(c("base", "full"), 3),
-  space = rep(c("gcdistance", "roaddistance", "riverdistance"), 2),
+  space = rep(c("gcdistance.scale", "roaddistance.scale", "riverdistance.scale"), 2),
   covars = rep(c("", list(covars)), 3),
-  outcome = "malecotf_gens"
+  outcome = "meanIBD"
 ) %>%
   dplyr::arrange(class)
 
@@ -134,41 +168,26 @@ mods <- tibble(
 #..............................................................
 # Setup Data and Inputs
 #..............................................................
-
-ibD.provdiff.zt <- ibD.provdiff %>%
-  dplyr::filter(malecotf_gens != Inf)
-
 space_prov_matrix <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_byprovince.rds") %>%
   dplyr::select(c(dplyr::starts_with("adm1name"), dplyr::everything()))
 
 
-ibD.provdiff.zt <- long_distance_matrix_join(ibD.provdiff.zt, space_prov_matrix,
+adm1name.pairs.diff <- long_distance_matrix_join(adm1name.pairs.diff, space_prov_matrix,
                                              by = c("adm1name.x", "adm1name.y"))
 
-ibD.provdiff.zt <- ibD.provdiff.zt %>%
-  dplyr::mutate(gcdistance = ifelse(adm1name.x == adm1name.y, .Machine$double.xmin, gcdistance),
-                roaddistance = ifelse(adm1name.x == adm1name.y, .Machine$double.xmin, roaddistance),
-                riverdist = ifelse(adm1name.x == adm1name.y, .Machine$double.xmin, riverdist),
+adm1name.pairs.diff <- adm1name.pairs.diff %>%
+  dplyr::mutate(
                 # note need to scale distances for stabilization of glmm
-                gcdistance = my.scale(gcdistance),
-                roaddistance = my.scale(roaddistance),
-                riverdistance = my.scale(riverdist),
-                # rescale everything
-                prevdiff = my.scale(prevdiff),
-                precipdiff = my.scale(precipdiff),
-                tempdiff = my.scale(tempdiff),
-                elevdiff = my.scale(elevdiff),
-                cropsdiff = my.scale(cropsdiff),
-                actusediff = my.scale(actusediff),
-                netusediff = my.scale(netusediff),
-                housingdiff = my.scale(housingdiff)
-  )
+                gcdistance.scale = my.scale(gcdistance),
+                roaddistance.scale = my.scale(roaddistance),
+                riverdistance.scale = my.scale(riverdist)
+                )
 
 
 
 
-fit_glmm_adm1 <- function(outcome, covars, space){
-  if (covars == "") {
+fit_glmm_adm1 <- function(class, outcome, covars, space){
+  if (class == "base") {
     eq <- as.formula(paste0(outcome, "~",
                             "(1+", space, "|", "adm1name.x)"))
   } else {
@@ -176,9 +195,10 @@ fit_glmm_adm1 <- function(outcome, covars, space){
                             "+ (1+", space, "|", "adm1name.x)"))
   }
   ret <- lme4::glmer(eq,
-                     data =  ibD.provdiff.zt,
+                     data =  adm1name.pairs.diff,
                      family = gaussian(link="log"),
-                     na.action = "na.fail")
+                     na.action = "na.fail",
+                     weights = n)
   return(ret)
 
 }
@@ -186,7 +206,7 @@ fit_glmm_adm1 <- function(outcome, covars, space){
 #..............................................................
 # Run Models
 #..............................................................
-mods$fitout <- furrr::future_pmap(mods[, c("outcome", "covars", "space")], fit_glmm_adm1)
+mods$fitout <- furrr::future_pmap(mods, fit_glmm_adm1)
 mods$modsum <- purrr::map(mods$fitout, summary)
 
 

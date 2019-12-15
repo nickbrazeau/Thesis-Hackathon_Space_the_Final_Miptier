@@ -45,7 +45,7 @@ ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 # Permutation Testing
 #..............................................................
 # Wrapper for Meiotic Siblings
-meiotic_sib_wrapper <- function(nsmpls, IBDdistrib, covardistrib){
+meiotic_sib_wrapper <- function(names, nsmpls, IBDdistrib, covardistrib){
   #' @param nsmpls numeric; number of samples to simulate as pairs for IBD
   #' @param IBDdistrib numeric vector; distribution of IBD in population
   #' @param covardistrib numeric vector; distribution of covariate in population
@@ -112,12 +112,13 @@ simdf <- tibble::tibble(
   IBDdistrib = list(ibD$malecotf),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e4
+iters <- 1e3
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)
 
-
+simdf$results <- purrr::pmap(simdf, meiotic_sib_wrapper)
+saveRDS(simdf, file = "~/Desktop/temp.rds")
 
 
 # for slurm on LL
@@ -140,14 +141,6 @@ sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
                                                  time = "1:00:00"))
 
 cat("*************************** \n Submitted Permutation Sims \n *************************** ")
-
-
-
-
-# save out
-dir.create("results/meiotic_null_dist/", recursive = T)
-saveRDS(simdf, file = "results/meiotic_null_dist/meiotic_null_dist_permutations.RDS")
-
 
 
 

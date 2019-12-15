@@ -328,7 +328,9 @@ ggplot() +
              aes(x = longnum, y = latnum, 
                  color = factor(hv001),
                  size = node_edge_density), alpha = 0.5, show.legend = F) + 
-  ggrepel::geom_label_repel(aes(label = hv001)) +
+  ggrepel::geom_label_repel(data = notsameclst.nodes, 
+                            aes(x = longnum, y = latnum,
+                                label = hv001)) +
   ggtitle("Long Transmission Events") + 
   theme(legend.position = "bottom")
 
@@ -341,10 +343,10 @@ ggplot() +
 ```{r}
 perms.clstwthn <- perms %>% 
   dplyr::filter(name == "clstwthn") %>% 
-  dplyr::select("ret") 
+  dplyr::select("results") 
 
 # lift over result
-perms.clstwthn$wthncount <- purrr::map(perms.clstwthn$ret, function(x){
+perms.clstwthn$wthncount <- purrr::map(perms.clstwthn$results, function(x){
   return(sum(x == 0)) # if it was the same cluster, hv001 - hv001 would be 0 
 })
 
@@ -381,10 +383,10 @@ plot(perms.clstwthn.plotObj)
 ```{r}
 perms.clstbtwen <- perms %>% 
   dplyr::filter(name == "clstwthn") %>% 
-  dplyr::select("ret") 
+  dplyr::select("results") 
 
 # lift over result
-perms.clstbtwen$wthncount <- purrr::map(perms.clstbtwen$ret, function(x){
+perms.clstbtwen$wthncount <- purrr::map(perms.clstbtwen$results, function(x){
   return(sum(x != 0)) # if it was the same cluster, hv001 - hv001 would be 0 
 })
 
@@ -607,12 +609,12 @@ ggplot() +
 ```{r}
 perms.urb <- perms %>% 
   dplyr::filter(name == "urban") %>% 
-  dplyr::select("ret") 
+  dplyr::select("results") 
 
 # process data
 perms.urb <- perms.urb %>% 
   dplyr::mutate(
-    urbnmeandiff = purrr::map(ret, mean)
+    urbnmeandiff = purrr::map(results, mean)
   ) %>% 
   tidyr::unnest(cols = urbnmeandiff)
 
@@ -761,12 +763,12 @@ graphics.off()
 ```{r}
 perms.prev <- perms %>% 
   dplyr::filter(name == "prev") %>% 
-  dplyr::select("ret") 
+  dplyr::select("results") 
 
 # process data
 perms.prev <- perms.prev %>% 
   dplyr::mutate(
-    prevmeandiff = purrr::map(ret, mean)
+    prevmeandiff = purrr::map(results, mean)
   ) %>% 
   tidyr::unnest(cols = prevmeandiff)
 
