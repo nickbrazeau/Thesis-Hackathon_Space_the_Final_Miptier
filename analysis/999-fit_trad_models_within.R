@@ -1,6 +1,6 @@
 #---------------------------------------------------------------------------
 # Purpose of this script is to do fit our pairwise traditional
-# epi models as a backend process BETWEEN provinces.
+# epi models as a backend process WITHIN provinces.
 # Don't want to do this every time we knit
 #----------------------------------------------------------------------------
 library(tidyverse)
@@ -55,31 +55,31 @@ colnames(mtdt.prov)[1] <- "smpl2"
 ibD.long <- dplyr::left_join(ibD.long, mtdt.prov, by = "smpl2")
 
 
-# loop through IBD now
-adm1name.pairs <- tibble::as_tibble(
-expand.grid(list(DRCprov$adm1name, DRCprov$adm1name)) ) %>%
-  magrittr::set_colnames(c("adm1name.x", "adm1name.y")) %>%
-  dplyr::filter(adm1name.x != adm1name.y)
-# function for mean IBD btwn provs
-get_mean_IBD_prov <- function(adm1name.x, adm1name.y){
-  x = adm1name.x
-  y = adm1name.y
-  ret <- ibD.long %>%  dplyr::filter(adm1name.x == as.character(x) &
-                                       adm1name.y == as.character(y)) %>%
-    dplyr::summarise(
-      n = n(),
-      meanIBD = mean(malecotf),
-      seIBD = sd(malecotf)/sqrt(n),
-      LLIBD = meanIBD - 1.96 * seIBD,
-      ULIBD = meanIBD + 1.96 * seIBD
-    )
-  return(ret)
-}
+adm1.IBD.btwn <- ibD.long %>%
+  dplyr::group_by(adm1name.x) %>%
+  dplyr::summarise(
+    n = n(),
+    meanIBD = mean(malecotf),
+    seIBD = sd(malecotf)/sqrt(n),
+    LLIBD = meanIBD - 1.96 * seIBD,
+    ULIBD = meanIBD + 1.96 * seIBD
+  ) %>%
+  dplyr::rename(adm1name = adm1name.x)
 
-adm1name.pairs$meanIBD <- purrr::pmap(adm1name.pairs, get_mean_IBD_prov)
-adm1name.pairs <- adm1name.pairs %>%
-  tidyr::unnest(cols = meanIBD)
+adm1.IBD.wthn <- ibD.long %>%
+  dplyr::filter(adm1name.x == adm1name.y) %>%
+  dplyr::group_by(adm1name.x) %>%
+  dplyr::summarise(
+    wthnn = n(),
+    wthnIBD = mean(malecotf),
+    sewthnIBD = sd(malecotf)/sqrt(wthnn),
+    LLwthnIBD = wthnIBD - 1.96 * sewthnIBD,
+    ULwthnIBD= wthnIBD + 1.96 * sewthnIBD
+  ) %>%
+  dplyr::rename(adm1name = adm1name.x)
 
+adm1.IBD <- dplyr::left_join(adm1.IBD.btwn, adm1.IBD.wthn,
+                             by = "adm1name")
 
 #..............................................................
 # Get Covariates for Provinces
@@ -103,44 +103,27 @@ adm1.list <- split(adm1, 1:nrow(adm1))
 provCovar <- lapply(adm1.list, extract_agg_raster_polygon, rstrlyr = covarrstr)
 provCovar <- do.call("rbind.data.frame", provCovar)
 colnames(provCovar) <- names(covarrstr)
+sf::st_geometry(provCovar) <- NULL
 
 #......................................
 # Wrangle -- add back in for modeling
 #......................................
 provCovar <- cbind.data.frame(adm1, provCovar)
-colnames(provCovar)[1] <- "adm1name.x"
-adm1name.pairs <- dplyr::left_join(adm1name.pairs, provCovar, by = "adm1name.x")
+adm1.IBD.covar <- dplyr::left_join(adm1.IBD, provCovar, by = "adm1name")
 
-colnames(provCovar)[1] <- "adm1name.y"
-adm1name.pairs <- dplyr::left_join(adm1name.pairs, provCovar, by = "adm1name.y")
-
-
-adm1name.pairs.diff <- adm1name.pairs %>%
-  dplyr::mutate(
-    prevdiff = (prev.x - prev.y)^2,
-    precipdiff = (precip.x - precip.y)^2,
-    tempdiff = (temp.x - temp.y)^2,
-    elevdiff = (elev.x - elev.y)^2,
-    cropsdiff = (crops.x - crops.y)^2,
-    actusediff = (actuse.x - actuse.y)^2,
-    netusediff = (netuse.x - netuse.y)^2,
-    housingdiff = (housing.x - housing.y)^2
-  ) %>%
-  dplyr::select(c("adm1name.x", "adm1name.y",
-                  "n", "meanIBD", "seIBD", "LLIBD", "ULIBD",
-                  dplyr::ends_with("diff"))) %>%
+# more wrangle
+adm1.IBD.covar <- adm1.IBD.covar %>%
   dplyr::mutate(
     # rescale everything
-    prevdiff = my.scale(prevdiff),
-    precipdiff = my.scale(precipdiff),
-    tempdiff = my.scale(tempdiff),
-    elevdiff = my.scale(elevdiff),
-    cropsdiff = my.scale(cropsdiff),
-    actusediff = my.scale(actusediff),
-    netusediff = my.scale(netusediff),
-    housingdiff = my.scale(housingdiff)
+    prev = my.scale(prev),
+    precip = my.scale(precip),
+    temp = my.scale(temp),
+    elev = my.scale(elev),
+    crops = my.scale(crops),
+    actuse = my.scale(actuse),
+    netuse  = my.scale(netuse),
+    housing = my.scale(housing)
   )
-
 
 #..............................................................
 # Fit Model and Perform Model Selection
@@ -149,76 +132,69 @@ adm1name.pairs.diff <- adm1name.pairs %>%
 # https://rstudio-pubs-static.s3.amazonaws.com/63556_e35cc7e2dfb54a5bb551f3fa4b3ec4ae.html
 # https://bbolker.github.io/stat4c03/notes/mixed_details.html
 
-covars <- c("prevdiff", "precipdiff", "tempdiff",
-            "elevdiff", "cropsdiff", "actusediff",
-            "netusediff", "housingdiff")
+covars <- c("prev", "precip", "temp",
+            "elev", "crops", "actuse",
+            "netuse", "housing")
 
-
-mods <- tibble(
-  class = rep(c("base", "full"), 3),
-  space = rep(c("gcdistance.scale", "roaddistance.scale", "riverdistance.scale"), 2),
-  covars = rep(c("", list(covars)), 3),
-  outcome = "meanIBD"
-) %>%
-  dplyr::arrange(class)
-
-
-
-
-#..............................................................
-# Setup Data and Inputs
-#..............................................................
-space_prov_matrix <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_byprovince.rds") %>%
-  dplyr::select(c(dplyr::starts_with("adm1name"), dplyr::everything()))
-
-
-adm1name.pairs.diff <- long_distance_matrix_join(adm1name.pairs.diff, space_prov_matrix,
-                                             by = c("adm1name.x", "adm1name.y"))
-
-adm1name.pairs.diff <- adm1name.pairs.diff %>%
+# just make simple functions
+wthndat <- adm1.IBD.covar %>%
+  dplyr::select(-c("n", "meanIBD")) %>%
+  dplyr::rename(ibd = wthnIBD,
+                n = wthnn) %>%
   dplyr::mutate(
-                # note need to scale distances for stabilization of glmm
-                gcdistance.scale = my.scale(gcdistance),
-                roaddistance.scale = my.scale(roaddistance),
-                riverdistance.scale = my.scale(riverdist)
-                )
+    IBDlvl = "within"
+  )
+
+meandat <- adm1.IBD.covar %>%
+  dplyr::select(-c("wthnn", "wthnIBD")) %>%
+  dplyr::rename(ibd = meanIBD) %>%
+  dplyr::mutate(
+    IBDlvl = "mean"
+  )
+
+# dredge looks for data in global environment, can't use nested
+IBDdat <- cbind.data.frame(wthndat, meandat)
 
 
+adm1_models <- tibble::tibble(
+  class = c("base", "base", "covars", "covars"),
+  outcome = "ibd",
+  covars = list("", "", covars, covars)
+)
 
-
-fit_glmm_adm1 <- function(class, outcome, covars, space){
+# modeling equation
+fit_glm_adm1 <- function(class, outcome, covars){
   if (class == "base") {
-    eq <- as.formula(paste0(outcome, "~",
-                            "(1+", space, "|", "adm1name.x)"))
+    eq <- as.formula(paste0(outcome, "~ 1"))
   } else {
-    eq <- as.formula(paste0(outcome, "~", paste(covars, collapse = "+"),
-                            "+ (1+", space, "|", "adm1name.x)"))
+    eq <- as.formula(paste0(outcome, "~", paste(covars, collapse = "+")))
   }
-  ret <- lme4::glmer(eq,
-                     data =  adm1name.pairs.diff,
-                     family = gaussian(link="log"),
-                     na.action = "na.fail",
-                     weights = n)
+  ret <- glm(eq,
+             data =  IBDdat,
+             family = gaussian(link="log"),
+             na.action = "na.fail",
+             weights = n)
   return(ret)
 
 }
 
+
 #..............................................................
 # Run Models
 #..............................................................
-mods$fitout <- furrr::future_pmap(mods, fit_glmm_adm1)
-mods$modsum <- purrr::map(mods$fitout, summary)
+adm1_models$fitout <- furrr::future_pmap(adm1_models, fit_glm_adm1)
+adm1_models$modsum <- purrr::map(adm1_models$fitout, summary)
 
 
 #..............................................................
 # Explore Combinations of Saturated Models Models
 #..............................................................
 # limit combinations to 18, which is the number of our non-spatial covars times 2
-mods$dredging <- purrr::map(mods$fitout, function(x){
-  if (length(x@beta) == 1) {
+adm1_models$dredging <- purrr::pmap(adm1_models[,c("class", "fitout")], function(class, fitout){
+  if (class == "base") {
     ret <- NA
   } else {
-    ret <- MuMIn::dredge(x, m.lim = c(1,18))
+    ret <- MuMIn::dredge(fitout, m.lim = c(1,18))
   }
   return(ret)
 })
@@ -227,6 +203,9 @@ mods$dredging <- purrr::map(mods$fitout, function(x){
 # Save out
 #..............................................................
 dir.create("results/trad_epi_fits/", recursive = T)
-saveRDS(mods, "results/trad_epi_fits/Provglmm_between_modfits.RDS")
+saveRDS(adm1_models, "results/trad_epi_fits/Provglm_within_modfits.RDS")
+
+
+
 
 

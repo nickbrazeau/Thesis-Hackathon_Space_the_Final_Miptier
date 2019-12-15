@@ -253,8 +253,11 @@ Note, our goal is to have the effective sample sizes (`n.effective`) to be at le
 
 
 ```{r}
+# clear memory for markdown
+rm(list = ls())
+
 provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/params.RDS") %>% 
-  dplyr::select(c("formula", "distcat"))
+  dplyr::select(c("formula", "outcome", "distcat"))
 
 # get all files
 provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/",
@@ -270,8 +273,8 @@ provformlistdf <- tibble::tibble(
   dplyr::arrange(fileord)
 
 # now get results
-provformlistdf$results <- purrr::map(provformlistdf$path, readRDS) 
-provmodels$results <- unlist(provformlistdf$results, recursive = F)
+nick <- unlist(purrr::map(provformlistdf$path, readRDS), 
+                             recursive = F)
 
 # now examine models
 provmodels$min_nEff <- purrr::map(provmodels$results, function(x){

@@ -75,11 +75,11 @@ meiotic_sib_wrapper <- function(name, nsmpls, IBDdistrib, covardistrib){
 
   # given that you are at or above meiotic, this is what your
   # covar distribution should look like
-  smpl.pair.IBD <- IBDpermutator(nsmpls, IBDdistrib, covardistrib)
+  smpl.pair.IBD <- IBDpermutator(name, nsmpls, IBDdistrib, covardistrib)
   if (max(smpl.pair.IBD$simibd) >= 0.5) {
     smpl.pair.IBD.meiotic <- smpl.pair.IBD %>%
       dplyr::filter(simibd >= 0.5) %>%
-      dplyr::mutate(covardiff = abs(covar.x) - abs(covar.y)) # make magnitude same always
+      dplyr::mutate(covardiff = (covar.x - covar.y)^2) # make magnitude same always
 
     return(smpl.pair.IBD.meiotic$covardiff)
 
@@ -109,7 +109,7 @@ simdf <- tibble::tibble(
   IBDdistrib = list(ibD$malecotf),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e4
+iters <- 1e3
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)

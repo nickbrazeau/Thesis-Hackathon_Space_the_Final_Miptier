@@ -279,18 +279,22 @@ mod.framework.sp <- tibble(formula = mods,
                            n.sample = 1e6 + 1e4,
                            W = list(W))
 
-# rep this out three times for levels of spatial data
-mod.framework.sp <- lapply(1:3, function(x) return(mod.framework.sp)) %>%
-  dplyr::bind_rows() %>%
-  dplyr::mutate(distcat = c( rep("gcdistance", times = nrow(mod.framework.sp)),
-                             rep("roaddistance", times = nrow(mod.framework.sp)),
-                             rep("riverdistance", times = nrow(mod.framework.sp))
-                          )
-  )
+# rep this out three times for levels of spatial data, three model levels
+mod.framework.sp <- lapply(1:nrow(mod.IBD.provCovar.nest),
+                           function(x){
+                             meta <- tibble::tibble(
+                               distcat = mod.IBD.provCovar.nest$distcat[x],
+                               outcome = mod.IBD.provCovar.nest$outcome[x]
+                             )
+                             ret <- cbind.data.frame(meta, mod.framework.sp)
+                             return(ret)
+                           }) %>%
+  dplyr::bind_rows()
+
 
 mod.IBD.provCovar.nest.framework.sp <- dplyr::left_join(mod.IBD.provCovar.nest,
                                                         mod.framework.sp,
-                                                        by = "distcat")
+                                                        by = c("distcat", "outcome"))
 
 
 # for slurm on LL

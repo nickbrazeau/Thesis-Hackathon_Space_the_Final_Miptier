@@ -475,19 +475,19 @@ urban.pts <- urban.pts %>%
 urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
 
 
-urbanmean <- rep(NA, nrow(urban.pts)) 
+urbanmedian <- rep(NA, nrow(urban.pts)) 
 for (i in 1:nrow(urban.pts)) {
-  urbanmean[i] <-  raster::extract(x = urban,
+  urbanmedian[i] <-  raster::extract(x = urban,
                                    y = sf::as_Spatial(urban.pts$geometry[i]),
                                    buffer = urban.pts$urban_rura_ext[i],
-                                   fun = mean, na.rm = T
+                                   fun = median, na.rm = T
   )
 }
   
 urban.pts <- urban.pts %>% 
   dplyr::mutate(long = sf::st_coordinates(geometry)[,1],
                 lat = sf::st_coordinates(geometry)[,2],
-                urbanmean = urbanmean)
+                urbanmedian = urbanmedian)
 
 ```
 
@@ -530,10 +530,10 @@ ibD.meiotic_plot <- ggplot() +
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf_gens)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
-                                    fill = urbanmean), 
+                                    fill = urbanmedian), 
              size = 2, shape = 21, stroke = 0) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
-  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") 
+  scale_fill_distiller("Median Urbanicity", type = "div", palette = "RdYlBu") 
 
 
 
@@ -558,13 +558,13 @@ ibD.meiotic_plot <- ggplot() +
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf_gens)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
-                                    fill = urbanmean, shape = factor(urban_rura)), 
+                                    fill = urbanmedian, shape = factor(urban_rura)), 
              size = 2) +
   geom_point(data = drccities, aes(x = longnum, y=latnum), color = "#f0f0f0") + 
   geom_text(data = drccities, aes(label = city, x = longnum, y=latnum), 
             hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
-  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") +
+  scale_fill_distiller("Median Urbanicity", type = "div", palette = "RdYlBu") +
   scale_shape_manual("Urban-Rural", values = c(21, 24))
 
 
@@ -612,11 +612,12 @@ perms.urb <- perms %>%
   dplyr::select("results") 
 
 # process data
+# look at medians here since non-normal
 perms.urb <- perms.urb %>% 
   dplyr::mutate(
-    urbnmeandiff = purrr::map(results, mean)
+    urbanmediandiff = purrr::map(results, median)
   ) %>% 
-  tidyr::unnest(cols = urbnmeandiff)
+  tidyr::unnest(cols = urbanmediandiff)
 
 # observed data
 # match .x
@@ -632,11 +633,11 @@ urban.pts <- urban.pts %>%
 obsurb <- dplyr::left_join(obsurb, urban.pts, by = "hv001.y") %>% 
   dplyr::select(c(dplyr::starts_with("malecot"),
                   "hv001.x", "hv001.y",
-                  "urbanmean.x", "urbanmean.y")) %>% 
-  dplyr::mutate(urbandiff =  (urbanmean.x - urbanmean.y)^2)
+                  "urbanmedian.x", "urbanmedian.y")) %>% 
+  dplyr::mutate(urbanmeadiandiff =  (urbanmedian.x - urbanmedian.y)^2)
 
 
-obsurb.urbnmeandiff <- mean(obsurb$urbandiff)
+obsurb.urbnmediandiff <- mean(obsurb$urbanmeadiandiff)
 
 
 ```
@@ -644,9 +645,9 @@ obsurb.urbnmeandiff <- mean(obsurb$urbandiff)
 ```{r, results='asis'}
 
 urb.perm.plotObj <- ggplot() +
-  geom_density(data = perms.urb, aes(x = urbnmeandiff), fill = "#969696", color = "#969696") 
+  geom_density(data = perms.urb, aes(x = urbanmediandiff), fill = "#969696", color = "#969696") 
 
-perms.urb.pval <- quantile(perms.urb$urbnmeandiff, probs = c(0.025, 0.975))
+perms.urb.pval <- quantile(perms.urb$urbanmediandiff, probs = c(0.025, 0.975))
 # extract ggplot data
 ggplotdat <- ggplot2::ggplot_build(urb.perm.plotObj)$data[[1]]
 
@@ -660,9 +661,9 @@ perms.urb.uppertail <- ggplotdat %>%
 urb.perm.plotObj <- urb.perm.plotObj + 
   geom_area(data = perms.urb.lowertail, aes(x = x, y = y), fill = "#4292c6", color = "#4292c6") +
   geom_area(data = perms.urb.uppertail, aes(x = x, y = y), fill = "#4292c6", color = "#4292c6") +
-  geom_vline(xintercept = obsurb.urbnmeandiff, color = "#cb181d") +
+  geom_vline(xintercept = obsurb.urbnmediandiff, color = "#cb181d") +
   ggtitle("Permuted Urbanicity Difference Between Pairs Expected to be at least Meiotic Sibs") +
-  xlab("Permuted Urbanicity Difference") + ylab("Sim Proportion") +
+  xlab("Permuted Urbanicity Median Difference") + ylab("Sim Proportion") +
   plot_theme
   
 plot(urb.perm.plotObj)
