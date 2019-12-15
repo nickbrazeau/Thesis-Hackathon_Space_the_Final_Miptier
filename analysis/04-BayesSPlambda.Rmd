@@ -217,11 +217,26 @@ ibDdist.prov.lambda %>%
 #..............................................................
 # Import Covariates for Province
 #..............................................................
-provCovar <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
+provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
+
+# transform covars
+provCovar <- provCovar.raw %>%
+  dplyr::mutate(
+    prev = my.scale(logit(prev, tol = 0.1)),
+    precip = my.scale(precip),
+    temp = my.scale(temp),
+    elev = my.scale(elev),
+    crops = my.scale(logit(crops, tol = 0.1)),
+    actuse = my.scale(logit(actuse, tol = 0.1)),
+    netuse = my.scale(logit(netuse, tol = 0.1)),
+    housing = my.scale(logit(housing, tol = 0.1))
+  )
+
 
 ```
 
 Here you can visualize the (scaled) covariate by province. 
+**Note, the covariate X were standardized/scaled in order to account to promote model stability.** 
 ```{r}
 
 provCovar.geo <- provCovar %>% 
@@ -272,8 +287,8 @@ provformlistdf <- tibble::tibble(
                 fileord = as.numeric(fileord)) %>% 
   dplyr::arrange(fileord)
 
-# now get results
-nick <- unlist(purrr::map(provformlistdf$path, readRDS), 
+# now get results 
+provmodels$results <- unlist(purrr::map(provformlistdf$path, readRDS), 
                              recursive = F)
 
 # now examine models
@@ -300,9 +315,9 @@ provmodels <- provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -317,9 +332,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -334,9 +349,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -355,9 +370,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -372,9 +387,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -389,9 +404,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -404,14 +419,14 @@ provmodels %>%
 
 ####
 
-#### DICs Slope {.tabset .tabset-fade}
+#### DICs Mean IBD {.tabset .tabset-fade}
 ##### Greater Circle DICs 
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -426,9 +441,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -443,9 +458,9 @@ provmodels %>%
 ```{r, results='asis'}
 
 provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::mutate(formula = deparse(formula)) %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(

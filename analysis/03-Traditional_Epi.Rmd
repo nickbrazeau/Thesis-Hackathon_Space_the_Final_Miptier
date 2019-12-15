@@ -84,31 +84,23 @@ Looks relatively normal considering...
 ### Covariate Considerations
 ```{r}
 #..............................................................
-# Get Covariates for Province
+# Import Covariates for Province
 #..............................................................
-covarrstr <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_raw.RDS")
+provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
 
-extract_agg_raster_polygon <- function(rstrlyr, plygn){
-  vals <- raster::extract(x = rstrlyr, y = sf::as_Spatial(plygn),
-                          fun = mean,
-                          na.rm = T, 
-                          sp = F
-                          )
-  return(as.vector(vals))
-  
-}
+# transform covars
+provCovar <- provCovar.raw %>%
+  dplyr::mutate(
+    prev = my.scale(logit(prev, tol = 0.1)),
+    precip = my.scale(precip),
+    temp = my.scale(temp),
+    elev = my.scale(elev),
+    crops = my.scale(logit(crops, tol = 0.1)),
+    actuse = my.scale(logit(actuse, tol = 0.1)),
+    netuse = my.scale(logit(netuse, tol = 0.1)),
+    housing = my.scale(logit(housing, tol = 0.1))
+  )
 
-adm1 <- DRCprov %>% 
-  dplyr::select(c("adm1name", "geometry"))
-adm1.list <- split(adm1, 1:nrow(adm1))
-
-provCovar <- lapply(adm1.list, extract_agg_raster_polygon, rstrlyr = covarrstr)
-provCovar <- do.call("rbind.data.frame", provCovar)
-colnames(provCovar) <- names(covarrstr)
-
-# add back in geometry and ad1names
-provCovar <- cbind.data.frame(adm1, provCovar)
-provCovar <- sf::st_as_sf(provCovar)
 
 ```
 
@@ -174,6 +166,7 @@ Going to fixed mixed models here using a random intercept for Province and a ran
 $$ln(IBD_{ij}) = (b_{0j}(s) + \beta_0) + (b_{1j}(s) + \beta^{\intercal})x_{ij} + \epsilon_{ij}$$
 Here, $b$ are the random intercepts and slope that rely on space, $s$. Note, $IBD_{ij}$ is calculated at the mean IBD between province $i$ and province $j$. 
   
+**Note, the $x_{ij}$ represent the squared difference $(x-i)^22$ in order to account for magnitude and not assume directionality.** 
 We will fit these models first (saturated and base for each distance).
 ```{r}
 mods <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/Provglmm_between_modfits.RDS")
@@ -282,6 +275,7 @@ stargazer(mods$dredging[mods$class == "full" & mods$space == "riverdistance.scal
 
 ## Within Province IBD Models 
 Note, I excluded weights here. Can add them back in if we decide to use these models.
+**Note, the covariate X were standardized/scaled in order to account to promote model stability.** 
 ```{r}
 mods <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/Provglm_within_modfits.RDS")
 ```

@@ -82,47 +82,21 @@ adm1.IBD <- dplyr::left_join(adm1.IBD.btwn, adm1.IBD.wthn,
                              by = "adm1name")
 
 #..............................................................
-# Get Covariates for Provinces
+# Import Covariates for Province
 #..............................................................
-covarrstr <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_raw.RDS")
+provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
 
-extract_agg_raster_polygon <- function(rstrlyr, plygn){
-  vals <- raster::extract(x = rstrlyr, y = sf::as_Spatial(plygn),
-                          fun = mean,
-                          na.rm = T,
-                          sp = F
-  )
-  return(as.vector(vals))
-
-}
-
-adm1 <- DRCprov %>%
-  dplyr::select(c("adm1name", "geometry"))
-adm1.list <- split(adm1, 1:nrow(adm1))
-
-provCovar <- lapply(adm1.list, extract_agg_raster_polygon, rstrlyr = covarrstr)
-provCovar <- do.call("rbind.data.frame", provCovar)
-colnames(provCovar) <- names(covarrstr)
-sf::st_geometry(provCovar) <- NULL
-
-#......................................
-# Wrangle -- add back in for modeling
-#......................................
-provCovar <- cbind.data.frame(adm1, provCovar)
-adm1.IBD.covar <- dplyr::left_join(adm1.IBD, provCovar, by = "adm1name")
-
-# more wrangle
-adm1.IBD.covar <- adm1.IBD.covar %>%
+# transform covars
+provCovar <- provCovar.raw %>%
   dplyr::mutate(
-    # rescale everything
-    prev = my.scale(prev),
+    prev = my.scale(logit(prev, tol = 0.1)),
     precip = my.scale(precip),
     temp = my.scale(temp),
     elev = my.scale(elev),
-    crops = my.scale(crops),
-    actuse = my.scale(actuse),
-    netuse  = my.scale(netuse),
-    housing = my.scale(housing)
+    crops = my.scale(logit(crops, tol = 0.1)),
+    actuse = my.scale(logit(actuse, tol = 0.1)),
+    netuse = my.scale(logit(netuse, tol = 0.1)),
+    housing = my.scale(logit(housing, tol = 0.1))
   )
 
 #..............................................................

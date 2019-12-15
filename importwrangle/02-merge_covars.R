@@ -216,28 +216,3 @@ covar.raw.extract <- cbind.data.frame(adm1name = DRCprov$adm1name,
 colnames(covar.raw.extract) <- c("adm1name", names(covar.rasterstack.raw))
 saveRDS(covar.raw.extract, "data/derived_data/covar_rasterstack_provlocations_raw.RDS")
 
-#.........................
-# Scaled Covariates
-#.........................
-
-# set up items for extraction
-covar.scaled.extract <- matrix(NA, nrow = nrow(DRCprov),
-                               ncol = length(names(covar.rasterstack.derived)))
-
-# fill in table
-for (i in 1:nrow(DRCprov)){
-  covar.scaled.extract[i, ] <-raster::extract(x = covar.rasterstack.derived,
-                                              y = sf::as_Spatial(DRCprov$geometry[i]),
-                                              fun = mean,
-                                              na.rm = T,
-                                              sp = F)}
-
-covar.scaled.extract <- cbind.data.frame(adm1name = DRCprov$adm1name,
-                                         covar.scaled.extract)
-colnames(covar.scaled.extract) <- c("adm1name", names(covar.rasterstack.derived))
-saveRDS(covar.scaled.extract, "data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
-
-
-
-
-

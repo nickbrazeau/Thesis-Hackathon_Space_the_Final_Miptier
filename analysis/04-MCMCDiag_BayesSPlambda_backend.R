@@ -152,7 +152,21 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
 #..............................................................
 # Import Covariates for Province
 #..............................................................
-provCovar <- readRDS("data/derived_data/covar_rasterstack_provlocations_scaled.RDS")
+provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
+
+# transform covars
+provCovar <- provCovar.raw %>%
+  dplyr::mutate(
+    prev = my.scale(logit(prev, tol = 0.1)),
+    precip = my.scale(precip),
+    temp = my.scale(temp),
+    elev = my.scale(elev),
+    crops = my.scale(logit(crops, tol = 0.1)),
+    actuse = my.scale(logit(actuse, tol = 0.1)),
+    netuse = my.scale(logit(netuse, tol = 0.1)),
+    housing = my.scale(logit(housing, tol = 0.1))
+  )
+
 
 #..............................................................
 # Combine outcome and covariate data
