@@ -86,12 +86,12 @@ get_distance_geno_likelihood <- function(name, ibD, distmat){
 #...................
 # meta Data
 #...................
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::select(c("id", "hv001")) %>%
   dplyr::rename(name = id)
 
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>%
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
   dplyr::rename(name = id) %>%
   dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
@@ -99,7 +99,7 @@ mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sa
 #...................
 # Genetic Data
 #...................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
 # merge in cluster informations
 colnames(drcsmpls)[1] <- "smpl1"
 ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
@@ -110,7 +110,7 @@ ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
 #...................
 # Distance Data
 #...................
-distancematrix.cluster <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_bycluster.rds")
+distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 distancematrix.cluster <- distancematrix.cluster %>%
   dplyr::filter(hv001.x %in% unique(drcsmpls$hv001)) %>%
   dplyr::filter(hv001.y %in% unique(drcsmpls$hv001))
