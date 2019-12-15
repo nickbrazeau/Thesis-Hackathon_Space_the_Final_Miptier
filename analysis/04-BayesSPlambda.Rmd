@@ -243,7 +243,7 @@ provCovar.geo %>%
 
 
 
-## Hierarchial Bayesian Spatial Models for Province Gen-Geo Dist Slope 
+## Hierarchial Bayesian Spatial Models for Province Gen-Geo 
 ### Make Model Framework
 NB. Using the _Leroux et al. 2000_ specifiation of the Gaussian Markov Random Field, we will allow  $\rho$ to be estimated under the model.
 
@@ -295,7 +295,8 @@ provmodels <- provmodels %>%
 
 ```
 
-#### Greater Circle DICs 
+#### DICs Slope {.tabset .tabset-fade}
+##### Greater Circle DICs 
 ```{r, results='asis'}
 
 provmodels %>% 
@@ -312,7 +313,7 @@ provmodels %>%
 
 ```
 
-#### Road DICs 
+##### Road DICs 
 ```{r, results='asis'}
 
 provmodels %>% 
@@ -329,7 +330,7 @@ provmodels %>%
 
 ```
 
-#### River DICs 
+##### River DICs 
 ```{r, results='asis'}
 
 provmodels %>% 
@@ -346,9 +347,123 @@ provmodels %>%
 
 ```
 
+####
 
-#### Long Chain MCMC Diagnostics
-Note, our goal is still to have the effective sample sizes (`n.effective`) to be at least 1,000 for all parameters. In addition, we will visually check for convergence among the four chains.
+
+#### DICs Within Prov IBD {.tabset .tabset-fade}
+##### Greater Circle DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "gcdistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### Road DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "roaddistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### River DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "riverdistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+####
+
+#### DICs Slope {.tabset .tabset-fade}
+##### Greater Circle DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "gcdistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### Road DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "roaddistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### River DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DICs")) %>% 
+  dplyr::filter(distcat == "riverdistance") %>% 
+  dplyr::mutate(formula = deparse(formula)) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+####
+
+
+
+### Long Chain Runs
+Note, our goal is still to have the effective sample sizes (`n.effective`) to be at least 1,000 for all parameters. In addition, we will visually check for convergence among the four chains.  
+  
+**Looks like the slope fitting models failed miserably. Going to drop those going forward**. 
 
 ##### Long Chain Param Diagnostics
 ```{r}

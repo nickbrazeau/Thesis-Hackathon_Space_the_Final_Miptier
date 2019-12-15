@@ -137,43 +137,24 @@ covars <- c("prev", "precip", "temp",
             "netuse", "housing")
 
 # just make simple functions
-wthndat <- adm1.IBD.covar %>%
-  dplyr::select(-c("n", "meanIBD")) %>%
-  dplyr::rename(ibd = wthnIBD,
-                n = wthnn) %>%
-  dplyr::mutate(
-    IBDlvl = "within"
-  )
-
-meandat <- adm1.IBD.covar %>%
-  dplyr::select(-c("wthnn", "wthnIBD")) %>%
-  dplyr::rename(ibd = meanIBD) %>%
-  dplyr::mutate(
-    IBDlvl = "mean"
-  )
-
-# dredge looks for data in global environment, can't use nested
-IBDdat <- cbind.data.frame(wthndat, meandat)
-
-
 adm1_models <- tibble::tibble(
   class = c("base", "base", "covars", "covars"),
-  outcome = "ibd",
-  covars = list("", "", covars, covars)
+  outcome = c("meanIBD", "wthnIBD", "meanIBD", "wthnIBD"),
+  covars = list("", "", covars, covars),
+  weights = c("n", "wthnn", "n", "wthnn")
 )
 
 # modeling equation
-fit_glm_adm1 <- function(class, outcome, covars){
+fit_glm_adm1 <- function(class, data, outcome, weights, covars){
   if (class == "base") {
     eq <- as.formula(paste0(outcome, "~ 1"))
   } else {
     eq <- as.formula(paste0(outcome, "~", paste(covars, collapse = "+")))
   }
   ret <- glm(eq,
-             data =  IBDdat,
+             data = adm1.IBD.covar,
              family = gaussian(link="log"),
-             na.action = "na.fail",
-             weights = n)
+             na.action = "na.fail")
   return(ret)
 
 }
