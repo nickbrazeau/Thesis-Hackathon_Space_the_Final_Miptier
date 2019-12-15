@@ -2,6 +2,7 @@
 # Purpose of this script is to calculate distance
 # likelihood
 #..............................................................
+library(tidyverse)
 
 #..............................................................
 # Function
