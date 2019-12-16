@@ -808,8 +808,9 @@ plot(ibDdist.logfit.plot)
 ## IBD Decay by Province
 Note, here we are including all pairwise comparisons for a given sample in a province. 
 
-### IBD Decay Plots - Continuous, Facet Province
+### IBD Decay Plots - Continuous, Facet Province {.tabset .tabset-fade}
 
+#### All
 ```{r}
 admhv001 <- mtdt %>% 
   dplyr::select(c("adm1name", "hv001")) %>% 
@@ -831,28 +832,100 @@ IBDdecay.df <- ibDdist.long %>%
                                            "1700km", "1800km", "1900km", "2000km", ">2000km"
                                            )))
 
+```
+
+```{r}
 IBDdecay.plot <- IBDdecay.df %>%
   ggplot() +
   geom_boxplot(aes(x=distmetric, y = malecotf)) +
   facet_grid(adm1name~distcat, scales = "free") +
   plot_theme +
   theme(axis.text.x = element_text(angle = 90))
+```
 
-
+```{r, results='asis', fig.width=11, fig.height=25}
+plot(IBDdecay.plot)
+```
+```{r}
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet.jpg",
+     unit = "in", height = 25, width = 11, res = 500)
+plot(IBDdecay.plot)
+graphics.off()
+```
+
+#### GC Distance
+```{r}
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "GC Dist.") %>% 
+  ggplot() +
+  geom_boxplot(aes(x=distmetric, y = malecotf)) +
+  facet_wrap(adm1name~., scales = "free") +
+  plot_theme +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r, results='asis', fig.height=11, fig.width=11}
+plot(IBDdecay.plot)
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_gcdistance.jpg",
+     unit = "in", height = 25, width = 11, res = 500)
+plot(IBDdecay.plot)
+graphics.off()
+```
+
+#### Road Distance
+```{r}
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "Road Dist.") %>% 
+  ggplot() +
+  geom_boxplot(aes(x=distmetric, y = malecotf)) +
+  facet_wrap(adm1name~., scales = "free") +
+  plot_theme +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r, results='asis', fig.height=11, fig.width=11}
+plot(IBDdecay.plot)
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_roaddistance.jpg",
+     unit = "in", height = 25, width = 11, res = 500)
+plot(IBDdecay.plot)
+graphics.off()
+```
+
+#### River Distance
+```{r}
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "River Dist.") %>% 
+  ggplot() +
+  geom_boxplot(aes(x=distmetric, y = malecotf)) +
+  facet_wrap(adm1name~., scales = "free") +
+  plot_theme +
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+```{r, results='asis', fig.height=11, fig.width=11}
+plot(IBDdecay.plot)
+
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_riverdistance.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 
 ```
 
-```{r, results='asis', fig.height=25, fig.width=11}
-plot(IBDdecay.plot)
-
-```
+### 
 
 
-### IBD Decay Plots - Means, Facet Province
+### IBD Decay Plots - Means, Facet Province {.tabset .tabset-fade}
 
 ```{r}
 
@@ -885,16 +958,22 @@ IBDdecay.df <- ibDdist.long %>%
   
   
   
+```
 
-IBDdecay.plot <- IBDdecay.df %>%
-  ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
+#### All
+**Let's zoom in a bit since the SE is large for some points**. 
+```{r}
   # geom_smooth(aes(x = distmetcat, y = meanIBD), # this needs to be a continuous x -- lift over cat
   #             method="glm",
   #             formula = y+.Machine$double.xmin ~ x,
   #             method.args=list(family=gaussian(link="log")), color = "#9ecae1") +
+
+IBDdecay.plot <- IBDdecay.df %>%
+  ggplot() +
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_y_continuous("Mean IBD") +
   facet_wrap(adm1name ~ distcat) +
+  coord_cartesian(ylim = c(0,0.1)) +
   plot_theme +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_text(size = 12, face = "bold"),
@@ -910,28 +989,27 @@ jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
-
 ```
 
-```{r, results='asis', fig.height=25, fig.width=11}
+```{r, results='asis', fig.width=11, fig.height=25}
 plot(IBDdecay.plot)
-
 ```
 
-**Let's zoom in a bit since the SE is large for some points**. 
+#### GC Distance
 ```{r}
-
-IBDdecay.plot <- IBDdecay.df %>%
-  ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   # geom_smooth(aes(x = distmetcat, y = meanIBD), # this needs to be a continuous x -- lift over cat
   #             method="glm",
   #             formula = y+.Machine$double.xmin ~ x,
   #             method.args=list(family=gaussian(link="log")), color = "#9ecae1") +
+
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "GC Dist.") %>% 
+  ggplot() +
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_y_continuous("Mean IBD") +
-  facet_wrap(adm1name ~ distcat) +
-  plot_theme +
+  facet_wrap(adm1name ~ .) +
   coord_cartesian(ylim = c(0,0.1)) +
+  plot_theme +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.text.y = element_text(size = 10, face = "bold"),
@@ -942,21 +1020,89 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_zoom.jpg",
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_gcdistance.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
-
 ```
 
-```{r, results='asis', fig.height=25, fig.width=11}
+```{r, results='asis', fig.width=11, fig.height=11, fig.align='center'}
 plot(IBDdecay.plot)
-
 ```
 
 
+#### Road Distance
+```{r}
+  # geom_smooth(aes(x = distmetcat, y = meanIBD), # this needs to be a continuous x -- lift over cat
+  #             method="glm",
+  #             formula = y+.Machine$double.xmin ~ x,
+  #             method.args=list(family=gaussian(link="log")), color = "#9ecae1") +
+
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "Road Dist.") %>% 
+  ggplot() +
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
+  scale_y_continuous("Mean IBD") +
+  facet_wrap(adm1name ~ .) +
+  coord_cartesian(ylim = c(0,0.1)) +
+  plot_theme +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(angle = 90, size = 8, face = "bold"),
+        axis.line.x = element_line(size = 1.1, color = "#000000"),
+        panel.grid.minor.x = element_line(color = "#bdbdbd"),
+        panel.grid.minor.y = element_line(color = "#bdbdbd")
+        )
 
 
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_roaddistance.jpg",
+     unit = "in", height = 25, width = 11, res = 500)
+plot(IBDdecay.plot)
+graphics.off()
+```
+
+```{r, results='asis', fig.width=11, fig.height=11, fig.align='center'}
+plot(IBDdecay.plot)
+```
+
+
+#### River Distance
+```{r}
+  # geom_smooth(aes(x = distmetcat, y = meanIBD), # this needs to be a continuous x -- lift over cat
+  #             method="glm",
+  #             formula = y+.Machine$double.xmin ~ x,
+  #             method.args=list(family=gaussian(link="log")), color = "#9ecae1") +
+
+IBDdecay.plot <- IBDdecay.df %>%
+  dplyr::filter(distcat == "River Dist.") %>% 
+  ggplot() +
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
+  scale_y_continuous("Mean IBD") +
+  facet_wrap(adm1name ~ .) +
+  coord_cartesian(ylim = c(0,0.1)) +
+  plot_theme +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(angle = 90, size = 8, face = "bold"),
+        axis.line.x = element_line(size = 1.1, color = "#000000"),
+        panel.grid.minor.x = element_line(color = "#bdbdbd"),
+        panel.grid.minor.y = element_line(color = "#bdbdbd")
+        )
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_riverdistance.jpg",
+     unit = "in", height = 25, width = 11, res = 500)
+plot(IBDdecay.plot)
+graphics.off()
+```
+
+```{r, results='asis', fig.width=11, fig.height=11, fig.align='center'}
+plot(IBDdecay.plot)
+```
+
+### 
 
 ## Appendix, Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
 ```{r}

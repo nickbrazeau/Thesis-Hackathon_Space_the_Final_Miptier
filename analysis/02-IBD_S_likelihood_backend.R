@@ -8,7 +8,7 @@ source("R/pairwise_helpers.R")
 # Function
 #..............................................................
 
-get_distance_geno_likelihood <- function(name, ibD, distmat){
+get_distance_geno_likelihood <- function(name, ibD, distmat, clsts){
   #..............................................................
   # functions
   #..............................................................
@@ -21,8 +21,8 @@ get_distance_geno_likelihood <- function(name, ibD, distmat){
   #..............................................................
   # setup
   #..............................................................
-  clsts <- unique(drcsmpls$hv001)
-  fuu <- sapply(drcsmpls$hv001, function(x){
+  clsts <- unique(clsts)
+  fuu <- sapply(clsts, function(x){
     ret <- mean( ibD$malecotf[c(ibD$hv001.x %in% x | ibD$hv001.y %in% x)] )
     return(ret)
   })
@@ -142,7 +142,8 @@ riverdistmat <- distancematrix.cluster %>%
 modLL <- tibble::tibble(
   name = c("gcdist", "roaddist", "riverdist"),
   ibD = list(ibD),
-  distmat = list(gcdistmat, roaddistmat, riverdistmat)
+  distmat = list(gcdistmat, roaddistmat, riverdistmat),
+  clsts = drcsmpls$hv001
 )
 
 

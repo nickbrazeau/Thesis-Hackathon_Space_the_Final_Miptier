@@ -99,6 +99,8 @@ provCovar <- provCovar.raw %>%
     housing = my.scale(logit(housing, tol = 0.1))
   )
 
+adm1.IBD.covar <- dplyr::left_join(adm1.IBD, provCovar, by = "adm1name")
+
 #..............................................................
 # Fit Model and Perform Model Selection
 #..............................................................

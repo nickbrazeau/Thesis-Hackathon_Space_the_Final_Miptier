@@ -86,7 +86,7 @@ Looks relatively normal considering...
 #..............................................................
 # Import Covariates for Province
 #..............................................................
-provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
+provCovar.raw <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_provlocations_raw.RDS")
 
 # transform covars
 provCovar <- provCovar.raw %>%
@@ -107,15 +107,13 @@ provCovar <- provCovar.raw %>%
 Here you can visualize the covariate by province. 
 ```{r}
 # this nonsense since sf and tidyr get upset 
-provCovar.nosf <- provCovar
-sf::st_geometry(provCovar.nosf) <- NULL
 
-provCovar.geo <- provCovar %>% 
+provCovar.geo <- DRCprov %>% 
   dplyr::select(c("adm1name", "geometry"))
 
-provCovar.nosf <- provCovar.nosf %>% 
+provCovar.forsf <- provCovar %>% 
   tidyr::gather(., key = "covar", value = "val", 2:ncol(.)) 
-provCovar.geo <- dplyr::left_join(provCovar.nosf, 
+provCovar.geo <- dplyr::left_join(provCovar.forsf, 
                                   y = provCovar.geo, by = "adm1name") 
 
 provCovar.geo <- sf::st_as_sf(provCovar.geo)
@@ -172,6 +170,47 @@ We will fit these models first (saturated and base for each distance).
 mods <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/Provglmm_between_modfits.RDS")
 ```
 
+##### Adm1 Pairs IBD
+```{r}
+# loop through IBD now
+adm1name.pairs <- tibble::as_tibble(
+expand.grid(list(DRCprov$adm1name, DRCprov$adm1name)) ) %>%
+  magrittr::set_colnames(c("adm1name.x", "adm1name.y")) %>%
+  dplyr::filter(adm1name.x != adm1name.y)
+# function for mean IBD btwn provs
+get_mean_IBD_prov <- function(adm1name.x, adm1name.y){
+  x = adm1name.x
+  y = adm1name.y
+  ret <- ibD.long %>%  dplyr::filter(adm1name.x == as.character(x) &
+                                       adm1name.y == as.character(y)) %>%
+    dplyr::summarise(
+      n = n(),
+      meanIBD = mean(malecotf),
+      seIBD = sd(malecotf)/sqrt(n),
+      LLIBD = meanIBD - 1.96 * seIBD,
+      ULIBD = meanIBD + 1.96 * seIBD
+    )
+  return(ret)
+}
+
+adm1name.pairs$meanIBD <- purrr::pmap(adm1name.pairs, get_mean_IBD_prov)
+adm1name.pairs <- adm1name.pairs %>%
+  tidyr::unnest(cols = meanIBD)
+
+```
+```{r, results='asis'}
+adm1name.pairs %>% 
+  dplyr::mutate_if(is.numeric, round, 5) %>% 
+    DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 10,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+  
+
+
+```
 
 #####  Model Fits
 ```{r, results='asis'}

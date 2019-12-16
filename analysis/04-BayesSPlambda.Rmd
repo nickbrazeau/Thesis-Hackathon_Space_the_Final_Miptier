@@ -102,6 +102,82 @@ Here we will analyze IBD using a traditional epidemiological approach. _Outcome_
 NB, all covariates were taken from open sources including: Malaria Atlas Project, European Space Agency, LAADS/NASA, and OSM (this include prevalence which is not from our lab but from MAP).
 
 
+## Province Models
+### Covariate Considerations
+```{r}
+#..............................................................
+# Import Covariates for Province
+#..............................................................
+provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
+
+# transform covars
+provCovar <- provCovar.raw %>%
+  dplyr::mutate(
+    prev = my.scale(logit(prev, tol = 0.1)),
+    precip = my.scale(precip),
+    temp = my.scale(temp),
+    elev = my.scale(elev),
+    crops = my.scale(logit(crops, tol = 0.1)),
+    actuse = my.scale(logit(actuse, tol = 0.1)),
+    netuse = my.scale(logit(netuse, tol = 0.1)),
+    housing = my.scale(logit(housing, tol = 0.1))
+  )
+
+
+```
+
+Here you can visualize the (scaled) covariate by province. 
+**Note, the covariate X were standardized/scaled in order to account to promote model stability.** 
+```{r}
+
+provCovar.geo <- provCovar %>% 
+  tidyr::gather(., key = "covar", value = "val", 2:ncol(.)) %>% 
+  dplyr::left_join(DRCprov, 
+                   y = ., by = "adm1name") 
+provCovar.geo <- sf::st_as_sf(provCovar.geo)
+
+provCovar.geo %>% 
+  ggplot() + 
+  geom_sf(aes(fill = val)) +
+  facet_wrap(covar ~ .) + 
+  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
+  map_theme +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+```
+
+#### Prevalence
+```{r, results='asis'}
+DRC.Provmprev <- dplyr::left_join(DRCprov, provCovar, by = "adm1name")
+DRC.Provmprev.plotObj <- ggplot() +
+    geom_sf(data = DRC.Provmprev, aes(fill = prev), 
+          color = "#525252", size = 0.05) +
+    scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") 
+
+plot(DRC.Provmprev.plotObj)
+
+```
+
+```{r, results='asis'}
+drcadm1names <- tibble::tibble(
+  adm1 = DRCprov$adm1name,
+  longnum = sf::st_coordinates(sf::st_centroid(DRCprov))[,1],
+  latnum = sf::st_coordinates(sf::st_centroid(DRCprov))[,2]
+)
+
+DRC.Provmprev <- dplyr::left_join(DRCprov, provCovar, by = "adm1name")
+DRC.Provmprev.plotObj.labels <- ggplot() +
+  geom_sf(data = DRC.Provmprev, aes(fill = prev), 
+          color = "#525252", size = 0.05) +
+  ggrepel::geom_text_repel(data = drcadm1names, 
+                           aes(x = longnum, y = latnum, label = adm1), fontface = "bold", size = 4) +
+  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") 
+
+plot(DRC.Provmprev.plotObj.labels)
+```
+
+
 
 ### Outcome
 When considering pairwise IBD as the outcome, we can use a log-base-2 tranformation to normalize the IBD measure. Log-base-2 represents the number of generations ago to samples were IBD (or coalesced) under an assumption of outcrossing. N.B. larger numbers mean more generations (less related).
@@ -185,6 +261,7 @@ ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
   tidyr::unnest(cols = "genbase2_slope")
 
 ```
+
 ```{r, results='asis'}
 #..............................................................
 # Fit by prov for slope
@@ -210,49 +287,94 @@ ibDdist.prov.lambda %>%
 
 ```
 
-
-## Province Models
-### Covariate Considerations
+#### Mean IBD by Prov
 ```{r}
-#..............................................................
-# Import Covariates for Province
-#..............................................................
-provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
-
-# transform covars
-provCovar <- provCovar.raw %>%
-  dplyr::mutate(
-    prev = my.scale(logit(prev, tol = 0.1)),
-    precip = my.scale(precip),
-    temp = my.scale(temp),
-    elev = my.scale(elev),
-    crops = my.scale(logit(crops, tol = 0.1)),
-    actuse = my.scale(logit(actuse, tol = 0.1)),
-    netuse = my.scale(logit(netuse, tol = 0.1)),
-    housing = my.scale(logit(housing, tol = 0.1))
-  )
-
+Provmean <- ibDdist.long.mtdt %>% 
+  dplyr::group_by(adm1name.x) %>% 
+  dplyr::summarise(
+    n = n(),
+    meanIBD = mean(malecotf),
+    seIBD = sd(malecotf)/sqrt(n),
+    LL = meanIBD - 1.96*seIBD,
+    UL = meanIBD + 1.96*seIBD
+  ) %>% 
+  dplyr::mutate(adm1name = adm1name.x)
 
 ```
 
-Here you can visualize the (scaled) covariate by province. 
-**Note, the covariate X were standardized/scaled in order to account to promote model stability.** 
+```{r, results='asis'}
+Provmean %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv'))) 
+```
+
+
+
+```{r, results='asis'}
+DRC.Provmean <- dplyr::left_join(DRCprov, Provmean, by = "adm1name")
+
+DRC.Provmean.plotObj <- ggplot() +
+  geom_sf(data = DRC.Provmean, aes(fill = meanIBD), 
+          color = "#525252", size = 0.05) +
+  scale_fill_viridis_c("Mean IBD") 
+  #prettybasemap_nodrc_dark 
+
+```
+```{r, results='asis'}
+
+cowplot::plot_grid(DRC.Provmean.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
+
+```
+
+#### Within IBD by Prov
 ```{r}
+Provwthn <- ibDdist.long.mtdt %>% 
+  dplyr::filter(adm1name.x == adm1name.y) %>% 
+  dplyr::group_by(adm1name.x) %>% 
+  dplyr::summarise(
+    wthnn = n(),
+    wthnIBD = mean(malecotf),
+    wthnseIBD = sd(malecotf)/sqrt(wthnn),
+    wthnLL = wthnIBD - 1.96*wthnseIBD,
+    wthnUL = wthnIBD + 1.96*wthnseIBD
+  ) %>% 
+  dplyr::mutate(adm1name = adm1name.x)
 
-provCovar.geo <- provCovar %>% 
-  tidyr::gather(., key = "covar", value = "val", 2:ncol(.)) %>% 
-  dplyr::left_join(DRCprov, 
-                   y = ., by = "adm1name") 
-provCovar.geo <- sf::st_as_sf(provCovar.geo)
+```
 
-provCovar.geo %>% 
-  ggplot() + 
-  geom_sf(aes(fill = val)) +
-  facet_wrap(covar ~ .) + 
-  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
-  map_theme +
-  theme(axis.text = element_blank(),
-        axis.ticks = element_blank())
+```{r, results='asis'}
+Provwthn %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv'))) 
+```
+
+
+
+```{r, results='asis'}
+DRC.Provwthn <- dplyr::left_join(DRCprov, Provwthn, by = "adm1name")
+
+DRC.Provwthn.plotObj <- ggplot() +
+  geom_sf(data = DRC.Provwthn, aes(fill = wthnIBD), 
+          color = "#525252", size = 0.05) +
+  scale_fill_viridis_c("Within IBD") 
+#prettybasemap_nodrc_dark 
+
+```
+```{r, results='asis'}
+
+cowplot::plot_grid(DRC.Provwthn, DRC.Provmprev.plotObj, nrow = 1, align = "v")
 
 ```
 

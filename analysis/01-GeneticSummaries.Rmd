@@ -299,13 +299,23 @@ ibD.exp.hv001 %>% # selfs already excluded
 ## Sampling Locations
 ```{r}
 
-ggplot() +
+smplocations <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   #prettybasemap_nodrc_dark +
-  geom_jitter(data = mtdt, 
+  geom_point(data = ge, 
               aes(x = longnum, y = latnum), 
-              height = 0.05, width = 0.05,
-              color = "#d9d9d9", size = 1, show.legend = F, alpha = 0.8) 
+              color = "#d9d9d9", size = 1, show.legend = F) +
+  geom_point(data = mtdt, 
+              aes(x = longnum, y = latnum), 
+              color = "#cb181d", size = 1, show.legend = F, alpha = 0.1) 
 
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocations_clster.jpg",
+     width = 8, height = 8, units = "in", res = 300)
+plot(smplocations)
+graphics.off()
 
 ```
+```{r, results='asis'}
+plot(smplocations)
+```
+
