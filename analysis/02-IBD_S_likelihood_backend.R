@@ -143,7 +143,7 @@ modLL <- tibble::tibble(
   name = c("gcdist", "roaddist", "riverdist"),
   ibD = list(ibD),
   distmat = list(gcdistmat, roaddistmat, riverdistmat),
-  clsts = drcsmpls$hv001
+  clsts = list(drcsmpls$hv001)
 )
 
 
