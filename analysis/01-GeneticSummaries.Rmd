@@ -298,16 +298,39 @@ ibD.exp.hv001 %>% # selfs already excluded
 
 ## Sampling Locations
 ```{r}
+drcsmpls.ge <- dplyr::left_join(drcsmpls, ge, by = "hv001")
+drcsmpls.ge <- drcsmpls.ge %>% 
+  dplyr::group_by(hv001) %>% 
+  dplyr::summarise(n = n(),
+                   longnum = mean(longnum),
+                   latnum = mean(latnum)) # geocoords same w/in clust
 
+drcsmpls.ge$smpls <- "Sampled"
+ge.notsmpl <- ge %>% 
+  dplyr::select(c("hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(!hv001 %in% drcsmpls.ge$hv001) %>% 
+  dplyr::mutate(
+    n = 0.8, 
+    smpls = "Not Sampled"
+  )
+
+ge.plotpts <- rbind.data.frame(drcsmpls.ge, ge.notsmpl)
+
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
 smplocations <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  #prettybasemap_nodrc_dark +
-  geom_point(data = ge, 
-              aes(x = longnum, y = latnum), 
-              color = "#d9d9d9", size = 1, show.legend = F) +
-  geom_point(data = mtdt, 
-              aes(x = longnum, y = latnum), 
-              color = "#cb181d", size = 1, show.legend = F, alpha = 0.1) 
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts, 
+              aes(x = longnum, y = latnum, size = n, color = factor(smpls)), 
+              alpha = 0.8, show.legend = F) +
+  scale_color_viridis_d("DHS Cluster") +
+  scale_size("Cluster Size", range = c(1, 4)) +
+  theme(
+    legend.position = "left",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) + 
+   guides(fill=guide_legend(ncol=2))
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocations_clster.jpg",
      width = 8, height = 8, units = "in", res = 300)
@@ -318,4 +341,20 @@ graphics.off()
 ```{r, results='asis'}
 plot(smplocations)
 ```
+```{r, results='asis'}
+roadnetworkplotObj <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/roadnetworkplotObj.RDS")
+rivernetworkplotObj <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/rivernetworkplotObj.RDS")
 
+
+cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
+                   nrow = 1, align = "h")
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocationsroad_river_clster.jpg",
+     width = 11, height = 8, units = "in", res = 300)
+cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
+                   nrow = 1, align = "h")
+graphics.off()
+
+```

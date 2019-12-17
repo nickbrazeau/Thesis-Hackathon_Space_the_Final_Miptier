@@ -108,7 +108,7 @@ NB, all covariates were taken from open sources including: Malaria Atlas Project
 #..............................................................
 # Import Covariates for Province
 #..............................................................
-provCovar.raw <- readRDS("data/derived_data/covar_rasterstack_provlocations_raw.RDS")
+provCovar.raw <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_provlocations_raw.RDS")
 
 # transform covars
 provCovar <- provCovar.raw %>%

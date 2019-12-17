@@ -164,7 +164,6 @@ modLL <- tibble::tibble(
 )
 
 
-nick = purrr::pmap(modLL, get_distance_geno_likelihood)
 
 
 # for slurm on LL

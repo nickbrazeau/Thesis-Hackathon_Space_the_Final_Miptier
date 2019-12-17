@@ -57,6 +57,7 @@ ibD <- ibD %>%
 
 <!-- TODO all above should be pre-done -->
 
+### Meiotic Pair Plot
 ```{r}
 #..............................................................
 # Idenity samples with IBD that are greater than half the
@@ -106,6 +107,33 @@ graphics.off()
 ```{r, results='asis'}
 plot(ibD.meiotic_plot)
 ```
+
+### Meiotic Pair Table
+```{r, results=  'asis'}
+
+ibD_meiotic_table <- ibD.meiotic %>% 
+  dplyr::select(c("smpl1", "smpl2", "malecotf", "malecotf_gens", "hv001.x", "hv001.y"))
+
+mtdt.join <- mtdt %>% 
+  dplyr::select(c("hv001", "adm1name")) %>% 
+  filter(!duplicated(.)) %>% 
+  dplyr::rename(hv001.x = hv001) 
+ibD_meiotic_table <- dplyr::left_join(ibD_meiotic_table, mtdt.join, by = "hv001.x")
+
+mtdt.join <- mtdt.join %>% 
+  dplyr::rename(hv001.y = hv001.x)
+ibD_meiotic_table <- dplyr::left_join(ibD_meiotic_table, mtdt.join, by = "hv001.y")
+
+
+DT::datatable(ibD_meiotic_table, extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+  
+```
+
 
 ## Hypotheses
 We have three major questions regarding these strong genetic connections:  
@@ -561,8 +589,8 @@ ibD.meiotic_plot <- ggplot() +
                                     fill = urbanmedian, shape = factor(urban_rura)), 
              size = 2) +
   geom_point(data = drccities, aes(x = longnum, y=latnum), color = "#f0f0f0") + 
-  geom_text(data = drccities, aes(label = city, x = longnum, y=latnum), 
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
+  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
   scale_fill_distiller("Median Urbanicity", type = "div", palette = "RdYlBu") +
   scale_shape_manual("Urban-Rural", values = c(21, 24))
@@ -833,8 +861,8 @@ ibD.meiotic_plot <- ggplot() +
   ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#525252", fill = NA, size = 0.05) +
   scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
-  geom_text(data = drccities, aes(label = city, x = longnum, y=latnum), 
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
+  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
  geom_point(data = drccities, aes(x = longnum, y=latnum)) 
   #prettybasemap_nodrc_dark 
   

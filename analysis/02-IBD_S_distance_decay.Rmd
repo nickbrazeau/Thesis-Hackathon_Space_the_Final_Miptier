@@ -870,7 +870,7 @@ plot(IBDdecay.plot)
 
 ```{r}
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_gcdistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 ```
@@ -892,7 +892,7 @@ plot(IBDdecay.plot)
 
 ```{r}
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_roaddistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 ```
@@ -916,7 +916,7 @@ plot(IBDdecay.plot)
 
 ```{r}
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_riverdistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 
@@ -1021,7 +1021,7 @@ IBDdecay.plot <- IBDdecay.df %>%
 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_gcdistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 ```
@@ -1057,7 +1057,7 @@ IBDdecay.plot <- IBDdecay.df %>%
 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_roaddistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 ```
@@ -1093,7 +1093,7 @@ IBDdecay.plot <- IBDdecay.df %>%
 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_riverdistance.jpg",
-     unit = "in", height = 25, width = 11, res = 500)
+     unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
 ```
