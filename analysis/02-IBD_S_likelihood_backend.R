@@ -114,7 +114,7 @@ ibD <- ibD %>%
   dplyr::rename(relatedness = malecotf)
 
 # ibs
-ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
+ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
 # merge in cluster informations
 colnames(drcsmpls)[1] <- "smpl1"
 ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl1")
