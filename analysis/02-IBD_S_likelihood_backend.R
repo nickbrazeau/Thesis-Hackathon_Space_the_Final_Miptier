@@ -29,6 +29,7 @@ get_distance_geno_likelihood <- function(name, ibD, distmat, clsts){
 
 
   for (i in 1:length(clsts)) {
+    cat("Iteration i: ", i)
     for (j in 1:length(clsts)) {
 
       # init
@@ -155,7 +156,7 @@ setwd("results/distance_likelihoods/")
 ntry <- nrow(modLL)
 sjob <- rslurm::slurm_apply(f = get_distance_geno_likelihood,
                             params = modLL,
-                            jobname = 'distance_likelihoods',
+                            jobname = 'distance_likelihoods_recursion',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
@@ -166,7 +167,7 @@ sjob <- rslurm::slurm_apply(f = get_distance_geno_likelihood,
                                                  'cpus-per-task' = 1,
                                                  error =  "%A_%a.err",
                                                  output = "%A_%a.out",
-                                                 time = "5-00:00:00"))
+                                                 time = "11-00:00:00"))
 
 
 
