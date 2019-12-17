@@ -8,7 +8,7 @@ source("R/pairwise_helpers.R")
 # Function
 #..............................................................
 
-get_distance_geno_likelihood <- function(name, ibD, distmat, clsts){
+get_distance_geno_likelihood <- function(name, relatedness, distmat, clsts){
   #..............................................................
   # functions
   #..............................................................
@@ -23,7 +23,7 @@ get_distance_geno_likelihood <- function(name, ibD, distmat, clsts){
   #..............................................................
   clsts <- unique(clsts)
   fuu <- sapply(clsts, function(x){
-    ret <- mean( ibD$malecotf[c(ibD$hv001.x %in% x | ibD$hv001.y %in% x)] )
+    ret <- mean( relatedness$relatedness[c(relatedness$hv001.x %in% x | relatedness$hv001.y %in% x)] )
     return(ret)
   })
 
@@ -58,7 +58,7 @@ get_distance_geno_likelihood <- function(name, ibD, distmat, clsts){
       # now loop through
       for (u in 1:length(clsts)) {
         for (v in length(clsts):1) { # go backwards so not same deme
-          fuv <- mean( ibD$malecotf[ ibD$hv001.x %in% c( clsts[u], clsts[v] ) ] ) # mean within demes IBD
+          fuv <- mean( relatedness$relatedness[ relatedness$hv001.x %in% c( clsts[u], clsts[v] ) ] ) # mean within demes relatedness
           if (clsts[u] == clsts[i]) {
             diu <- 0
           } else {
@@ -101,6 +101,7 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
 #...................
 # Genetic Data
 #...................
+# IBD
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
 # merge in cluster informations
 colnames(drcsmpls)[1] <- "smpl1"
@@ -108,6 +109,21 @@ ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
 
 colnames(drcsmpls)[1] <- "smpl2"
 ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
+# rename for recursive function
+ibD <- ibD %>%
+  dplyr::rename(relatedness = malecotf)
+
+# ibs
+ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
+# merge in cluster informations
+colnames(drcsmpls)[1] <- "smpl1"
+ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl1")
+
+colnames(drcsmpls)[1] <- "smpl2"
+ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl2")
+# rename for recursive function
+ibS <- ibS %>%
+  dplyr::rename(relatedness = hammings)
 
 #...................
 # Distance Data
@@ -141,13 +157,14 @@ riverdistmat <- distancematrix.cluster %>%
 #...................
 
 modLL <- tibble::tibble(
-  name = c("gcdist", "roaddist", "riverdist"),
-  ibD = list(ibD),
-  distmat = list(gcdistmat, roaddistmat, riverdistmat),
+  name = c("gcdist-ibs", "roaddist-ibs", "riverdist-ibs", "gcdist-ibd", "roaddistibd", "riverdist-ibd"),
+  relatedness = list(ibS, ibS, ibS, ibD, ibD, ibD),
+  distmat = list(gcdistmat, roaddistmat, riverdistmat, gcdistmat, roaddistmat, riverdistmat),
   clsts = list(drcsmpls$hv001)
 )
 
 
+nick = purrr::pmap(modLL, get_distance_geno_likelihood)
 
 
 # for slurm on LL
