@@ -171,34 +171,10 @@ mods <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fit
 ```
 
 ##### Adm1 Pairs IBD
-```{r}
-# loop through IBD now
-adm1name.pairs <- tibble::as_tibble(
-expand.grid(list(DRCprov$adm1name, DRCprov$adm1name)) ) %>%
-  magrittr::set_colnames(c("adm1name.x", "adm1name.y")) %>%
-  dplyr::filter(adm1name.x != adm1name.y)
-# function for mean IBD btwn provs
-get_mean_IBD_prov <- function(adm1name.x, adm1name.y){
-  x = adm1name.x
-  y = adm1name.y
-  ret <- ibD.long %>%  dplyr::filter(adm1name.x == as.character(x) &
-                                       adm1name.y == as.character(y)) %>%
-    dplyr::summarise(
-      n = n(),
-      meanIBD = mean(malecotf),
-      seIBD = sd(malecotf)/sqrt(n),
-      LLIBD = meanIBD - 1.96 * seIBD,
-      ULIBD = meanIBD + 1.96 * seIBD
-    )
-  return(ret)
-}
 
-adm1name.pairs$meanIBD <- purrr::pmap(adm1name.pairs, get_mean_IBD_prov)
-adm1name.pairs <- adm1name.pairs %>%
-  tidyr::unnest(cols = meanIBD)
-
-```
 ```{r, results='asis'}
+adm1name.pairs <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/adm1name_pairs_IBD_range.RDS")
+
 adm1name.pairs %>% 
   dplyr::mutate_if(is.numeric, round, 5) %>% 
     DT::datatable(., extensions='Buttons',
@@ -212,7 +188,34 @@ adm1name.pairs %>%
 
 ```
 
+```{r, results='asis'}
+adm1name.pairs.plotObj <- adm1name.pairs %>% 
+ggplot() + 
+  geom_tile(aes(x = adm1name.x, y = adm1name.y, fill = meanIBD)) + 
+  plot_theme +
+  scale_fill_viridis_c("Prov. Pairwise Mean IBD") + 
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(family = "Helvetica", hjust = 0.5, size = 11, face = "bold", angle = 90),
+        axis.text.y = element_text(family = "Helvetica", hjust = 0.5, size = 11, face = "bold"),
+        legend.title = element_text(family = "Helvetica", hjust = 0.5, size = 12, face = "bold"),
+        legend.position = "bottom")
+
+plot(adm1name.pairs.plotObj)
+
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/adm1name_pairs_meanIBD.jpg")
+plot(adm1name.pairs.plotObj)
+graphics.off()
+
+```
+
 #####  Model Fits
+```{r, results='asis'}
+knitr::kable(mods[,1:2])
+```
+
 ```{r, results='asis'}
 stargazer::stargazer(mods$fitout, 
                      no.space=F,

@@ -86,12 +86,12 @@ colnames(coords.pts)[1] <- "name"
 
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf_gens)) +
-  geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter), color = "#d9d9d9", size = 2, show.legend = F) +
+  geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter), color = "#d9d9d9", size = 2, show.legend = F, alpha = 0.8) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
 
 
@@ -521,11 +521,11 @@ urban.pts <- urban.pts %>%
 
 ```{r}
 
-ibD.meiotic_plot <- ggplot() +
+ibD.meiotic_plot_urbanrstr <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -618,7 +618,7 @@ Urbanitity in the top third percentile is city and below is rural.
 urbancatch <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity_binary.grd")
 
 
-ggplot() +
+ibD.meiotic_plot_urban_binary_rstr <- ggplot() +
   ggspatial::layer_spatial(data = urbancatch, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity Binary", type = "div", palette = "RdYlBu") +
@@ -631,6 +631,49 @@ ggplot() +
              size = 2, shape = 21, stroke = 0.5, fill = NA) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
 
+plot(ibD.meiotic_plot_urban_binary_rstr)
+```
+
+```{r, results='asis'}
+
+cowplot::plot_grid(ibD.meiotic_plot_urbanrstr, ibD.meiotic_plot_urban_binary_rstr,
+                   align = "h", nrow = 1, labels = c("(A)", "(B)")
+                   )
+```
+
+```{r}
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic_citylights_urbbinary_cowplot.jpg",
+     height = 8, width = 11, units = "in", res = 500)
+cowplot::plot_grid(ibD.meiotic_plot_urbanrstr, ibD.meiotic_plot_urban_binary_rstr,
+                   align = "h", nrow = 1, labels = c("(A)", "(B)")
+                   )
+graphics.off()
+
+```
+
+```{r}
+
+
+urban.cities <- ggplot() +
+  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
+ geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
+  prettybasemap_nodrc_dark 
+  
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_cities_citylights_raster.jpg",
+     height = 8, width = 8, units = "in", res = 500)
+plot(urban.cities)
+graphics.off()
+
+```
+```{r, results='asis'}
+plot(urban.cities)
 ```
 
 #### Permutation Test for Urbanicity

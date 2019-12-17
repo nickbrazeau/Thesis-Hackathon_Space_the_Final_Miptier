@@ -141,6 +141,9 @@ adm1name.pairs.diff <- adm1name.pairs %>%
     housingdiff = my.scale(housingdiff)
   )
 
+# save out for comparison
+saveRDS(adm1name.pairs.diff, "~/Documents/GitHub/Space_the_Final_Miptier/results/trad_epi_fits/adm1name_pairs_IBD_range.RDS")
+
 
 #..............................................................
 # Fit Model and Perform Model Selection

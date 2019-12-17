@@ -354,7 +354,7 @@ cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocationsroad_river_clster.jpg",
      width = 11, height = 8, units = "in", res = 300)
 cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
-                   nrow = 1, align = "h")
+                   nrow = 1, align = "h", labels = c("(A)", "(B)", "(C)"))
 graphics.off()
 
 ```

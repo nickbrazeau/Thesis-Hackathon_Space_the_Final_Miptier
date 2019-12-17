@@ -304,7 +304,7 @@ Provmean <- ibDdist.long.mtdt %>%
 
 ```{r, results='asis'}
 Provmean %>% 
-  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  dplyr::mutate_if(is.numeric, round, 4) %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -350,7 +350,7 @@ Provwthn <- ibDdist.long.mtdt %>%
 
 ```{r, results='asis'}
 Provwthn %>% 
-  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  dplyr::mutate_if(is.numeric, round, 4) %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -374,7 +374,7 @@ DRC.Provwthn.plotObj <- ggplot() +
 ```
 ```{r, results='asis'}
 
-cowplot::plot_grid(DRC.Provwthn, DRC.Provmprev.plotObj, nrow = 1, align = "v")
+cowplot::plot_grid(DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
 
 ```
 
@@ -390,14 +390,12 @@ Note, our goal is to have the effective sample sizes (`n.effective`) to be at le
 
 
 ```{r}
-# clear memory for markdown
-rm(list = ls())
 
-provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/params.RDS") %>% 
+provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics_LL/params.RDS") %>% 
   dplyr::select(c("formula", "outcome", "distcat"))
 
 # get all files
-provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics/",
+provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics_LL/",
                            pattern = ".RDS", full.names = T)
 provformlist <- provformlist[!grepl("f.RDS|params.RDS", provformlist)]
 
