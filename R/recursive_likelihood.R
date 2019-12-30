@@ -11,7 +11,6 @@ get_distance_geno_likelihood <- function(name, distdata, scalar){
   #..............................................................
   # Setup
   #..............................................................
-  source("R/pairwise_helpers.R")
   # Find unique clusters
   clsts <- sort(unique(c(distdata$K1, distdata$K2)))
 
