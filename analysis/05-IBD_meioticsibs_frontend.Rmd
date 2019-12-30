@@ -155,10 +155,15 @@ ibD.meiotic.network <- ibD.meiotic %>%
 # plot
 ibD.meiotic.network %>%
   ggraph(layout = "kk") +
-  geom_edge_link(aes(width  = malecotf), color = "#969696", alpha = 0.5) +
-  geom_node_point(aes(color = factor(hv001))) +
+  geom_edge_link(aes(color  = malecotf), width = 1.2, alpha = 0.5) +
+  scale_edge_color_viridis("Pairwise IBD") +
+  geom_node_point(aes(shape = factor(hv001), fill = factor(hv001)), show.legend = F) +
+  scale_shape_manual(values = rep(c(21, 22, 23, 24, 25), 12)) +
+  #geom_node_text(aes(label = hv001), nudge_y = 0.1) +
   theme_graph() +
-  theme(legend.position = "none")
+  theme(legend.position = "bottom",
+        legend.title = element_text(family = "Helvetica", vjust = 0.85, size = 13, face = "bold"),
+        legend.text = element_text(family = "Helvetica", hjust = 1, size = 12, face = "bold", angle = 90))
 
 ```
 
@@ -166,16 +171,25 @@ ibD.meiotic.network %>%
 ```{r, results='asis'}
 
 meiotic_clst.uni <- ibD.meiotic.network %>% 
-  tidygraph::activate("nodes") %>% 
+  tidygraph::activate("nodes") %>%
   dplyr::mutate(node_edge_density = igraph::degree(.)) %>%
-  dplyr::filter(node_edge_density == 1) 
+  dplyr::filter(c(node_edge_density == 1 | 
+                     name %in% c("3002B1W5E", "Z2H3M")# catch violation of transitivity 
+                    ) 
+                )
 
-meiotic_clst.uni %>% 
+meiotic_clst.uni.plotobj <- meiotic_clst.uni %>% 
   ggraph(layout = "kk") +
-  geom_edge_link(aes(width  = malecotf), color = "#969696", alpha = 0.5) +
-  geom_node_point(aes(color = factor(hv001))) +
-  theme_graph() 
-
+  geom_node_point(aes(shape = factor(hv001), fill = factor(hv001)), show.legend = F) +
+  geom_edge_link(aes(color  = malecotf), width = 1.2, alpha = 0.5) +
+  scale_edge_color_viridis("Pairwise IBD") +
+  scale_shape_manual(values = rep(c(21, 22, 23, 24, 25), 12)) +
+  geom_node_text(aes(label = hv001), nudge_y = 0.1) +
+  theme_graph() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(family = "Helvetica", vjust = 0.85, size = 13, face = "bold"),
+        legend.text = element_text(family = "Helvetica", hjust = 1, size = 12, face = "bold", angle = 90))
+plot(meiotic_clst.uni.plotobj)
 
 meiotic_clst.uni %>% 
   ggraph(layout = "kk") +
@@ -192,14 +206,21 @@ meiotic_clst.uni %>%
 
 meiotic_clst.conn <- ibD.meiotic.network %>% 
   tidygraph::activate("nodes") %>% 
-  dplyr::mutate(node_edge_density = igraph::degree(.)) %>%
+  dplyr::mutate(node_edge_density = igraph::degree(.)) %>% 
   dplyr::filter(node_edge_density > 1) 
 
-meiotic_clst.conn %>% 
+meiotic_clst.conn.PlotObj <- meiotic_clst.conn %>% 
   ggraph(layout = "kk") +
-  geom_edge_link(aes(width  = malecotf), color = "#969696", alpha = 0.5) +
-  geom_node_point(aes(color = factor(hv001))) +
-  theme_graph() 
+  geom_node_point(aes(shape = factor(hv001), fill = factor(hv001)), show.legend = F) +
+  geom_edge_link(aes(color  = malecotf), width = 1.2, alpha = 0.5) +
+  scale_edge_color_viridis("Pairwise IBD") +
+  scale_shape_manual(values = rep(c(21, 22, 23, 24, 25), 12)) +
+  geom_node_text(aes(label = hv001), nudge_y = 0.1) +
+  theme_graph() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(family = "Helvetica", vjust = 0.85, size = 13, face = "bold"),
+        legend.text = element_text(family = "Helvetica", hjust = 1, size = 12, face = "bold", angle = 90))
+plot(meiotic_clst.conn.PlotObj)
 
 meiotic_clst.conn %>% 
   ggraph(layout = "kk") +
@@ -209,6 +230,9 @@ meiotic_clst.conn %>%
   theme_graph() 
 
 ```
+
+
+
 
 **Let's look at that same information but on a map**.  
 
@@ -223,7 +247,7 @@ meiotic_clst.uni.edges <- meiotic_clst.uni %>%
   tibble::as_tibble(.) 
 
 
-ggplot() +
+meiotic_clst.one.conn.map <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_curve(data = meiotic_clst.uni.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
@@ -235,6 +259,7 @@ ggplot() +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) + 
   ggtitle("IBD Pairs with only One Connection")
 
+plot(meiotic_clst.one.conn.map)
 
 ```
 
@@ -250,7 +275,7 @@ meiotic_clst.conn.edges <- meiotic_clst.conn %>%
   tibble::as_tibble(.) 
 
 
-ggplot() +
+ibd.moreconn.map <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_curve(data = meiotic_clst.conn.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
@@ -261,7 +286,7 @@ ggplot() +
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) + 
   ggtitle("IBD Pairs with more than One Connection")
-
+plot(ibd.moreconn.map)
 
 ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
@@ -279,24 +304,66 @@ ggplot() +
 
 ```
 
+```{r}
+
+ibd.moreconn.map <- 
+  prettybasemap_nodrc_dark + 
+  ibd.moreconn.map + 
+  theme(plot.title = element_blank()) 
+
+meiotic_clst.one.conn.map <- 
+  prettybasemap_nodrc_dark + 
+  meiotic_clst.one.conn.map + 
+  theme(plot.title = element_blank()) 
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_IBDpairwise_connections.jpg",
+     height = 8, width = 11, units = "in", res = 500)
+cowplot::plot_grid(meiotic_clst.uni.plotobj, meiotic_clst.conn.PlotObj,
+                   meiotic_clst.one.conn.map, ibd.moreconn.map,
+                   nrow = 2, align = "v", labels = c("(A)", "(B)", "(C)", "(D)"))
+graphics.off()
+
+```
 
 ### Local Transmission Events
 Now mark clusters with local transmission events (regardless of number of connections). 
 ```{r, results='asis'}
 
-ibD.meiotic.network %>% 
+local_trans_plot <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   dplyr::filter(hv001.x == hv001.y) %>% 
   ggplot() +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_jitter(alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  color = malecotf_gens),
              width = 0.05, height = 0.05) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
-  ggtitle("Local Transmission Sites")
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+
+plot(local_trans_plot)
+```
+
+#### Quadrad
+Is the quadrad from individuals in the same household?
+```{r, results='asis'}
+
+quadrad <- meiotic_clst.conn.nodes %>% 
+  dplyr::filter(hv001 == 284)
+
+dt.geo <- readRDS(file = "~/Documents/GitHub/VivID_Epi/data/derived_data/vividepi_recode_completecases.rds") %>% 
+  dplyr::select(c("hivrecode_barcode", "houseid"))
+
+quadrad %>% 
+  dplyr::rename(hivrecode_barcode = name) %>% 
+  dplyr::mutate(hivrecode_barcode = tolower(hivrecode_barcode)) %>% 
+  dplyr::left_join(., dt.geo, by = c("hivrecode_barcode")) %>% 
+  dplyr::select(c("hivrecode_barcode", "hv001", "adm1name", "houseid", "malecotf")) %>% 
+  knitr::kable(.)
 
 ```
+
 
 ### Long Transmission Events
 Now mark clusters with long transmission events (regardless of number of connections). 
@@ -314,7 +381,8 @@ notsameclst.nodes <- ibD.meiotic.network %>%
   dplyr::filter(hv001 %in% c(notsameclst.edges$hv001.x, notsameclst.edges$hv001.y))
 
 
-ggplot() +
+long_trans_plot <= ggplot() +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = notsameclst.edges,
               aes(x = long_jitter.x, y = lat_jitter.x, 
@@ -323,13 +391,24 @@ ggplot() +
              alpha = 0.5, size = 1.1) +
   geom_point(data = notsameclst.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) + 
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
-  ggtitle("Long Transmission Events")
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
 
+plot(long_trans_plot)
+```
+
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_local_long_trans_map.jpg",
+     height = 8, width = 11, units = "in", res = 500)
+cowplot::plot_grid(local_trans_plot, 
+                   long_trans_plot,
+                   nrow = 1, align = "v", labels = c("(A)", "(B)"))
+graphics.off()
 ```
 
 
 Interesting to look at edge density. 
+
 ```{r, results='asis'}
 
 
@@ -622,7 +701,7 @@ ibD.meiotic_plot_urban_binary_rstr <- ggplot() +
   ggspatial::layer_spatial(data = urbancatch, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity Binary", type = "div", palette = "RdYlBu") +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -658,11 +737,11 @@ graphics.off()
 urban.cities <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  prettybasemap_nodrc_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA) +
-  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_dark 
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") 
   
 
 

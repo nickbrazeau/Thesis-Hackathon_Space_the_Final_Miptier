@@ -1,0 +1,151 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# IBD, Meiotic Siblings Sink-Source
+In this analysis, we will look at our meiotic pairs and see if we can determine if directionality based on local IBD. 
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+```{r}
+library(tidyverse)
+library(raster)
+library(tidygraph)
+library(ggraph)
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
+```
+
+```{r}
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("id", "hv001")) %>% 
+  dplyr::rename(name = id)
+
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(name = id) %>% 
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% drcsmpls$name)
+
+# drc prov for plot
+DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+# load pretty map aesthetics 
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+
+```
+```{r}
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+
+# log2 IBD measure
+ibD <- ibD %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens)
+
+
+```
+
+
+<!-- TODO all above should be pre-done -->
+
+```{r}
+#..............................................................
+# Idenity samples with IBD that are greater than half the
+# genome (i.e. at or above meiotic siblings)
+# These represent likely recent transmission events
+#..............................................................
+ibD.meiotic <- ibD %>% 
+  dplyr::filter(malecotf_gens <= 1)
+ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
+ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
+
+
+```
+
+## Approach
+For each "meiotic" sample, we are going to take the mean IBD within a 10-km radius (about the distance a mosquito flies) of the samples' genotype to the other "near-neighbor" pairs. This should give us a sense of how common that genotype (or really how common segments are) and potentially "root" genotypes. Will scale this by $$\frac{n}{n-1}$$ to account for small sample sizes.
+
+```{r}
+# meiotic coord pts
+ibdmeioticsmpls.coords.pts <- mtdt %>% 
+  dplyr::select(c("name", "hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% ibdmeioticsmpls)
+ibdmeioticsmpls.coords.pts <- sf::st_as_sf(ibdmeioticsmpls.coords.pts, 
+                                           coords = c("longnum", "latnum"))
+sf::st_crs(ibdmeioticsmpls.coords.pts) <- 4326
+ibdmeioticsmpls.coords.pts <- sf::st_transform(ibdmeioticsmpls.coords.pts, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
+
+
+# meta data light
+mtdt.light <- mtdt %>% 
+  sf::st_as_sf(., coords = c("longnum", "latnum")) %>% 
+  dplyr::select(c("hv001")) %>% 
+  dplyr::filter(!duplicated(.))
+sf::st_crs(mtdt.light) <- 4326
+mtdt.light <- sf::st_transform(mtdt.light, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
+
+#..............................................................
+# Make a cluster map table
+#..............................................................
+meiotic.clst <- ibdmeioticsmpls.coords.pts %>% 
+  dplyr::select(c("hv001")) %>% 
+  dplyr::filter(!duplicated(.)) 
+#..............................................................
+# find nearest neighbors w/in 10km
+# 10-km radius because it corresponds to the maximum flight distance of blood-fed A gambiae
+# 10km wasn't enough... so moved on to where we though we saw an inflection point in the data for
+# falling off of distance approximately 100km 
+#..............................................................
+meiotic.buff <- sf::st_buffer(meiotic.clst, dist = 100*1e3) # m to km
+meiotic.buff <- split(meiotic.buff, 1:nrow(meiotic.buff))
+meiotic.clst$clst_intersects <- lapply(meiotic.buff, function(buff){
+  ret <- sf::st_intersection(mtdt.light, buff)
+  ret <- ret$hv001
+  return(ret)
+  })
+
+# get rid of extra info
+sf::st_geometry(meiotic.clst) <- NULL
+meiotic.clst <- meiotic.clst[,c("hv001", "clst_intersects")]
+  
+```
+
+```{r}
+#..............................................................
+# IBD information extend
+#.............................................................
+mtdtibd <- mtdt %>% 
+  dplyr::select(c("name", "hv001")) %>% 
+  dplyr::rename(smpl1 = name)
+ibD <- dplyr::left_join(ibD, mtdtibd, by = "smpl1")
+colnames(mtdtibd)[1] <- "smpl2"
+ibD <- dplyr::left_join(ibD, mtdtibd, by = "smpl2")
+
+#..............................................................
+# Join meiotic sibs with buffer clst information
+#..............................................................
+meiotic.clst <- mtdt %>% 
+  dplyr::select(c("name", "hv001")) %>% 
+  dplyr::filter(name %in% ibdmeioticsmpls) %>% 
+  dplyr::left_join(., y = meiotic.clst, by = "hv001")
+
+#..............................................................
+# Bring in the IBD information
+#..............................................................
+function(name, clst_intersects){
+  ret <- ibD %>% 
+    dplyr::filter(smpl1 == name | smpl2 == name) %>% 
+    dplyr::fitler()
+  
+}
+
+
+```
+
+
+
+
+

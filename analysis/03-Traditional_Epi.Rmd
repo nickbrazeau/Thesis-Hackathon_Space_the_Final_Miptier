@@ -195,9 +195,10 @@ ggplot() +
   plot_theme +
   scale_fill_viridis_c("Prov. Pairwise Mean IBD") + 
   theme(axis.title = element_blank(),
-        axis.text.x = element_text(family = "Helvetica", hjust = 0.5, size = 11, face = "bold", angle = 90),
-        axis.text.y = element_text(family = "Helvetica", hjust = 0.5, size = 11, face = "bold"),
+        axis.text.x = element_text(family = "Helvetica", hjust = 1, vjust = 0.5, size = 11, face = "bold", angle = 90),
+        axis.text.y = element_text(family = "Helvetica", hjust = 1, vjust = 0.5, size = 11, face = "bold"),
         legend.title = element_text(family = "Helvetica", hjust = 0.5, size = 12, face = "bold"),
+        legend.text = element_text(family = "Helvetica", hjust = 0.5, size = 12, face = "bold", angle = 90),
         legend.position = "bottom")
 
 plot(adm1name.pairs.plotObj)
@@ -205,7 +206,7 @@ plot(adm1name.pairs.plotObj)
 ```
 
 ```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/adm1name_pairs_meanIBD.jpg")
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/adm1name_pairs_meanIBD.jpg", width = 8, height = 8.5, units = "in", res = 600)
 plot(adm1name.pairs.plotObj)
 graphics.off()
 

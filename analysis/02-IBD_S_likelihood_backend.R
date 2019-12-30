@@ -4,83 +4,7 @@
 #..............................................................
 library(tidyverse)
 source("R/pairwise_helpers.R")
-#..............................................................
-# Function
-#..............................................................
-
-get_distance_geno_likelihood <- function(name, relatedness, distmat, clsts){
-  #..............................................................
-  # functions
-  #..............................................................
-  gaussdist <- function(x){
-    x <- x/1e3 # m to km
-    ret <- (1 / sqrt(2*pi) ) * exp(-x)
-    return(ret)
-  }
-
-  #..............................................................
-  # setup
-  #..............................................................
-  clsts <- unique(clsts)
-  fuu <- sapply(clsts, function(x){
-    ret <- mean( relatedness$relatedness[c(relatedness$hv001.x %in% x | relatedness$hv001.y %in% x)] )
-    return(ret)
-  })
-
-
-  for (i in 1:length(clsts)) {
-    cat("Iteration i: ", i)
-    for (j in 1:length(clsts)) {
-
-      # init
-      LL <- 0
-
-      # first term
-      frsttrm <- 0
-      for (u in 1:length(clsts)) {
-        if ( clsts[u] == clsts[i] ){
-          diu <- 0
-        } else {
-          diu <- gaussdist( distmat$distance[distmat$hv001.x == clsts[i] & distmat$hv001.y == clsts[u]] )
-        }
-        if ( clsts[u] == clsts[j] ){
-          dju <- 0
-        } else {
-          dju <- gaussdist( distmat$distance[distmat$hv001.x == clsts[j] & distmat$hv001.y == clsts[u]] )
-        }
-
-        frsttrm <- frsttrm + (fuu[u] * diu * dju)
-
-      }
-
-      # second term
-      scndterm <- 0
-      # now loop through
-      for (u in 1:length(clsts)) {
-        for (v in length(clsts):1) { # go backwards so not same deme
-          fuv <- mean( relatedness$relatedness[ relatedness$hv001.x %in% c( clsts[u], clsts[v] ) ] ) # mean within demes relatedness
-          if (clsts[u] == clsts[i]) {
-            diu <- 0
-          } else {
-            diu <- gaussdist( distmat$distance[distmat$hv001.x == clsts[i] & distmat$hv001.y == clsts[u]] )
-          }
-
-          if (clsts[v] == clsts[j]) {
-            djv <- 0
-          } else {
-            djv <- gaussdist( distmat$distance[distmat$hv001.x == clsts[j] & distmat$hv001.y == clsts[v]] )
-          }
-          scndterm <- scndterm + (fuv*diu*djv)
-        }
-      }
-
-      # add to LL
-      LL <- LL + sum(log(frsttrm), log(scndterm))
-    } # end loop j
-  } # end loop i
-  return(LL)
-}
-
+source("R/recursive_likelihood.R")
 
 #..............................................................
 # Model Setup
@@ -150,7 +74,30 @@ riverdistmat <- distancematrix.cluster %>%
   dplyr::rename(distance = riverdist) %>%
   dplyr::mutate(distance = distance/1e3)
 
+#..............................................................
+# make distance data
+#..............................................................
+# ibS
+ibS.gcdistmat <- dplyr::left_join(ibS, gcdistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
+ibS.roaddistmat <- dplyr::left_join(ibS, roaddistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
+ibS.riverdistmat <- dplyr::left_join(ibS, riverdistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
 
+# ibD
+ibD.gcdistmat <- dplyr::left_join(ibD, gcdistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
+ibD.roaddistmat <- dplyr::left_join(ibD, roaddistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
+ibD.riverdistmat <- dplyr::left_join(ibD, riverdistmat, by = c("hv001.x", "hv001.y")) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "relatedness", "K1", "K2", "distance")) %>%
+  dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
 
 #...................
 #  Model framework
@@ -158,11 +105,14 @@ riverdistmat <- distancematrix.cluster %>%
 
 modLL <- tibble::tibble(
   name = c("gcdist-ibs", "roaddist-ibs", "riverdist-ibs", "gcdist-ibd", "roaddistibd", "riverdist-ibd"),
-  relatedness = list(ibS, ibS, ibS, ibD, ibD, ibD),
-  distmat = list(gcdistmat, roaddistmat, riverdistmat, gcdistmat, roaddistmat, riverdistmat),
-  clsts = list(drcsmpls$hv001)
+  distdata = list(ibS.gcdistmat,
+                  ibS.roaddistmat,
+                  ibS.riverdistmat,
+                  ibD.gcdistmat,
+                  ibD.roaddistmat,
+                  ibD.riverdistmat),
+  scalar = 1
 )
-
 
 
 

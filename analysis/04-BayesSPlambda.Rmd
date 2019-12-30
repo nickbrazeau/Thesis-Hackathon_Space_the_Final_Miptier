@@ -151,6 +151,7 @@ provCovar.geo %>%
 ```{r, results='asis'}
 DRC.Provmprev <- dplyr::left_join(DRCprov, provCovar, by = "adm1name")
 DRC.Provmprev.plotObj <- ggplot() +
+  prettybasemap_nodrc_dark + 
     geom_sf(data = DRC.Provmprev, aes(fill = prev), 
           color = "#525252", size = 0.05) +
     scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") 
@@ -366,16 +367,23 @@ Provwthn %>%
 DRC.Provwthn <- dplyr::left_join(DRCprov, Provwthn, by = "adm1name")
 
 DRC.Provwthn.plotObj <- ggplot() +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRC.Provwthn, aes(fill = wthnIBD), 
           color = "#525252", size = 0.05) +
-  scale_fill_viridis_c("Within IBD") 
-#prettybasemap_nodrc_dark 
+  scale_fill_viridis_c("Within IBD") +
 
 ```
 ```{r, results='asis'}
 
 cowplot::plot_grid(DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
 
+```
+
+```{r}
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/provibD_within_prev.jpg", width = 11, height = 8, units = "in", res = 600)
+cowplot::plot_grid(DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v", labels = c("(A)", "(B)"))
+graphics.off()
 ```
 
 
