@@ -1,7 +1,7 @@
 #' @param distdata
 #' @param scalar numeric; scalar for distance
 #' @details distdata column names must be: (1) smpl1; (2) smpl2; (3) relatedness; (4) K1; (5) K2; (6) distance
-get_distance_geno_likelihood <- function(distdata, scalar){
+get_distance_geno_likelihood <- function(name, distdata, scalar){
   #..............................................................
   # Assertions
   #..............................................................
