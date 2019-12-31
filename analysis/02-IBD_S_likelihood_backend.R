@@ -119,14 +119,14 @@ modLL <- tibble::tibble(
 # for slurm on LL
 dir.create("results/distance_likelihoods", recursive = T)
 setwd("results/distance_likelihoods/")
-ntry <- nrow(modLL)
+ntry <- nrow(modLL) - 1
 sjob <- rslurm::slurm_apply(f = get_distance_geno_likelihood,
                             params = modLL,
                             jobname = 'distance_likelihoods_recursion',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
-                            slurm_options = list(mem = 64000,
+                            slurm_options = list(mem = 256000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
                                                                  128),
