@@ -42,17 +42,17 @@ ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 # Permutation Testing
 #..............................................................
 # Wrapper for Meiotic Siblings
-meiotic_sib_wrapper <- function(name, nsmpls, IBDdistrib, covardistrib){
+meiotic_sib_wrapper <- function(name, nsmpls, IBDdistrib, IBDwi, covardistrib){
   #' @param nsmpls numeric; number of samples to simulate as pairs for IBD
   #' @param IBDdistrib numeric vector; distribution of IBD in population
   #' @param covardistrib numeric vector; distribution of covariate in population
 
-  IBDpermutator <- function(nsmpls, IBDdistrib, covardistrib){
+  IBDpermutator <- function(nsmpls, IBDdistrib, IBDwi, covardistrib){
 
     distmat <- matrix(NA, nrow = nsmpls, ncol = nsmpls)
     smpl.pairs <- sum(lower.tri(distmat, diag = F))
     # ibd
-    smpl.pair.IBD <- sample(IBDdistrib, size = smpl.pairs, replace = T)
+    smpl.pair.IBD <- sample(IBDdistrib, size = smpl.pairs, prob = IBDwi/sum(IBDwi), replace = T)
     # covar
     smpl.pair.covar <- tibble::tibble(
       covar.x = sample(covardistrib, size = smpl.pairs, replace = T),
@@ -75,7 +75,7 @@ meiotic_sib_wrapper <- function(name, nsmpls, IBDdistrib, covardistrib){
 
   # given that you are at or above meiotic, this is what your
   # covar distribution should look like
-  smpl.pair.IBD <- IBDpermutator(name, nsmpls, IBDdistrib, covardistrib)
+  smpl.pair.IBD <- IBDpermutator(nsmpls, IBDdistrib, IBDwi, covardistrib)
   if (max(smpl.pair.IBD$simibd) >= 0.5) {
     smpl.pair.IBD.meiotic <- smpl.pair.IBD %>%
       dplyr::filter(simibd >= 0.5) %>%
@@ -101,23 +101,53 @@ citydistrib <- clstcovar$urban
 unique_clst_vs_same_distrib <- mtdt$hv001
 
 #..............................................................
+# Save some memory for IBD distribut
+#..............................................................
+IBDdistrib <- sort( unique(ibD$malecotf) )
+IBDwi <- table(ibD$malecotf)
+if(!all(names(IBDwi) == IBDdistrib)){
+  stop("Issue with IBD distrib uniqueness")
+}
+
+
+#..............................................................
 # Run Simulations
 #..............................................................
 simdf <- tibble::tibble(
   name = c("prev", "urban", "clstwthn"),
   nsmpls = nrow(drcsmpls),
-  IBDdistrib = list(ibD$malecotf),
+  IBDdistrib = list(IBDdistrib),
+  IBDwi = list(IBDwi),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e3
+iters <- 1e1
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)
 
-simdf$ret <- purrr::pmap(simdf, meiotic_sib_wrapper)
-simdf <- simdf %>%
-  dplyr::select(c("name", "ret"))
+
+#..............................................................
+# Out on LL
+#..............................................................
+# for slurm on LL
 dir.create("results/meiotic_null_dist", recursive = T)
-saveRDS(simdf, file = "results/meiotic_null_dist/meoitic_null_distrib.RDS")
+setwd("results/carbayes_sp_dics/")
+ntry <- 1028 # max number of nodes
+sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
+                            params = simdf,
+                            jobname = 'meiotic_sib_permutations',
+                            nodes = ntry,
+                            cpus_per_node = 1,
+                            submit = T,
+                            slurm_options = list(mem = 32000,
+                                                 array = sprintf("0-%d%%%d",
+                                                                 ntry,
+                                                                 128),
+                                                 'cpus-per-task' = 1,
+                                                 error =  "%A_%a.err",
+                                                 output = "%A_%a.out",
+                                                 time = "12:00:00"))
+
+cat("*************************** \n Submitted Permutations \n *************************** ")
 
 
