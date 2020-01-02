@@ -53,7 +53,7 @@ distdata <- dplyr::left_join(ibD, gcdistmat, by = c("hv001.x", "hv001.y"))
 #..............................................................
 # downsize setup
 #..............................................................
-keep <- c(1:5)
+keep <- c(1,5)
 smpls.keep <- drcsmpls %>%
   dplyr::filter(hv001 %in% keep) %>%
   dplyr::select(c("smpl2")) %>%

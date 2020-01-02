@@ -105,7 +105,7 @@ ibD.riverdistmat <- dplyr::left_join(ibD, riverdistmat, by = c("hv001.x", "hv001
 
 modLL <- tibble::tibble(
   name = c("gcdist-ibs", "roaddist-ibs", "riverdist-ibs", "gcdist-ibd", "roaddistibd", "riverdist-ibd"),
-  distdata = list(ibS.gcdistmat,
+  fulldata = list(ibS.gcdistmat,
                   ibS.roaddistmat,
                   ibS.riverdistmat,
                   ibD.gcdistmat,
@@ -116,24 +116,49 @@ modLL <- tibble::tibble(
 
 
 
+
+#..............................................................
+# Massive parallelization
+#..............................................................
+clsts <- sort( unique(c(ibS.gcdistmat$K1, ibS.gcdistmat$K2)) )
+clsts.combns <- as.data.frame( t( combn(clsts, 2) ) )
+colnames(clsts.combns) <- c("K1sub", "K2sub")
+
+modLL$distdata <- purrr::map(modLL$fulldata, function(dat){
+  # nested lapply to subset to specific row of data that we want
+  out <- apply(clsts.combns, 1, function(combns){
+    ret <- dat %>%
+      dplyr::filter(c(K1 %in% as.vector(combns) | K2 %in% as.vector(combns)))
+    return(ret)
+  })
+  return(out)
+})
+
+# subset and unnest
+modLL$Kselect <- lapply(1:nrow(modLL), function(x) return(clsts.combns))
+modLL <- modLL %>%
+  dplyr::select(-c("fulldata")) %>%
+  tidyr::unnest(cols = c(Kselect, distdata))
+
+
 # for slurm on LL
 dir.create("results/distance_likelihoods", recursive = T)
 setwd("results/distance_likelihoods/")
-ntry <- nrow(modLL) - 1
+ntry <- 1028 # max number of nodes allowed
 sjob <- rslurm::slurm_apply(f = get_distance_geno_likelihood,
                             params = modLL,
                             jobname = 'distance_likelihoods_recursion',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
-                            slurm_options = list(mem = 256000,
+                            slurm_options = list(mem = 32000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
                                                                  128),
                                                  'cpus-per-task' = 1,
                                                  error =  "%A_%a.err",
                                                  output = "%A_%a.out",
-                                                 time = "11-00:00:00"))
+                                                 time = "10s:00:00"))
 
 
 
