@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --ntasks=1
-#SBATCH --time=12:00:00
-#SBATCH --mem=16g
+#SBATCH --time=5-00:00:00
+#SBATCH --mem=256g
 #SBATCH --mail-type=all
 #SBATCH --mail-user=nbrazeau@med.unc.edu
 
