@@ -195,11 +195,48 @@ mod.IBD.provCovar.nest <- mod.IBD.provCovar %>%
 #-------------------------------------------------------------------------
 # Conditional Autoregressive Spatial Model
 #-------------------------------------------------------------------------
-#......................
-# Make Adjacency Matrix for Pv
-#......................
-W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
-W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
+#..............................................................
+# Make Adjacency Matrix
+# by space
+#..............................................................
+#W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
+#W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
+
+make_symm_mat <- function(x){
+  # now make it a symm matrix
+  ret <- rbind( matrix(NA, nrow = 1, ncol = ncol(x)), as.matrix(x) )
+  ret <- cbind(ret, matrix(NA, nrow = nrow(ret), ncol = 1) )
+  diag(ret) <- 0
+  ret[upper.tri(ret)] <- t(ret)[lower.tri(ret)]
+  return(ret)
+}
+#..............................................................
+# get distance matrices
+#..............................................................
+# gc
+prov.gcdist <- readRDS("data/distance_data/greater_circle_distance_forprovinces.rds")
+W.gcdist <- prov.gcdist %>%
+  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.gcdist <- make_symm_mat(W.gcdist)/1e3 # meters to kilometers, to help with variance
+
+# road
+prov.roaddist <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
+W.roaddist <- prov.roaddist %>%
+  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.roaddist <- make_symm_mat(W.roaddist)/1e3 # meters to kilometers, to help with variance
+
+# river
+prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds")
+W.riverdist <- prov.riverdist %>%
+  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.riverdist <- make_symm_mat(W.riverdist)/1e3 # meters to kilometers, to help with variance
+
 
 #..............................................................
 # Make Model Framework
@@ -290,15 +327,17 @@ wrap_S.CARleroux <- function(distcat, outcome, formula, W, data, burnin, n.sampl
 #..............................................................
 mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
-                           n.sample = 1e6 + 1e4,
-                           W = list(W))
+                           n.sample = 1e6 + 1e4)
+
+W.matrices <- list(W.gcdist, W.roaddist, W.riverdist)
 
 # rep this out three times for levels of spatial data, three model levels
 mod.framework.sp <- lapply(1:nrow(mod.IBD.provCovar.nest),
                            function(x){
                              meta <- tibble::tibble(
                                distcat = mod.IBD.provCovar.nest$distcat[x],
-                               outcome = mod.IBD.provCovar.nest$outcome[x]
+                               outcome = mod.IBD.provCovar.nest$outcome[x],
+                               W = W.matrices[x]
                              )
                              ret <- cbind.data.frame(meta, mod.framework.sp)
                              return(ret)

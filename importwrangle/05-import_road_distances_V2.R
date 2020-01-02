@@ -30,8 +30,8 @@ library(osrm)
 options(osrm.server = "http://0.0.0.0:5000/", osrm.profile = "driving")
 
 ge.osrm <- ge %>%
-  dplyr::select("dhsclust")
-rownames(ge.osrm) <- ge.osrm$dhsclust
+  dplyr::select("hv001")
+rownames(ge.osrm) <- ge.osrm$hv001
 
 #..............................................................
 # pull in friction surface

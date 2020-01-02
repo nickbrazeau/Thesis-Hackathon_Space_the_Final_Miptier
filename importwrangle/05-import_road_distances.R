@@ -165,12 +165,13 @@ drcpov.osrm$provcentroid[drcpov.osrm$adm1name == "Mai-Ndombe"] <- sf::st_sfc(st_
                                                                    crs = crs)
 
 
-
 # now access API
 provlvldists <- osrm::osrmTable(loc = drcpov.osrm,
                                   measure = "distance") # in meters
 
-
+# add in names
+colnames(provlvldists$distances) <- drcpov.osrm$adm1name
+rownames(provlvldists$distances) <- drcpov.osrm$adm1name
 
 #..................
 # save out

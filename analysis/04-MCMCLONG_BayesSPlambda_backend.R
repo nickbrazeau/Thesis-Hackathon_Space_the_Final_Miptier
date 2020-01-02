@@ -114,7 +114,7 @@ provCovar <- provCovar.raw %>%
     temp = my.scale(temp),
     elev = my.scale(elev),
     crops = my.scale(logit(crops, tol = 0.1)),
-    actuse = my.scale(logit(actuse, tol = 0.1)),
+#    actuse = my.scale(logit(actuse, tol = 0.1)), actuse doesn't have any real variation in DRC
     netuse = my.scale(logit(netuse, tol = 0.1)),
     housing = my.scale(logit(housing, tol = 0.1))
   )
@@ -135,13 +135,51 @@ mod.IBD.provCovar <- dplyr::left_join(withinprovIBD, provCovar,
 #-------------------------------------------------------------------------
 # Conditional Autoregressive Spatial Model
 #-------------------------------------------------------------------------
-#......................
+#..............................................................
 # Make Adjacency Matrix
 # by space
-# TODO -- FIX THIS
-#......................
-W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
-W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
+#..............................................................
+#W.nb <- spdep::poly2nb(sf::as_Spatial(DRCprov), row.names = DRCprov$adm1name)
+#W <- spdep::nb2mat(W.nb, style = "B") # binary weights taking values zero or one (only one is recorded)
+
+make_symm_mat <- function(x){
+  # now make it a symm matrix
+  ret <- rbind( matrix(NA, nrow = 1, ncol = ncol(x)), as.matrix(x) )
+  ret <- cbind(ret, matrix(NA, nrow = nrow(ret), ncol = 1) )
+  diag(ret) <- 0
+  ret[upper.tri(ret)] <-  t(ret)[upper.tri(ret)]
+  return(ret)
+}
+#..............................................................
+# get distance matrices
+#..............................................................
+# gc
+prov.gcdist <- readRDS("data/distance_data/greater_circle_distance_forprovinces.rds")
+W.gcdist <- prov.gcdist %>%
+  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.gcdist <- make_symm_mat(W.gcdist)/1e3 # meters to kilometers, to help with variance
+
+# road
+prov.roaddist <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
+W.roaddist <- prov.roaddist %>%
+  tidyr::spread(., key = "item2", value = "roaddistance") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.roaddist <- make_symm_mat(W.roaddist)/1e3 # meters to kilometers, to help with variance
+
+# river
+prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds")
+W.riverdist <- prov.riverdist %>%
+  dplyr::select(c("dhsprovfrom", "dhsprovto", "riverdist")) %>%
+  dplyr::rename(item1 = dhsprovfrom,
+                item2 = dhsprovto) %>%
+  tidyr::spread(., key = "item2", value = "riverdist") %>%
+  dplyr::select(-c("item1"))
+# now make it a symm matrix
+W.riverdist <- make_symm_mat(W.riverdist)/1e3 # meters to kilometers, to help with variance
+
 
 #..............................................................
 # Run Leroux model in parallel on slurm
@@ -204,7 +242,7 @@ mod.framework.sp <- tibble(distcat = c("gc", "road", "river"),
                                           as.formula("meangens ~ 1")),
                            burnin = 1e4,
                            n.sample = 1e7 + 1e4,
-                           W = list(W),
+                           W = list(W.gcdist, W.roaddist, W.riverdist),
                            data = list(mod.IBD.provCovar))
 
 mod.framework.sp$results <- purrr::pmap(mod.framework.sp, wrap_S.CARleroux)
