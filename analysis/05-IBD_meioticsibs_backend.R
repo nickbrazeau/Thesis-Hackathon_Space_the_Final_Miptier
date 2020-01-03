@@ -131,7 +131,7 @@ simdf <- lapply(1:iters, function(x) return(simdf)) %>%
 #..............................................................
 # for slurm on LL
 dir.create("results/meiotic_null_dist", recursive = T)
-setwd("results/carbayes_sp_dics/")
+setwd("results/meiotic_null_dist/")
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
                             params = simdf,

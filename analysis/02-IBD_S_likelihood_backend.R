@@ -158,7 +158,7 @@ sjob <- rslurm::slurm_apply(f = get_distance_geno_likelihood,
                                                  'cpus-per-task' = 1,
                                                  error =  "%A_%a.err",
                                                  output = "%A_%a.out",
-                                                 time = "10s:00:00"))
+                                                 time = "10:00:00"))
 
 
 
