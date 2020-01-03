@@ -131,14 +131,14 @@ sjob <- rslurm::slurm_apply(f = meiotic_sib_wrapper,
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
-                            slurm_options = list(mem = 4000,
+                            slurm_options = list(mem = 32000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
                                                                  128),
                                                  'cpus-per-task' = 1,
                                                  error =  "%A_%a.err",
                                                  output = "%A_%a.out",
-                                                 time = "1:00:00"))
+                                                 time = "5:00:00"))
 
 cat("*************************** \n Submitted Permutation Sims \n *************************** ")
 

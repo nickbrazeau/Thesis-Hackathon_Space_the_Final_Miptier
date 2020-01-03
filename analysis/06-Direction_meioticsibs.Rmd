@@ -40,11 +40,16 @@ load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_
 ```{r}
 ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
 
+# merge in cluster informations
+colnames(drcsmpls)[1] <- "smpl1"
+ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
+colnames(drcsmpls)[1] <- "smpl2"
+ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
+colnames(drcsmpls)[1] <- "name" # need this for posterity/later blocks
 # log2 IBD measure
 ibD <- ibD %>% 
   dplyr::mutate(malecotf_gens = -log2(malecotf),
                 malecotf_gens_inv = 1/malecotf_gens)
-
 
 ```
 
@@ -79,7 +84,9 @@ sf::st_crs(ibdmeioticsmpls.coords.pts) <- 4326
 ibdmeioticsmpls.coords.pts <- sf::st_transform(ibdmeioticsmpls.coords.pts, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
 
 
-# meta data light
+#..............................................................
+# subset mtdt to just what we need to make a meiotic table
+#..............................................................
 mtdt.light <- mtdt %>% 
   sf::st_as_sf(., coords = c("longnum", "latnum")) %>% 
   dplyr::select(c("hv001")) %>% 
@@ -88,64 +95,260 @@ sf::st_crs(mtdt.light) <- 4326
 mtdt.light <- sf::st_transform(mtdt.light, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
 
 #..............................................................
-# Make a cluster map table
-#..............................................................
-meiotic.clst <- ibdmeioticsmpls.coords.pts %>% 
-  dplyr::select(c("hv001")) %>% 
-  dplyr::filter(!duplicated(.)) 
-#..............................................................
 # find nearest neighbors w/in 10km
 # 10-km radius because it corresponds to the maximum flight distance of blood-fed A gambiae
-# 10km wasn't enough... so moved on to where we though we saw an inflection point in the data for
-# falling off of distance approximately 100km 
+# 10km wasn't enough... so moved on to where we thought we saw an inflection point in the data for falling off of distance approximately 100km 
 #..............................................................
-meiotic.buff <- sf::st_buffer(meiotic.clst, dist = 100*1e3) # m to km
+meiotic.buff <- sf::st_buffer(ibdmeioticsmpls.coords.pts, dist = 100*1e3) # m to km
 meiotic.buff <- split(meiotic.buff, 1:nrow(meiotic.buff))
-meiotic.clst$clst_intersects <- lapply(meiotic.buff, function(buff){
+ibdmeioticsmpls.coords.pts$clst_intersects <- lapply(meiotic.buff, function(buff){
   ret <- sf::st_intersection(mtdt.light, buff)
   ret <- ret$hv001
   return(ret)
   })
 
-# get rid of extra info
-sf::st_geometry(meiotic.clst) <- NULL
-meiotic.clst <- meiotic.clst[,c("hv001", "clst_intersects")]
+# we no longer need geographic information
+# as we now have the meiotic sample and which clusters it is closest to 
+sf::st_geometry(ibdmeioticsmpls.coords.pts) <- NULL
+
   
 ```
 
 ```{r}
-#..............................................................
-# IBD information extend
-#.............................................................
-mtdtibd <- mtdt %>% 
-  dplyr::select(c("name", "hv001")) %>% 
-  dplyr::rename(smpl1 = name)
-ibD <- dplyr::left_join(ibD, mtdtibd, by = "smpl1")
-colnames(mtdtibd)[1] <- "smpl2"
-ibD <- dplyr::left_join(ibD, mtdtibd, by = "smpl2")
 
 #..............................................................
-# Join meiotic sibs with buffer clst information
+# Making the Meiotic IBD dictionary
+#   Here we have the meiotic sibling sample and the clusters
+#   that were within X-km of that sample. We extract all pairwise
+#   comparison of the meiotic sample and those samples in the nearby clusters
 #..............................................................
-meiotic.clst <- mtdt %>% 
-  dplyr::select(c("name", "hv001")) %>% 
-  dplyr::filter(name %in% ibdmeioticsmpls) %>% 
-  dplyr::left_join(., y = meiotic.clst, by = "hv001")
-
-#..............................................................
-# Bring in the IBD information
-#..............................................................
-function(name, clst_intersects){
-  ret <- ibD %>% 
-    dplyr::filter(smpl1 == name | smpl2 == name) %>% 
-    dplyr::fitler()
+liftover_ibd_neighborhood <- function(ibd_dict, smpls = drcsmpls, genrelated = ibD){
+  # get intersecting clusters
+  clst_intersects <- unlist(ibd_dict$clst_intersects)
+  # get all drc samples from clsts
+  smpls_intersect <- smpls %>% 
+    dplyr::filter(hv001 %in% clst_intersects)
+  # find pairwise comparison that are for meiotic smpl and neighbors 
+  ibD_intersect <- genrelated %>% 
+    dplyr::filter( c(
+      smpl1 %in% smpls_intersect$name & smpl2 == ibd_dict$name | # transivity of iBD measures
+        smpl2 %in% smpls_intersect$name & smpl1 == ibd_dict$name
+                    )
+      )
+  # calculate neighborhood IBD
+  neighborhood_ibd <- mean(ibD_intersect$malecotf)
+  
+  return(neighborhood_ibd)
   
 }
+
+ibdmeioticsmpls.coords.pts.list <- split(ibdmeioticsmpls.coords.pts, 
+                                         1:nrow(ibdmeioticsmpls.coords.pts))
+# run function
+ibdmeioticsmpls_neighborIBD <- lapply(ibdmeioticsmpls.coords.pts.list,
+                                      liftover_ibd_neighborhood,
+                                      smpls = drcsmpls, genrelated = ibD)
+```
+```{r}
+#..............................................................
+# Reattach new neighborhood data and join
+#..............................................................
+ibdmeioticsmpls.coords.pts$neighborhoodIBD = unlist(ibdmeioticsmpls_neighborIBD)
+ibdmeioticsmpls.neighborhood <- ibdmeioticsmpls.coords.pts %>% 
+  dplyr::select(c("name", "neighborhoodIBD"))
+
+# join with ibd meiotic set
+colnames(ibdmeioticsmpls.neighborhood)[1] <- "smpl1"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic, 
+                                                ibdmeioticsmpls.neighborhood,
+                                                by = "smpl1")
+colnames(ibdmeioticsmpls.neighborhood)[1] <- "smpl2"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD, 
+                                                ibdmeioticsmpls.neighborhood,
+                                                by = "smpl2")
+
+```
+
+```{r}
+
+ibD.meiotic.neighborhoodIBD <- ibD.meiotic.neighborhoodIBD %>% 
+  dplyr::filter(hv001.x != hv001.y) %>% 
+  dplyr::mutate(
+    neighborIBDdiff = neighborhoodIBD.x - neighborhoodIBD.y # positive values support x, negative y
+  )
+
+
+```
+
+```{r}
+# to do, should make this importable since we use it twice
+#..............................................................
+# Read in urban data
+#..............................................................
+# extract out coordinate information and join in urban rural data
+coord.pts <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>% 
+  dplyr::rename(hv001 = dhsclust) %>% 
+  dplyr::select(c("hv001", "urban_rura")) %>% 
+  dplyr::filter(!duplicated(hv001)) %>% 
+  dplyr::filter(hv001 %in% unique(mtdt$hv001)) %>% 
+  dplyr::mutate(urban_rura_ext = ifelse(urban_rura == "R", 10000, 2000))
+
+urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
+
+
+urbanmedian <- rep(NA, nrow(coord.pts)) 
+for (i in 1:nrow(coord.pts)) {
+  urbanmedian[i] <-  raster::extract(x = urban,
+                                   y = sf::as_Spatial(coord.pts$geometry[i]),
+                                   buffer = coord.pts$urban_rura_ext[i],
+                                   fun = median, na.rm = T
+  )
+}
+  
+urban.pts <- coord.pts %>% 
+  dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
+                latnum = sf::st_coordinates(geometry)[,2],
+                urbanmedian = urbanmedian) %>% 
+  dplyr::select(c("hv001", "longnum", "latnum", "urbanmedian")) %>% 
+  dplyr::filter(hv001 %in% c(ibD.meiotic.neighborhoodIBD$hv001.x, ibD.meiotic.neighborhoodIBD$hv001.y))
 
 
 ```
 
 
+```{r}
+#..............................................................
+# attach urban data
+#..............................................................
+colnames(urban.pts)[1] <- "hv001.x"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
+                                                urban.pts, 
+                                                by = "hv001.x")
 
+colnames(urban.pts)[1] <- "hv001.y"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
+                                                urban.pts, 
+                                                by = "hv001.y")
+
+```
+
+## Directionality Mapping
+Here, we have assigned the directionality based on the difference in pairwise IBD between the meiotic smaple and the other samples among local clusters. Arrows indicate the inferred directionality based on local IBD-ness (i.e. if a pairwise comparison shared more similarity in its "from" node versus its "to" node). **N.B. -- subsetted to observations that are between clusters, as we assume that within cluster highly related pairs are likely local transmission events**. 
+
+### Pairwise
+```{r}
+
+ibD.meiotic.neighborhoodIBD_plotdf <- ibD.meiotic.neighborhoodIBD %>% 
+  # note, need to determine "correct end" for arrow
+  dplyr::mutate(long.start = ifelse(neighborIBDdiff > 0, longnum.x, longnum.y),
+                lat.start = ifelse(neighborIBDdiff > 0, latnum.x, latnum.y),
+                long.end = ifelse(neighborIBDdiff > 0, longnum.y, longnum.x),
+                lat.end = ifelse(neighborIBDdiff > 0, latnum.y, latnum.x),
+                neighborIBDdiff_scaled = abs(neighborIBDdiff),
+                neighborIBDdiff_lvls = cut(neighborIBDdiff_scaled,
+                                           breaks = c(0, 0.01, 0.025, 0.05, 0.09, 1)),
+                neighborIBDdiff_lvls = factor(neighborIBDdiff_lvls, 
+                                              labels = c("<1%", "1-2.5%", "2.5-5%", "5-9%", ">9%"))
+  )
+
+ibD.meiotic.neighborhoodIBD_pointdf <- mtdt %>% 
+  dplyr::filter(hv001 %in% c(ibD.meiotic.neighborhoodIBD_plotdf$hv001.x, ibD.meiotic.neighborhoodIBD_plotdf$hv001.y)) %>% 
+  dplyr::select(c("hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(!duplicated(.))
+  
+IBD_meiotic_direct_plot <- ggplot() +
+  # prettybasemap_nodrc_dark + 
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+              aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf_gens,
+                 size = neighborIBDdiff_lvls),
+              arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.5) +
+  geom_point(data = ibD.meiotic.neighborhoodIBD_pointdf,
+             aes(x = longnum, y = latnum), 
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) + 
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
+  map_theme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, vjust = 0.5, size = 12),
+    legend.text = element_text(family = "Helvetica", size = 11, hjust = 0.5, vjust = 0.5, angle = 0),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality.jpg", width = 8, height = 8, units = "in", res = 500)
+plot(IBD_meiotic_direct_plot)
+graphics.off()
+```
+
+```{r, results='asis'}
+plot(IBD_meiotic_direct_plot)
+```
+
+
+### Pairwise-Urbanicity
+```{r}
+
+
+IBD_meiotic_direct_plot <- ggplot() +
+  # prettybasemap_nodrc_dark + 
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+              aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf_gens,
+                 size = neighborIBDdiff_lvls),
+              arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.5) +
+  geom_point(data = urban.pts,
+             aes(x = longnum, y = latnum,
+                 fill = urbanmedian), 
+             shape = 21) +
+  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
+  map_theme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, vjust = 0.5, size = 12),
+    legend.text = element_text(family = "Helvetica", size = 11, hjust = 0.5, vjust = 0.5, angle = 0),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_urban.jpg", width = 8, height = 8, units = "in", res = 500)
+plot(IBD_meiotic_direct_plot)
+graphics.off()
+```
+
+```{r, results='asis'}
+plot(IBD_meiotic_direct_plot)
+```
+
+#### Neighboorhood Data
+```{r, results='asis'}
+ibD.meiotic.neighborhoodIBD_plotdf %>% 
+  dplyr::select(-c(dplyr::starts_with("long"),
+                   dplyr::starts_with("lat"),
+                   dplyr::starts_with("geometry"),
+                   neighborIBDdiff_scaled,
+                   neighborIBDdiff_lvls
+                   )) %>% 
+  DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+
+```
 
 

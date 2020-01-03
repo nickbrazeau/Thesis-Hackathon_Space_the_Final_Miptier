@@ -381,7 +381,7 @@ notsameclst.nodes <- ibD.meiotic.network %>%
   dplyr::filter(hv001 %in% c(notsameclst.edges$hv001.x, notsameclst.edges$hv001.y))
 
 
-long_trans_plot <= ggplot() +
+long_trans_plot <- ggplot() +
   prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = notsameclst.edges,

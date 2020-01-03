@@ -39,6 +39,11 @@ wtrpolys <- sf::read_sf("data/raw_data/diva_gis_waterways/COD_wat/COD_water_area
   dplyr::filter(HYC_DESCRI == "Perennial/Permanent") # keep only permanent
 
 # cast polys
+wtrpolys.multilinestring <- sf::st_cast(wtrpolys, "MULTILINESTRING")
+wtrpolys.linestring <- sf::st_cast(wtrpolys.multilinestring, "LINESTRING")
+
+# unionize
+CODwater <- sf::st_union(wtrlns, wtrpolys.linestring)
 
 #............................................................................................................
 # write out and manipulate in qgis

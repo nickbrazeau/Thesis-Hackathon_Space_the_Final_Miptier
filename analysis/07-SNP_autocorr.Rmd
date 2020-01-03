@@ -1,0 +1,30 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Autocorrelation among Markers
+In this analysis, we will look at the autocorrelation (as a proxy of linkage disequilibrium) among our SNPs. 
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+```{r}
+library(tidyverse)
+library(vcfR)
+remotes::install_github("nickbrazeau/vcfRmanip")
+library(vcfRmanip)
+```
+
+
+
+
+
+
+
+
+
+<!-- words -->
+
