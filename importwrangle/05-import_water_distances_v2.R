@@ -32,15 +32,13 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 #...............................
 # Waterways
 #...............................
-wtrlns <- sf::read_sf("data/raw_data/hotosm_cod_waterways_lines_shp/hotosm_cod_waterways_lines.shp")
-wtrlns <- wtrlns %>%
-  dplyr::filter(waterway == "river" & !is.na(name)) %>%
-  dplyr::select(c("name", "geometry"))
+wtrlns <- sf::read_sf("data/raw_data/diva_gis_waterways/COD_wat/COD_water_lines_dcw.shp") %>%
+  dplyr::filter(HYC_DESCRI == "Perennial/Permanent") # keep only permanent
 
-wtrpolys <- sf::read_sf("data/raw_data/hotosm_cod_waterways_polygons_shp/hotosm_cod_waterways_polygons.shp")
-wtrpolys <- wtrpolys %>%
-  dplyr::filter(name == "Lake Tanganyika") %>%
-  dplyr::select(c("name", "geometry"))
+wtrpolys <- sf::read_sf("data/raw_data/diva_gis_waterways/COD_wat/COD_water_areas_dcw.shp") %>%
+  dplyr::filter(HYC_DESCRI == "Perennial/Permanent") # keep only permanent
+
+# cast polys
 
 #............................................................................................................
 # write out and manipulate in qgis
@@ -52,9 +50,8 @@ sf::write_sf(obj = drc.rivers,
              dsn = "data/raw_data/drc_rivers_simplified/drc_rivers_init.shp") # for cluster
 
 # read back in
-drc.rivers.full <- sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
-drc.rivers <- shp2graph::nt.connect(sf::as_Spatial(drc.rivers.full))
-drc.rivers <- sf::st_as_sf(drc.rivers)
+drc.rivers <- sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
+drc.rivers <- shp2graph::nt.connect(drc.rivers)
 
 #............................................................................................................
 # Manipulate Shapes to Prepare for Network
@@ -118,18 +115,15 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
                                      edges = tibble::as_tibble(edges),
                                      directed = FALSE)
 
-riveredges <- rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf()
-sf::st_crs(riveredges) <- sf::st_crs(DRCprov)
-rivernodes <- rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf()
-sf::st_crs(rivernodes) <- sf::st_crs(DRCprov)
+
 
 load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
 rivernetworkplotObj <- ggplot() +
   prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373") +
-  geom_sf(data = riveredges,
+  geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
           color = "#9ecae1") +
-  geom_sf(data = rivernodes,
+  geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
           size = 0.25, color = "#9ecae1") +
   geom_sf(data = ge, color = "#ff2e2e") +
   theme(legend.position = "none") +
