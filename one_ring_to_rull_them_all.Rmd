@@ -21,23 +21,21 @@ options(digits = 2)
 
 ```
 
-```{r, child = 'analysis/01-GeneticSummaries.Rmd'}
+```{r, child = 'analysis/01-SNP_autocorr.Rmd'}
 ```
 
-```{r, child = 'analysis/02-IBD_S_distance_decay.Rmd'}
+```{r, child = 'analysis/02-GeneticSummaries.Rmd'}
 ```
 
-```{r, child = 'analysis/03-Traditional_Epi.Rmd'}
+```{r, child = 'analysis/03-IBD_S_distance_decay.Rmd'}
 ```
 
-```{r, child = 'analysis/04-IBD_meioticsibs.Rmd'}
+```{r, child = 'analysis/04-BayesSPlambda.Rmd'}
 ```
 
-```{r, child = 'analysis/05-IBDnetwork.Rmd'}
+```{r, child = 'analysis/05-IBD_meioticsibs_frontend.Rmd'}
 ```
 
-```{r, child = 'analysis/06-IBD_centnetwork_cities.Rmd'}
+```{r, child = 'analysis/06-Direction_meioticsibs.Rmd'}
 ```
 
-```{r, child = 'analysis/07-RFsp/01-sp_RF.Rmd'}
-```

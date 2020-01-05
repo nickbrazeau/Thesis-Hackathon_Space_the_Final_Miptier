@@ -14,12 +14,9 @@ gcclust <- readRDS("data/distance_data/greater_circle_distance_forclusters.rds")
 roadsclust <- readRDS("data/distance_data/clstr_road_distmeters_long.rds")
 
 # river offset
-km1 <- 1e3
-units(km1) <- units::as_units("m")
 riverclust <- readRDS("data/distance_data/river_distance_forclusters.rds") %>%
   dplyr::select(c("dhsclustfrom", "dhsclustto", "riverdist")) %>%
-  magrittr::set_colnames(c("hv001.x", "hv001.y", "riverdist")) %>%
-  dplyr::mutate(riverdist = riverdist + km1) # river distance offset factor of 1km
+  magrittr::set_colnames(c("hv001.x", "hv001.y", "riverdist"))
 
 distancesmatrix_cluster <- dplyr::inner_join(gcclust, roadsclust, by = c("item1", "item2")) %>%
   magrittr::set_colnames(c("hv001.x", "hv001.y", "gcdistance", "roaddistance"))
@@ -41,11 +38,14 @@ gcprov <- readRDS("data/distance_data/greater_circle_distance_forprovinces.rds")
   dplyr::mutate(item1 = as.integer(item1),
                 item2 = as.integer(item2))
 
-roadrprov <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
+roadrprov <- readRDS("data/distance_data/prov_road_distmeters_long.rds") %>%
+  dplyr::mutate(item1 = as.integer(item1),
+                item2 = as.integer(item2))
 
 riverprov <- readRDS("data/distance_data/river_distance_forprovinces.rds") %>%
-  dplyr::select(c("item1", "item2", "riverdist"))  %>%
-  dplyr::mutate(riverdist = riverdist + km1) # river distance offset factor of 1km
+  dplyr::select(c("item1", "item2", "riverdist")) %>%
+  dplyr::mutate(item1 = as.integer(item1),
+                item2 = as.integer(item2))
 
 distancesmatrix_prov <- dplyr::inner_join(gcprov, roadrprov, by = c("item1", "item2")) %>%
   magrittr::set_colnames(c("item1", "item2", "gcdistance", "roaddistance"))

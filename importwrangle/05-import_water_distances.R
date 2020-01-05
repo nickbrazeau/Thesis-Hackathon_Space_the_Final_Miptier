@@ -242,17 +242,6 @@ rivernetwork <- rivernetwork %>%
   tidygraph::activate(edges) %>%
   dplyr::mutate(length = sf::st_length(geometry))
 
-#..............................................................
-# fix river network for some odd connections
-#..............................................................
-rivernetwork <- rivernetwork %>%
-  tidygraph::activate(edges) %>%
-  dplyr::mutate(from = ifelse(edgeID == 136800, 136919, from),
-                to = ifelse(edgeID == 136800, 136920, to),
-                from = ifelse(edgeID == 283205, 283089, from))
-
-View(rivernetwork %>%
-            tidygraph::activate(edges) %>% as_tibble())
 
 
 get_shortest_distance_length <- function(to, from){
