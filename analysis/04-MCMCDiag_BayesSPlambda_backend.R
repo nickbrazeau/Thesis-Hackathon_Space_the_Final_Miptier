@@ -207,7 +207,7 @@ make_symm_mat <- function(x){
   ret <- rbind( matrix(NA, nrow = 1, ncol = ncol(x)), as.matrix(x) )
   ret <- cbind(ret, matrix(NA, nrow = nrow(ret), ncol = 1) )
   diag(ret) <- 0
-  ret[upper.tri(ret)] <- t(ret)[lower.tri(ret)]
+  ret[upper.tri(ret)] <- t(ret)[upper.tri(ret)]
   return(ret)
 }
 #..............................................................
@@ -224,7 +224,7 @@ W.gcdist <- make_symm_mat(W.gcdist)/1e3 # meters to kilometers, to help with var
 # road
 prov.roaddist <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
 W.roaddist <- prov.roaddist %>%
-  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  tidyr::spread(., key = "item2", value = "roaddistance") %>%
   dplyr::select(-c("item1"))
 # now make it a symm matrix
 W.roaddist <- make_symm_mat(W.roaddist)/1e3 # meters to kilometers, to help with variance
@@ -232,7 +232,10 @@ W.roaddist <- make_symm_mat(W.roaddist)/1e3 # meters to kilometers, to help with
 # river
 prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds")
 W.riverdist <- prov.riverdist %>%
-  tidyr::spread(., key = "item2", value = "gcdistance") %>%
+  dplyr::select(c("dhsprovfrom", "dhsprovto", "riverdist")) %>%
+  dplyr::rename(item1 = dhsprovfrom,
+                item2 = dhsprovto) %>%
+  tidyr::spread(., key = "item2", value = "riverdist") %>%
   dplyr::select(-c("item1"))
 # now make it a symm matrix
 W.riverdist <- make_symm_mat(W.riverdist)/1e3 # meters to kilometers, to help with variance
