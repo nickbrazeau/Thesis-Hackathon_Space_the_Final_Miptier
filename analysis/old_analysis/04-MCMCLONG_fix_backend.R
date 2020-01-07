@@ -94,7 +94,7 @@ withinprovIBD <- ibDdist.long.mtdt %>%
   dplyr::filter(adm1name.x == adm1name.y) %>%
   dplyr::group_by(adm1name.x) %>%
   dplyr::summarise(
-    meangens = mean(malecotf)
+    withinmeangens = mean(malecotf)
   ) %>%
   dplyr::rename(adm1name = adm1name.x)
 
@@ -237,9 +237,9 @@ wrap_S.CARleroux <- function(distcat, outcome, formula, W, data, burnin, n.sampl
 # Spatial random effects Models
 #..............................................................
 mod.framework.sp <- tibble(distcat = c("gc", "road", "river"),
-                           formula = list(as.formula("meangens ~ netuse + 1"),
-                                          as.formula("meangens ~ netuse + 1"),
-                                          as.formula("meangens ~ 1")),
+                           formula = list(as.formula("withinmeangens ~ netuse + 1"),
+                                          as.formula("withinmeangens ~ netuse + 1"),
+                                          as.formula("withinmeangens ~ 1")),
                            burnin = 1e4,
                            n.sample = 1e7 + 1e4,
                            W = list(W.gcdist, W.roaddist, W.riverdist),

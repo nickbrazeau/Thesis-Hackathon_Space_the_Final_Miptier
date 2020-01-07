@@ -1104,6 +1104,32 @@ plot(IBDdecay.plot)
 
 ### 
 
+
+## Cluster Inbreeding Coeff. Likelihood
+```{r}
+
+llparams <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/ .... /params.RDS")
+
+# get all files
+llfiles <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/.....",
+                           pattern = ".RDS", full.names = T)
+llfiles <- llfiles[!grepl("f.RDS|params.RDS", llfiles)]
+
+
+llfilesdf <- tibble::tibble(
+  path = llfiles
+  ) %>% 
+  dplyr::mutate(fileord = stringr::str_extract(path, "[0-9]+"),
+                fileord = as.numeric(fileord)) %>% 
+  dplyr::arrange(fileord)
+
+# now get results 
+llparams$results <- unlist(purrr::map(llfilesdf$path, readRDS), 
+                             recursive = F)
+
+
+```
+
 ## Appendix, Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
 ```{r}
 

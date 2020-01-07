@@ -30,33 +30,21 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 
 
 #...............................
-# Waterways
+# Waterways and simplify
 #...............................
-wtrlns <- sf::read_sf("data/raw_data/diva_gis_waterways/COD_wat/COD_water_lines_dcw.shp") %>%
-  dplyr::filter(HYC_DESCRI == "Perennial/Permanent") # keep only permanent
+drcrivers <- sf::st_read("data/raw_data/river_data/combined/combind_rivers_postgrass/combined_rivers_postgrass.shp") %>%
+  dplyr::mutate(uniqueid = 1:nrow(.))
+drcrivers.nt <- shp2graph::nt.connect(sf::as_Spatial(drcrivers))
+drcrivers.nt <- sf::st_as_sf(drcrivers.nt)
 
-wtrpolys <- sf::read_sf("data/raw_data/diva_gis_waterways/COD_wat/COD_water_areas_dcw.shp") %>%
-  dplyr::filter(HYC_DESCRI == "Perennial/Permanent") # keep only permanent
+# now extract out
+drcrivers.simp <- drcrivers %>%
+  dplyr::filter(uniqueid %in% drcrivers.nt$uniqueid)
 
-# cast polys
-wtrpolys.multilinestring <- sf::st_cast(wtrpolys, "MULTILINESTRING")
-wtrpolys.linestring <- sf::st_cast(wtrpolys.multilinestring, "LINESTRING")
+# save this out for plotting later
+saveRDS(object = drcrivers.simp,
+        file = "data/derived_data/river_network.RDS")
 
-# unionize
-CODwater <- sf::st_union(wtrlns, wtrpolys.linestring)
-
-#............................................................................................................
-# write out and manipulate in qgis
-#............................................................................................................
-drc.rivers <- rbind.data.frame(wtrlns, wtrpolys)
-
-dir.create("data/raw_data/drc_rivers_simplified/")
-sf::write_sf(obj = drc.rivers,
-             dsn = "data/raw_data/drc_rivers_simplified/drc_rivers_init.shp") # for cluster
-
-# read back in
-drc.rivers <- sf::st_read("data/raw_data/drc_rivers_simplified/drc_rivers_simplified_postqgis.shp")
-drc.rivers <- shp2graph::nt.connect(drc.rivers)
 
 #............................................................................................................
 # Manipulate Shapes to Prepare for Network
@@ -110,8 +98,6 @@ nodes <- nodes %>%
   dplyr::select(-c(edgeID, start_end)) %>%
   sf::st_as_sf(coords = c('X', 'Y')) %>%
   sf::st_set_crs(st_crs(edges))
-
-
 
 #............................................................................................................
 # Make (and plot) Network

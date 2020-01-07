@@ -2,6 +2,8 @@
 # Purpose of this script is to fit the various models
 # from CarBayes for our IBD Spatial Covariates.
 # We use this "backend" script to interact with a server
+#
+# Y_k ~ B^T_X_{pred} + O_k + \phi_k
 #..............................................................
 library(tidyverse)
 library(CARBayes)
@@ -85,43 +87,22 @@ ibDdist.long.mtdt <- ibDdist.long %>%
   dplyr::left_join(., y = p2, by = "smpl2")
 
 
+################################################################################
+##############             Diagnostic Models         ###########################
+################################################################################
 #..............................................................
-# Fit the lambda distributions by prov
+# Get within IBD for the Prov
 #..............................................................
-
-ibDdist.prov.lambda <- ibDdist.long.mtdt %>%
+# here we want the long format since we want to be able to group_by
+# adm1name.x so need every pairwise to be there
+ibDdist.prov.within <- ibDdist.long.mtdt %>%
   dplyr::rename(riverdistance = riverdist) %>%
   dplyr::select(c("smpl1", "smpl2", "adm1name.x", "adm1name.y", "malecotf", "malecotf_gens", dplyr::ends_with("distance"))) %>%
   tidyr::gather(., key = "distcat", value = "geodist", 7:9) %>%
   dplyr::group_by(adm1name.x, distcat) %>%
   tidyr::nest()
 
-
-ibDdist.prov.lambda$genbase2_fit <- purrr::map(ibDdist.prov.lambda$data, function(dat){
-  dat <- dat %>%
-    dplyr::filter(malecotf_gens != Inf)
-  ret <- glm(malecotf_gens ~ geodist,
-             data = dat,
-             family = gaussian(link = "log"))
-  return(ret)
-})
-
-ibDdist.prov.lambda$genbase2_slope <- purrr::map(ibDdist.prov.lambda$genbase2_fit, function(fit){
-  ret <- broom::tidy(fit) %>%
-    dplyr::filter(term == "geodist") %>%
-    dplyr::select("estimate") %>%
-    unlist(.)
-  return(ret)
-})
-
-ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
-  tidyr::unnest(cols = "genbase2_slope")
-
-
-#..............................................................
-# Get within IBD for the Prov
-#..............................................................
-ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
+ibDdist.prov.within$withinprovIBD <- purrr::map(ibDdist.prov.within$data, function(x){
   ret <- x %>%
     dplyr::filter(geodist == 0) %>%
     dplyr::summarise(
@@ -130,23 +111,9 @@ ibDdist.prov.lambda$withinprovIBD <- purrr::map(ibDdist.prov.lambda$data, functi
   return(as.numeric(ret))
 })
 
-ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
+ibDdist.prov.within <- ibDdist.prov.within %>%
   tidyr::unnest(cols = c("withinprovIBD"))
 
-
-#..............................................................
-# Get mean IBD for the Prov
-#..............................................................
-ibDdist.prov.lambda$meanprovIBD <- purrr::map(ibDdist.prov.lambda$data, function(x){
-  ret <- x %>%
-    dplyr::summarise(
-      meangens = mean(malecotf)
-    )
-  return(as.numeric(ret))
-})
-
-ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
-  tidyr::unnest(cols = c("meanprovIBD"))
 
 
 #..............................................................
@@ -173,22 +140,18 @@ provCovar <- provCovar.raw %>%
 #..............................................................
 # housekeeping
 riskvar <- colnames(provCovar)[!colnames(provCovar) %in% "adm1name"]
-ibDdist.prov.lambda <- ibDdist.prov.lambda %>%
+ibDdist.prov.within <- ibDdist.prov.within %>%
   dplyr::rename(adm1name = adm1name.x) %>%
-  dplyr::select(c("adm1name", "distcat", "genbase2_slope", "withinprovIBD", "meanprovIBD"))
+  dplyr::select(c("adm1name", "distcat", "withinprovIBD"))
 
 
 # model framework
-mod.IBD.provCovar <- dplyr::left_join(ibDdist.prov.lambda, provCovar,
-                                       by = "adm1name")
-
-
-mod.IBD.provCovar <- mod.IBD.provCovar %>%
-  dplyr::select("adm1name", "distcat", riskvar, "genbase2_slope", "withinprovIBD", "meanprovIBD")
+mod.IBD.provCovar <- dplyr::left_join(ibDdist.prov.within, provCovar,
+                                       by = "adm1name") %>%
+  dplyr::select("adm1name", "distcat", riskvar, "withinprovIBD")
 
 mod.IBD.provCovar.nest <- mod.IBD.provCovar %>%
-  tidyr::gather(., key = "outcome", value = "ibd", 12:14) %>%
-  dplyr::group_by(distcat, outcome) %>%
+  dplyr::group_by(distcat) %>%
   tidyr::nest()
 
 
@@ -219,7 +182,10 @@ W.gcdist <- prov.gcdist %>%
   tidyr::spread(., key = "item2", value = "gcdistance") %>%
   dplyr::select(-c("item1"))
 # now make it a symm matrix
-W.gcdist <- make_symm_mat(W.gcdist)/1e3 # meters to kilometers, to help with variance
+W.gcdist <- make_symm_mat(W.gcdist)
+scale <- mean(W.gcdist[lower.tri(W.gcdist, diag = T)])
+W.gcdist <- dexp(W.gcdist/scale) # scale to help with variance and change rate
+
 
 # road
 prov.roaddist <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
@@ -227,7 +193,9 @@ W.roaddist <- prov.roaddist %>%
   tidyr::spread(., key = "item2", value = "roaddistance") %>%
   dplyr::select(-c("item1"))
 # now make it a symm matrix
-W.roaddist <- make_symm_mat(W.roaddist)/1e3 # meters to kilometers, to help with variance
+W.roaddist <- make_symm_mat(W.roaddist)
+scale <- mean(W.roaddist[lower.tri(W.roaddist, diag = T)])
+W.roaddist <- dexp(W.roaddist/scale) # scale to help with variance and change rate
 
 # river
 prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds")
@@ -238,8 +206,9 @@ W.riverdist <- prov.riverdist %>%
   tidyr::spread(., key = "item2", value = "riverdist") %>%
   dplyr::select(-c("item1"))
 # now make it a symm matrix
-W.riverdist <- make_symm_mat(W.riverdist)/1e3 # meters to kilometers, to help with variance
-
+W.riverdist <- make_symm_mat(W.riverdist)
+scale <- mean(W.riverdist[lower.tri(W.riverdist, diag = T)])
+W.riverdist <- dexp(W.riverdist/scale) # scale to help with variance and change rate
 
 #..............................................................
 # Make Model Framework
@@ -251,10 +220,11 @@ prov.covar.names <- names(provCovar)[names(provCovar) != "adm1name"]
 # get model form for dredges
 # this model fit isn't important
 #.........................
+covars.eval <- c("prev", "precip", "temp", "elev", "crops", "netuse", "housing", "urban")
 options(na.action = "na.fail")
 dat <- mod.IBD.provCovar.nest$data[[1]]
 mod <- lm(
-  as.formula(paste("ibd", "~", paste(prov.covar.names, collapse = "+"))),
+  as.formula(paste("withinprovIBD", "~", paste(covars.eval, collapse = "+"))),
   data = dat)
 
 # dredge
@@ -264,13 +234,13 @@ mods <- MuMIn::dredge(mod, evaluate = F,
 # formula to string manipulation
 mods <- lapply(mods, function(x){
   charform <- paste(deparse(x), collapse = "")
-  ret <- str_match(charform, "ibd (.*?) 1")[1,1]
+  ret <- str_match(charform, "withinprovIBD (.*?) 1")[1,1]
   ret <- as.formula(ret)
   return(ret)
 })
 
 # add in intercept only models
-mods <- append(mods, as.formula("ibd ~ 1"))
+mods <- append(mods, as.formula("withinprovIBD ~ 1"))
 
 
 #..............................................................
@@ -330,27 +300,24 @@ wrap_S.CARleroux <- function(distcat, outcome, formula, W, data, burnin, n.sampl
 #..............................................................
 mod.framework.sp <- tibble(formula = mods,
                            burnin = 1e4,
-                           n.sample = 1e6 + 1e4)
+                           n.sample = 1e6 + 1e4,
+                           outcome = "withinprovIBD")
 
-W.matrices <- list(W.gcdist, W.roaddist, W.riverdist)
+W.matrices <- tibble::tibble(
+  distcat = c("gcdistance", "roaddistance", "riverdistance"),
+  W = list(W.gcdist, W.roaddist, W.riverdist))
 
-# rep this out three times for levels of spatial data, three model levels
-mod.framework.sp <- lapply(1:nrow(mod.IBD.provCovar.nest),
-                           function(x){
-                             meta <- tibble::tibble(
-                               distcat = mod.IBD.provCovar.nest$distcat[x],
-                               outcome = mod.IBD.provCovar.nest$outcome[x],
-                               W = W.matrices[x]
-                             )
-                             ret <- cbind.data.frame(meta, mod.framework.sp)
-                             return(ret)
-                           }) %>%
-  dplyr::bind_rows()
+W.matrices <- lapply(1:nrow(mod.framework.sp), function(x) return(W.matrices)) %>%
+  dplyr::bind_rows(.) %>%
+  dplyr::arrange(., distcat)
 
+mod.framework.sp <- cbind.data.frame(
+  rbind.data.frame(mod.framework.sp, mod.framework.sp, mod.framework.sp),
+  W.matrices
+)
 
-mod.IBD.provCovar.nest.framework.sp <- dplyr::left_join(mod.IBD.provCovar.nest,
-                                                        mod.framework.sp,
-                                                        by = c("distcat", "outcome"))
+mod.framework.sp <- dplyr::left_join(mod.framework.sp, mod.IBD.provCovar.nest,
+                                     by = "distcat")
 
 
 # for slurm on LL
@@ -358,7 +325,7 @@ dir.create("results/carbayes_sp_dics", recursive = T)
 setwd("results/carbayes_sp_dics/")
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
-                            params = mod.IBD.provCovar.nest.framework.sp,
+                            params = mod.framework.sp,
                             jobname = 'CARleroux_DICs',
                             nodes = ntry,
                             cpus_per_node = 1,
@@ -373,4 +340,81 @@ sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                                                  time = "12:00:00"))
 
 cat("*************************** \n Submitted Carbayes Models \n *************************** ")
+
+
+
+################################################################################
+##############             Long Final Models         ###########################
+################################################################################
+wrap_S.CARleroux_long <- function(distcat, outcome, formula, W, data, burnin, n.sample){
+
+  #..............................................................
+  # fit model
+  #..............................................................
+  formvec <- paste(deparse(formula), collapse = "")
+  betacount <- stringr::str_count(formvec, "\\+") + 1 # plus one for intercept
+  prior.var.betavec <- rep(5e4, betacount) # note prior setting here
+
+  mod <- CARBayes::S.CARleroux(formula = formula,
+                               family = "gaussian",
+                               W = W,
+                               data = data,
+                               burnin = burnin,
+                               prior.var.beta = prior.var.betavec,
+                               prior.tau2 = c(1, 0.01),
+                               n.sample = n.sample)
+
+
+  #-------------------------------------------------------------------------
+  # MCMC Diagnostics
+  #-------------------------------------------------------------------------
+  ret <- tibble::tibble(MCMC = list(mod))
+  ret$mcmc.modsum <- purrr::map(ret$MCMC, print)  # note, print is overloaded here
+  ret$summresults <- purrr::map(ret$mcmc.modsum, "summary.results")
+  ret$summresults <- purrr::map(ret$summresults, function(x){
+    pars <- rownames(x)
+    ret <- cbind.data.frame(pars = pars, as.data.frame(x))
+    return(ret)
+  })
+
+  #..............................................................
+  # DIC for fits
+  #..............................................................
+  ret$modfit <- purrr::map(ret$mcmc.modsum, "modelfit")
+  ret$DIC <- purrr::map(ret$modfit, "DIC")
+
+  out <- list(mod = mod,
+              diagnostics = ret)
+  return(out)
+
+}
+
+
+#..............................................................
+# Longer run for final models with best DIC based
+# on above fits
+#..............................................................
+finalformulas <- list(as.formula("withinprovIBD ~ 1"), # gc
+                      as.formula("withinprovIBD ~ 1"), # road
+                      as.formula("withinprovIBD ~ 1") # river
+)
+long.mod.framework <- mod.framework.sp <- tibble(formula = finalformulas,
+                                                 burnin = 1e4,
+                                                 n.sample = 1e7 + 1e4,
+                                                 outcome = "withinprovIBD",
+                                                 W = list(W.gcdist, W.roaddist, W.riverdist))
+
+long.mod.framework <- cbind.data.frame(long.mod.framework, mod.IBD.provCovar.nest)
+
+#..............................................................
+# Run
+#..............................................................
+# we already set directory above to results/carbayes_between_prov_models
+dir.create("carbayes_long_chains_WITHIN")
+mods <- purrr::pmap(long.mod.framework, wrap_S.CARleroux_long)
+saveRDS(mods, file = "carbayes_long_chains_WITHIN.RDS")
+
+
+
+
 

@@ -245,6 +245,8 @@ ibD.meiotic.neighborhoodIBD_plotdf <- ibD.meiotic.neighborhoodIBD %>%
                 lat.start = ifelse(neighborIBDdiff > 0, latnum.x, latnum.y),
                 long.end = ifelse(neighborIBDdiff > 0, longnum.y, longnum.x),
                 lat.end = ifelse(neighborIBDdiff > 0, latnum.y, latnum.x),
+                from = ifelse(neighborIBDdiff > 0, hv001.x, hv001.y),
+                to = ifelse(neighborIBDdiff > 0, hv001.y, hv001.x),
                 neighborIBDdiff_scaled = abs(neighborIBDdiff),
                 neighborIBDdiff_lvls = cut(neighborIBDdiff_scaled,
                                            breaks = c(0, 0.01, 0.025, 0.05, 0.09, 1)),
@@ -263,7 +265,7 @@ IBD_meiotic_direct_plot <- ggplot() +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
                  xend = long.end, yend = lat.end, 
-                 color = malecotf_gens,
+                 color = malecotf,
                  size = neighborIBDdiff_lvls),
               arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
@@ -271,7 +273,7 @@ IBD_meiotic_direct_plot <- ggplot() +
              aes(x = longnum, y = latnum), 
              show.legend = F, shape = 21,
              fill = "#ffffff", color = "#000000" ) + 
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) +
   scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
   map_theme +
   theme(
@@ -297,13 +299,13 @@ plot(IBD_meiotic_direct_plot)
 ```{r}
 
 
-IBD_meiotic_direct_plot <- ggplot() +
+IBD_meiotic_direct_plot.urb <- ggplot() +
   # prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
                  xend = long.end, yend = lat.end, 
-                 color = malecotf_gens,
+                 color = malecotf,
                  size = neighborIBDdiff_lvls),
               arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
@@ -311,7 +313,7 @@ IBD_meiotic_direct_plot <- ggplot() +
              aes(x = longnum, y = latnum,
                  fill = urbanmedian), 
              shape = 21) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) +
   scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
   map_theme +
@@ -325,12 +327,12 @@ IBD_meiotic_direct_plot <- ggplot() +
   )
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_urban.jpg", width = 8, height = 8, units = "in", res = 500)
-plot(IBD_meiotic_direct_plot)
+plot(IBD_meiotic_direct_plot.urb)
 graphics.off()
 ```
 
 ```{r, results='asis'}
-plot(IBD_meiotic_direct_plot)
+plot(IBD_meiotic_direct_plot.urb)
 ```
 
 #### Neighboorhood Data
@@ -350,5 +352,95 @@ ibD.meiotic.neighborhoodIBD_plotdf %>%
               buttons = c('csv')))
 
 ```
+
+
+### Pairwise Prevalence
+```{r}
+
+#..............................................................
+# Pf Prevalence
+#..............................................................
+parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/parasiterate.grd")
+
+# extract out coordinate information and join in prevdata
+prev.pts <- sf::st_as_sf(coord.pts, coords = c("longnum", "latnum"), crs = 4326)
+# cluster 54 has missing when just 2km -- extend to 6km 
+prev.pts$urban_rura_ext[prev.pts$hv001 == 54] <- 6000
+
+prevmean <- rep(NA, nrow(prev.pts)) 
+for (i in 1:nrow(prev.pts)) {
+  prevmean[i] <-  raster::extract(x = parasiterate,
+                                   y = sf::as_Spatial(prev.pts$geometry[i]),
+                                   buffer = prev.pts$urban_rura_ext[i],
+                                   fun = mean, na.rm = T
+  )
+}
+  
+prev.pts <- prev.pts %>% 
+  dplyr::mutate(long = sf::st_coordinates(geometry)[,1],
+                lat = sf::st_coordinates(geometry)[,2],
+                prevmean = prevmean) %>% 
+  dplyr::select(c("hv001", "long", "lat", "prevmean")) %>% 
+  dplyr::filter(hv001 %in% mtdt$hv001[mtdt$name %in% ibdmeioticsmpls])
+
+#..............................................................
+# Combine data with directionality
+#..............................................................
+colnames(prev.pts)[1] <- "hv001.x"
+ibD.meiotic.neighborhoodIBD_plotdf <- dplyr::left_join(ibD.meiotic.neighborhoodIBD_plotdf, 
+                                                       prev.pts, 
+                                                       by = "hv001.x")
+colnames(prev.pts)[1] <- "hv001.y"
+ibD.meiotic.neighborhoodIBD_plotdf <- dplyr::left_join(ibD.meiotic.neighborhoodIBD_plotdf, 
+                                                       prev.pts, 
+                                                       by = "hv001.y")
+
+```
+
+```{r}
+IBD_meiotic_direct_plot.prev <- ggplot() +
+  # prettybasemap_nodrc_dark + 
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+              aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf,
+                 size = neighborIBDdiff_lvls),
+              arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.5) +
+  geom_point(data = prev.pts,
+             aes(x = long, y = lat,
+                 fill = prevmean), 
+             shape = 21) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) +
+  scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
+  scale_fill_distiller("Parasite Rate", type = "div", palette = "RdYlBu") +
+  map_theme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, vjust = 0.5, size = 12),
+    legend.text = element_text(family = "Helvetica", size = 11, hjust = 0.5, vjust = 0.5, angle = 0),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_prev.jpg", width = 8, height = 8, units = "in", res = 500)
+plot(IBD_meiotic_direct_plot.prev)
+graphics.off()
+```
+
+```{r, results='asis'}
+plot(IBD_meiotic_direct_plot.prev)
+```
+
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_facet.jpg", width = 11, height = 6, units = "in", res = 500)
+cowplot::plot_grid(IBD_meiotic_direct_plot.urb, IBD_meiotic_direct_plot.prev,
+                  labels = c("(A)", "(B)"), align = "h")
+graphics.off()
+```
+
 
 

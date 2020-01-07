@@ -20,8 +20,30 @@ source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
 ```
 
 ```{r}
-# TODO fix this link
-perms <- readRDS("~/Desktop/temp.rds")
+permsparams <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/meiotic_null_dist/_rslurm_meiotic_sib_permutations/params.RDS")
+
+# get all files
+permsfiles <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/meiotic_null_dist/_rslurm_meiotic_sib_permutations/",
+                           pattern = ".RDS", full.names = T)
+permsfiles <- permsfiles[!grepl("f.RDS|params.RDS", permsfiles)]
+
+
+permsfilesdf <- tibble::tibble(
+  path = permsfiles
+  ) %>% 
+  dplyr::mutate(fileord = stringr::str_extract(path, "[0-9]+"),
+                fileord = as.numeric(fileord)) %>% 
+  dplyr::arrange(fileord)
+
+# now get results 
+permsparams$results <- unlist(purrr::map(permsfilesdf$path, readRDS), 
+                             recursive = F)
+
+
+perms <- permsparams %>% 
+  dplyr::select(c("name", "results"))
+
+
 
 ```
 
@@ -86,7 +108,7 @@ colnames(coords.pts)[1] <- "name"
 
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -201,6 +223,20 @@ meiotic_clst.uni %>%
 
 ```
 
+```{r, results='asis'}
+meiotic_clst.uni %>% 
+  tidygraph::activate(edges) %>% 
+  tibble::as_tibble(.) %>% 
+   DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 20,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
 **Visualize pairs with more than one connection**. 
 ```{r, results='asis'}
 
@@ -231,7 +267,19 @@ meiotic_clst.conn %>%
 
 ```
 
+```{r, results='asis'}
+meiotic_clst.conn %>% 
+  tidygraph::activate(edges) %>% 
+  tibble::as_tibble(.) %>% 
+   DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 20,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
 
+```
 
 
 **Let's look at that same information but on a map**.  
@@ -288,6 +336,7 @@ ibd.moreconn.map <- ggplot() +
   ggtitle("IBD Pairs with more than One Connection")
 plot(ibd.moreconn.map)
 
+
 ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_curve(data = meiotic_clst.conn.edges,
@@ -307,12 +356,12 @@ ggplot() +
 ```{r}
 
 ibd.moreconn.map <- 
-  prettybasemap_nodrc_dark + 
+  # prettybasemap_nodrc_dark + 
   ibd.moreconn.map + 
   theme(plot.title = element_blank()) 
 
 meiotic_clst.one.conn.map <- 
-  prettybasemap_nodrc_dark + 
+ # prettybasemap_nodrc_dark + 
   meiotic_clst.one.conn.map + 
   theme(plot.title = element_blank()) 
 
@@ -326,6 +375,46 @@ graphics.off()
 
 ```
 
+
+```{r}
+
+ibd.moreconn.map <- ggplot() +
+  # prettybasemap_nodrc_dark +   
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  geom_curve(data = meiotic_clst.conn.edges,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf),
+             alpha = 0.5, size = 1.1) +
+  geom_point(data = meiotic_clst.conn.nodes,
+             aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
+
+meiotic_clst.one.conn.map <- ggplot() + 
+ # prettybasemap_nodrc_dark + 
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  geom_curve(data = meiotic_clst.uni.edges,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf),
+             alpha = 0.5, size = 1.1) +
+  geom_point(data = meiotic_clst.uni.nodes,
+             aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_IBDpairwise_connections_allpairwiseIBD.jpg",
+     height = 8, width = 11, units = "in", res = 500)
+cowplot::plot_grid(meiotic_clst.uni.plotobj, meiotic_clst.conn.PlotObj,
+                   meiotic_clst.one.conn.map, ibd.moreconn.map,
+                   nrow = 2, align = "v", labels = c("(A)", "(B)", "(C)", "(D)"))
+graphics.off()
+
+```
+
+
+
+
 ### Local Transmission Events
 Now mark clusters with local transmission events (regardless of number of connections). 
 ```{r, results='asis'}
@@ -334,7 +423,7 @@ local_trans_plot <- ibD.meiotic.network %>%
   tidygraph::activate(., "edges") %>% 
   dplyr::filter(hv001.x == hv001.y) %>% 
   ggplot() +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_jitter(alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
@@ -359,7 +448,7 @@ quadrad %>%
   dplyr::rename(hivrecode_barcode = name) %>% 
   dplyr::mutate(hivrecode_barcode = tolower(hivrecode_barcode)) %>% 
   dplyr::left_join(., dt.geo, by = c("hivrecode_barcode")) %>% 
-  dplyr::select(c("hivrecode_barcode", "hv001", "adm1name", "houseid", "malecotf")) %>% 
+  dplyr::select(c("hivrecode_barcode", "hv001", "adm1name", "houseid")) %>% 
   knitr::kable(.)
 
 ```
@@ -382,7 +471,7 @@ notsameclst.nodes <- ibD.meiotic.network %>%
 
 
 long_trans_plot <- ggplot() +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = notsameclst.edges,
               aes(x = long_jitter.x, y = lat_jitter.x, 
@@ -512,9 +601,16 @@ true_count_meiotic_btwnclst <- ibD.meiotic.network %>%
   tibble::as_tibble(.) %>% 
   nrow(.) %>% as.numeric(.)
 
+
+# geom density gets stretched out the curve density so need to set xlim
+summary(perms.clstbtwen$wthncount)
+true_count_meiotic_btwnclst
+# so need to add 4 to each side to get exact min, will add 5 for balance
+
 # get base plot
 btwnclst.plotObj <- ggplot() +
-  geom_density(data = perms.clstbtwen, aes(x = wthncount), color = "#969696", fill = "#969696") 
+  geom_density(data = perms.clstbtwen, aes(x = wthncount), color = "#969696", fill = "#969696") +
+  xlim(42, 71)
 
 # get ggplot data
 perms.clst.pval <- quantile(perms.clstbtwen$wthncount, probs = c(0.025, 0.975))
@@ -604,7 +700,7 @@ ibD.meiotic_plot_urbanrstr <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -701,7 +797,7 @@ ibD.meiotic_plot_urban_binary_rstr <- ggplot() +
   ggspatial::layer_spatial(data = urbancatch, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity Binary", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -737,7 +833,7 @@ graphics.off()
 urban.cities <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_dark +
+  # prettybasemap_nodrc_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA) +
@@ -794,8 +890,14 @@ obsurb.urbnmediandiff <- mean(obsurb$urbanmeadiandiff)
 
 ```{r, results='asis'}
 
+# geom_density stretches the density curve based on the observed data
+summary(perms.urb$urbanmediandiff)
+obsurb.urbnmediandiff
+# will fix at 0 and 13 to capture it
+
 urb.perm.plotObj <- ggplot() +
-  geom_density(data = perms.urb, aes(x = urbanmediandiff), fill = "#969696", color = "#969696") 
+  geom_density(data = perms.urb, aes(x = urbanmediandiff), fill = "#969696", color = "#969696") + 
+  xlim(0, 13)
 
 perms.urb.pval <- quantile(perms.urb$urbanmediandiff, probs = c(0.025, 0.975))
 # extract ggplot data
@@ -907,6 +1009,48 @@ plot(ibD.meiotic_plot)
 graphics.off()
 
 
+```
+
+#### Edge Density and Prevalence
+```{r}
+# get edge density
+prev.edge.dens <- ibD.meiotic.network %>% 
+  tidygraph::activate(., "nodes") %>% 
+  dplyr::mutate(node_edge_density = igraph::degree(.)) %>%
+  tibble::as_tibble(.) %>% 
+  dplyr::select(c("name", "hv001", "adm1name", "node_edge_density"))
+
+# link prevalence and edge counts
+prev.pts.clst <- prev.pts %>% 
+  dplyr::select(c("hv001", "prevmean")) %>% 
+  dplyr::filter(!duplicated(.))
+sf::st_geometry(prev.pts.clst) <- NULL
+
+
+
+prev.edge.dens <- dplyr::left_join(x = prev.edge.dens, 
+                                   y = prev.pts.clst, 
+                                   by = "hv001")
+
+```
+```{r, results='asis'}
+prev.edge.dens %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 15,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+```{r, results='asis'}
+prev.edge.dens %>% 
+  ggplot() + 
+  geom_point(aes(x = node_edge_density, y = prevmean), size = 2) +
+  theme_classic() + 
+  ggtitle("Edge Density (by Node) vs. Parasite Rate") + 
+  xlab("Edge Density") + ylab("Parasite Rate")
 ```
 
 
