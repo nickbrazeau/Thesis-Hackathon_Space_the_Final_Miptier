@@ -1,0 +1,399 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Between IBD Models
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+```{r}
+#---------------------------------------------------------------------------
+# Purpose of this script is to do basic epi analyses
+#----------------------------------------------------------------------------
+library(tidyverse)
+library(CARBayes)
+library(raster)
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/basics.R")
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
+
+```
+
+```{r}
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("id", "hv001")) %>% 
+  dplyr::rename(name = id)
+
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::rename(name = id) %>% 
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% drcsmpls$name)
+
+# drc prov for plot
+DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds")) 
+
+# load pretty map aesthetics 
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+```
+
+```{r}
+#....................................................................................
+# Import Genetic Data
+#....................................................................................
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+
+# log2 IBD measure
+ibD <- ibD %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens)
+
+```
+
+```{r}
+#..............................................................
+# mk mtdt 
+#..............................................................
+mtdt.clst <- mtdt %>% 
+  dplyr::select(c("name", "hv001")) %>% 
+  dplyr::rename(smpl1 = name)
+
+ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl1")
+
+# rename
+mtdt.clst <- mtdt.clst %>% 
+  dplyr::rename(smpl2 = smpl1)
+# rejoin
+ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl2")
+
+
+#..............................................................
+# Import geographic distance and combine with genetic
+#..............................................................
+distancematrix.cluster <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_bycluster.rds")
+
+ibDdist <- long_distance_matrix_join(x=ibD, y=distancematrix.cluster,
+                                     by = c("hv001.x", "hv001.y")) %>%
+  dplyr::mutate(gcdistance = gcdistance/1e3,
+                roaddistance = roaddistance/1e3,
+                riverdist = riverdist/1e3,
+                riverdist = as.numeric(riverdist)) # remove units
+
+
+# take care of cluster diagnonals
+ibDdist$gcdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
+ibDdist$roaddistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
+ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
+
+ibDdist.long <- ibDdist %>% 
+  dplyr::select(-c(dplyr::starts_with("hv001"))) %>% 
+  expand_distance_matrix(.)
+
+```
+
+<!-- TODO make above imported in already -->
+
+## Bayesian GLM Modeling/Epi Considerations
+Here we will analyze IBD using a pairwise approach, where our outcome is the mean IBD between two provinces. _Covariates_: Prov Differences; _Spatial Autocorrelation_: Difference in Distance. _Link/family_: Given that we can normalize the IBD pairwise outcome, we will use a log-link and the Gaussian probability family for our generalized linear models. A log-link will be used given the expected exponential relationship of IBD and distance/covariates.   
+  
+NB, all covariates were taken from open sources including: Malaria Atlas Project, European Space Agency, LAADS/NASA, and OSM (this include prevalence which is not from our lab but from MAP).
+
+Model Formulation: 
+$$ Y \sim \beta^TX_{predictors} + \beta (\Delta Distance) + \beta I(Provlvl) $$
+
+Note, here we will use an indicator value for whether or not the pairwise comparison is from the same province to "mop up" any residual variance from difference in sample sizes within provinces, etc. 
+
+
+#### Distribution of Pairwise IBD for Prov-Prov
+```{r}
+# params models should have exactly what you want
+adm1name.pairs <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/ibDdist_prov_between.RDS") %>% 
+  dplyr::mutate(
+    adm1name.x = stringr::str_split_fixed(btwn, "/", n=2)[,1],
+    adm1name.y = stringr::str_split_fixed(btwn, "/", n=2)[,2],
+  ) %>% 
+  dplyr::select(-c("distcat")) %>% 
+  dplyr::filter(!duplicated(.))
+
+
+```
+
+```{r, results='asis'}
+adm1name.pairs.plotObj <- adm1name.pairs %>% 
+ggplot() + 
+  geom_tile(aes(x = adm1name.x, y = adm1name.y, fill = F_between_mean)) + 
+  plot_theme +
+  scale_fill_viridis_c("Prov. Pairwise Mean IBD") + 
+  theme(axis.title = element_blank(),
+        axis.text.x = element_text(family = "Helvetica", hjust = 1, vjust = 0.5, size = 11, face = "bold", angle = 90),
+        axis.text.y = element_text(family = "Helvetica", hjust = 1, vjust = 0.5, size = 11, face = "bold"),
+        legend.title = element_text(family = "Helvetica", hjust = 0.5, size = 12, face = "bold"),
+        legend.text = element_text(family = "Helvetica", hjust = 0.5, size = 12, face = "bold", angle = 90),
+        legend.position = "bottom")
+
+plot(adm1name.pairs.plotObj)
+
+
+```
+
+```{r}
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/adm1name_pairs_meanIBD.jpg", width = 8, height = 8.5, units = "in", res = 600)
+plot(adm1name.pairs.plotObj)
+graphics.off()
+
+```
+
+```{r, results='asis'}
+
+adm1name.pairs %>% 
+  dplyr::mutate_if(is.numeric, round, 5) %>% 
+    DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 10,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+  
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### MCMC Diagnostics
+Note, our goal is to have the effective sample sizes (`n.effective`) to be at least 500 for all parameters. In addition, we will visually check for convergence among the four chains.
+
+
+```{r}
+
+provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_within_prov_models/_rslurm_CARleroux_DICs_within/") %>% 
+  dplyr::select(c("formula", "outcome", "distcat"))
+
+# get all files
+provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics_LL/",
+                           pattern = ".RDS", full.names = T)
+provformlist <- provformlist[!grepl("f.RDS|params.RDS", provformlist)]
+
+
+provformlistdf <- tibble::tibble(
+  path = provformlist
+  ) %>% 
+  dplyr::mutate(fileord = stringr::str_extract(path, "[0-9]+"),
+                fileord = as.numeric(fileord)) %>% 
+  dplyr::arrange(fileord)
+
+# now get results 
+provmodels$results <- unlist(purrr::map(provformlistdf$path, readRDS), 
+                             recursive = F)
+
+# now examine models
+provmodels$min_nEff <- purrr::map(provmodels$results, function(x){
+  return(min(x$n.effective))
+})
+
+provmodels$DIC <- purrr::map(provmodels$results, function(x){
+  return(unique(x$DIC))
+})
+
+# select out what we need
+provmodels <- provmodels %>% 
+  dplyr::select(-c("results")) %>% 
+  tidyr::unnest(cols = c("min_nEff", "DIC")) %>% 
+  dplyr::mutate(formula = purrr::map(formula, function(x){
+    return(paste(deparse(x), collapse = ""))
+  }))
+
+```
+
+#### DICs Slope {.tabset .tabset-fade}
+##### Greater Circle DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "gcdistance") %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### Road DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "roaddistance") %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### River DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "riverdistance") %>% 
+  dplyr::filter(outcome == "genbase2_slope") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+####
+
+
+#### DICs Within Prov IBD {.tabset .tabset-fade}
+##### Greater Circle DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "gcdistance") %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### Road DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "roaddistance") %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### River DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "riverdistance") %>% 
+  dplyr::filter(outcome == "withinprovIBD") %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+####
+
+#### DICs Mean IBD {.tabset .tabset-fade}
+##### Greater Circle DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "gcdistance") %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### Road DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "roaddistance") %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+##### River DICs 
+```{r, results='asis'}
+
+provmodels %>% 
+  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
+  dplyr::filter(distcat == "riverdistance") %>% 
+  dplyr::filter(outcome == "meanprovIBD" ) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+####
+
+
+
+### Long Chain Runs
+Note, our goal is still to have the effective sample sizes (`n.effective`) to be at least 1,000 for all parameters. In addition, we will visually check for convergence among the four chains.  
+  
+**Looks like the slope fitting models failed miserably. Going to drop those going forward**. 
+
+##### Long Chain Param Diagnostics
+```{r}
+
+```

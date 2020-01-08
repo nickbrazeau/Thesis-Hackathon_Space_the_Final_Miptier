@@ -113,20 +113,16 @@ ibDdist.mtdt <- ibDdist.mtdt %>%
 
 ibDdist.prov.between$data <- purrr::pmap(ibDdist.prov.between[,c("prov.x", "prov.y")],
                                          function(prov.x, prov.y){
-                                           if(prov.x == prov.y){ # same prov
-                                             ret <- ibDdist.mtdt %>%
-                                               dplyr::filter(adm1name.x == adm1name.y)
-                                           } else { # for all others
-                                             ret <- ibDdist.mtdt %>%
-                                               dplyr::filter(
-                                                 c(adm1name.x == prov.x & adm1name.y == prov.y |
-                                                     adm1name.y == prov.x & adm1name.x == prov.y
-                                                 )
+                                           # for all others (this will also work for same)
+                                           ret <- ibDdist.mtdt %>%
+                                             dplyr::filter(
+                                               c(adm1name.x == prov.x & adm1name.y == prov.y |
+                                                   adm1name.y == prov.x & adm1name.x == prov.y
                                                )
-                                           }
+                                             )
                                            return(ret)
                                          }
-                                         )
+)
 
 # make tibble for easier viz
 ibDdist.prov.between <- tibble::as_tibble(ibDdist.prov.between)
@@ -158,6 +154,10 @@ ibDdist.prov.between <- ibDdist.prov.between%>%
 
 ibDdist.prov.between <- ibDdist.prov.between[,c("btwn", "distcat", "F_between_mean")] %>%
   tidyr::unnest(cols = "F_between_mean")
+
+saveRDS(object = ibDdist.prov.between,
+        file = "data/derived_data/ibDdist_prov_between.RDS")
+
 
 #..............................................................
 # Import Covariates for Province
@@ -357,8 +357,9 @@ mod.framework.sp <- dplyr::left_join(mod.framework.sp, ibDdist.prov.between,
 
 
 # for slurm on LL
-dir.create("results/carbayes_between_prov_models", recursive = T)
-setwd("results/carbayes_between_prov_models/")
+scrdir <- "/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/results/carbayes_between_prov_models"
+dir.create(scrdir, recursive = T)
+setwd(scrdir)
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_glm,
                             params = mod.framework.sp,
@@ -404,7 +405,7 @@ wrap_glm_long <- function(distcat, outcome, formula, data, burnin, n.sample){
   #-------------------------------------------------------------------------
   # MCMC Diagnostics
   #-------------------------------------------------------------------------
-  ret <- tibble::tibble(MCMC = list(mod))
+  ret <- tibble::tibble(MCMC = list(ret))
   ret$mcmc.modsum <- purrr::map(ret$MCMC, print)  # note, print is overloaded here
   ret$summresults <- purrr::map(ret$mcmc.modsum, "summary.results")
   ret$summresults <- purrr::map(ret$summresults, function(x){
@@ -419,13 +420,16 @@ wrap_glm_long <- function(distcat, outcome, formula, data, burnin, n.sample){
   ret$modfit <- purrr::map(ret$mcmc.modsum, "modelfit")
   ret$DIC <- purrr::map(ret$modfit, "DIC")
 
+  #..............................................................
+  # Keep smaller piece
+  #..............................................................
+  ret <- ret %>%
+    dplyr::select(c("summresults", "DIC")) %>%
+    tidyr::unnest(cols = c("summresults", "DIC"))
 
-  out <- list(
-    mod = mod,
-    diagnostics = ret
-  )
+  return(ret)
 
-  return(out)
+}
 
 }
 
@@ -450,7 +454,6 @@ long.mod.framework <- cbind.data.frame(long.mod.framework, ibDdist.prov.between)
 # Run
 #..............................................................
 # we already set directory above to results/carbayes_between_prov_models
-dir.create("carbayes_long_chains_BETWEEN")
 mods <- purrr::pmap(long.mod.framework, wrap_glm_long)
 saveRDS(mods, file = "carbayes_long_chains_BETWEEN.RDS")
 

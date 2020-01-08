@@ -39,6 +39,8 @@ ge <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/spac
 
 ```
 
+<!-- TO DO this should all be once call -- or import -->
+
 ## Pairwise IBS
 ```{r}
 #.....................
@@ -247,29 +249,6 @@ ibD.exp.hv001 %>% # selfs already excluded
 ```
 
 
-#### Prov
-```{r, results='asis'}
-ibD.exp.hv001 %>% # selfs already excluded
-  dplyr::group_by(adm1name.x) %>% 
-  dplyr::summarise(
-    n = n(),
-    minIBS = min(malecotf),
-    quart25IBS = quantile(malecotf, 0.25),
-    medIBS = median(malecotf),
-    meanIBS = mean(malecotf),
-    sdIBS = sd(malecotf),
-    quart75IBS = quantile(malecotf, 0.75),
-    maxIBS = max(malecotf)
-  ) %>% 
-  dplyr::mutate_if(is.numeric, round, 2) %>% 
-  DT::datatable(., extensions='Buttons',
-                options = list(
-                  searching = T,
-                  pageLength = 20,
-                  dom = 'Bfrtip', 
-                  buttons = c('csv')))
-
-```
 
 
 #### Cluster

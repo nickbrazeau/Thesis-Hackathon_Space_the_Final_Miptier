@@ -115,14 +115,13 @@ modLL <- tibble::tibble(
 )
 
 
-
-
 #..............................................................
 # Massive parallelization
 #..............................................................
 clsts <- sort( unique(c(ibS.gcdistmat$K1, ibS.gcdistmat$K2)) )
 clsts.combns <- as.data.frame( t( combn(clsts, 2) ) )
 colnames(clsts.combns) <- c("K1sub", "K2sub")
+
 
 modLL$distdata <- purrr::map(modLL$fulldata, function(dat){
   # nested lapply to subset to specific row of data that we want
@@ -139,6 +138,15 @@ modLL$Kselect <- lapply(1:nrow(modLL), function(x) return(clsts.combns))
 modLL <- modLL %>%
   dplyr::select(-c("fulldata")) %>%
   tidyr::unnest(cols = c(Kselect, distdata))
+
+#..............................................................
+# Save out here so we don't have to read distdata all back in
+# and create mem bottleneck for rmd downstream
+#..............................................................
+easyout <- modLL %>%
+  dplyr::select(-c("distdata"))
+saveRDS(object = easyout, file = "data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
+
 
 
 # for slurm on LL

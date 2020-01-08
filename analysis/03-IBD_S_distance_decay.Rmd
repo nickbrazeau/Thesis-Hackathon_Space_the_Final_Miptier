@@ -89,6 +89,9 @@ ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 
 ```
 
+<!-- TODO This should all be one call or import -->
+
+
 ## IBS/D Mantel Tests
 The mantel test assess the correlation between a genetic distance and a geographical distance. In this case, we will use IBS and IBD as the measures of genetic distance (although $F_{st}$, Nei's $\pi$, etc. could be used). Similarly, geographical distance is measured with either greater circle, road, or river distance. Another thank you to  Emmanuel Pardis for making this analyses easy with ape. We will use 10,000 permutations. _Note, we will use two-sided p-values_.  
 
@@ -1108,7 +1111,7 @@ plot(IBDdecay.plot)
 ## Cluster Inbreeding Coeff. Likelihood
 ```{r}
 
-llparams <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/ .... /params.RDS")
+llparams <- readRDS(file = "~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
 
 # get all files
 llfiles <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/.....",

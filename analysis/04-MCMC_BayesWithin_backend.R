@@ -321,12 +321,13 @@ mod.framework.sp <- dplyr::left_join(mod.framework.sp, mod.IBD.provCovar.nest,
 
 
 # for slurm on LL
-dir.create("results/carbayes_sp_dics", recursive = T)
-setwd("results/carbayes_sp_dics/")
+scrdir <- "/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/results/carbayes_within_prov_models"
+dir.create(scrdir, recursive = T)
+setwd(scrdir)
 ntry <- 1028 # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                             params = mod.framework.sp,
-                            jobname = 'CARleroux_DICs',
+                            jobname = 'CARleroux_DICs_within',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
@@ -368,7 +369,7 @@ wrap_S.CARleroux_long <- function(distcat, outcome, formula, W, data, burnin, n.
   #-------------------------------------------------------------------------
   # MCMC Diagnostics
   #-------------------------------------------------------------------------
-  ret <- tibble::tibble(MCMC = list(mod))
+  ret <- tibble::tibble(MCMC = list(ret))
   ret$mcmc.modsum <- purrr::map(ret$MCMC, print)  # note, print is overloaded here
   ret$summresults <- purrr::map(ret$mcmc.modsum, "summary.results")
   ret$summresults <- purrr::map(ret$summresults, function(x){
@@ -383,9 +384,14 @@ wrap_S.CARleroux_long <- function(distcat, outcome, formula, W, data, burnin, n.
   ret$modfit <- purrr::map(ret$mcmc.modsum, "modelfit")
   ret$DIC <- purrr::map(ret$modfit, "DIC")
 
-  out <- list(mod = mod,
-              diagnostics = ret)
-  return(out)
+  #..............................................................
+  # Keep smaller piece
+  #..............................................................
+  ret <- ret %>%
+    dplyr::select(c("summresults", "DIC")) %>%
+    tidyr::unnest(cols = c("summresults", "DIC"))
+
+  return(ret)
 
 }
 
@@ -409,8 +415,7 @@ long.mod.framework <- cbind.data.frame(long.mod.framework, mod.IBD.provCovar.nes
 #..............................................................
 # Run
 #..............................................................
-# we already set directory above to results/carbayes_between_prov_models
-dir.create("carbayes_long_chains_WITHIN")
+# we already set directory above to results/carbayes_within_prov_models
 mods <- purrr::pmap(long.mod.framework, wrap_S.CARleroux_long)
 saveRDS(mods, file = "carbayes_long_chains_WITHIN.RDS")
 
