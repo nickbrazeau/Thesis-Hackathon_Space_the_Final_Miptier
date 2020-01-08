@@ -1114,7 +1114,7 @@ plot(IBDdecay.plot)
 llparams <- readRDS(file = "~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
 
 # get all files
-llfiles <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/.....",
+llfiles <- list.files("~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/results/distance_likelihoods/_rslurm_distance_likelihoods_recursion/",
                            pattern = ".RDS", full.names = T)
 llfiles <- llfiles[!grepl("f.RDS|params.RDS", llfiles)]
 
@@ -1132,6 +1132,22 @@ llparams$results <- unlist(purrr::map(llfilesdf$path, readRDS),
 
 
 ```
+```{r}
+# group by and sum up
+
+```
+```{r, results='asis'}
+llparams %>% 
+  dplyr::mutate_if(is.numeric, round, 4) %>% 
+  DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 6,
+                  dom = 'Bfrtip',
+                  buttons = c('csv'))) 
+```
+
 
 ## Appendix, Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
 ```{r}

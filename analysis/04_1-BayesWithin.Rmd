@@ -435,5 +435,6 @@ Note, our goal is still to have the effective sample sizes (`n.effective`) to be
 
 ##### Long Chain Param Diagnostics
 ```{r}
+provmodels <- readRDS("~/Documents/MountPoints/mountedScratchLL/Projects/Space_the_Final_Miptier/results/carbayes_within_prov_models/carbayes_long_chains_WITHIN.RDS")
 
 ```
