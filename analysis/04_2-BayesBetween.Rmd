@@ -231,14 +231,13 @@ provmodels <- provmodels %>%
 
 ```
 
-#### DICs Slope {.tabset .tabset-fade}
+#### DICs {.tabset .tabset-fade}
 ##### Greater Circle DICs 
 ```{r, results='asis'}
 
 provmodels %>% 
   dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -255,7 +254,6 @@ provmodels %>%
 provmodels %>% 
   dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -272,7 +270,6 @@ provmodels %>%
 provmodels %>% 
   dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
   dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::filter(outcome == "genbase2_slope") %>% 
   DT::datatable(.,
                 rownames = F,
                 options = list(
@@ -284,124 +281,30 @@ provmodels %>%
 ```
 
 ####
-
-
-#### DICs Within Prov IBD {.tabset .tabset-fade}
-##### Greater Circle DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::filter(outcome == "withinprovIBD") %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-##### Road DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::filter(outcome == "withinprovIBD") %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-##### River DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::filter(outcome == "withinprovIBD") %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-####
-
-#### DICs Mean IBD {.tabset .tabset-fade}
-##### Greater Circle DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "gcdistance") %>% 
-  dplyr::filter(outcome == "meanprovIBD" ) %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-##### Road DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "roaddistance") %>% 
-  dplyr::filter(outcome == "meanprovIBD" ) %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-##### River DICs 
-```{r, results='asis'}
-
-provmodels %>% 
-  dplyr::select(c("formula", "distcat", "min_nEff", "DIC")) %>% 
-  dplyr::filter(distcat == "riverdistance") %>% 
-  dplyr::filter(outcome == "meanprovIBD" ) %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 6,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-####
-
 
 
 ### Long Chain Runs
 Note, our goal is still to have the effective sample sizes (`n.effective`) to be at least 1,000 for all parameters. In addition, we will visually check for convergence among the four chains.  
   
-**Looks like the slope fitting models failed miserably. Going to drop those going forward**. 
-
 ##### Long Chain Param Diagnostics
 ```{r}
+provmodels <- readRDS("~/Documents/MountPoints/mountedScratchLL/Projects/Space_the_Final_Miptier/results/")
+
+names(provmodels) <- c("gcdisance", "roaddistance", "riverdistance")
+provmodels <- provmodels %>% 
+  dplyr::bind_rows(., .id = "distcat") 
 
 ```
+```{r, results='asis'}
+
+provmodels %>% 
+    DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 12,
+                  dom = 'Bfrtip',
+                  buttons = c('csv'))) 
+
+```
+

@@ -104,7 +104,7 @@ ibD.riverdistmat <- dplyr::left_join(ibD, riverdistmat, by = c("hv001.x", "hv001
 #...................
 
 modLL <- tibble::tibble(
-  name = c("gcdist-ibs", "roaddist-ibs", "riverdist-ibs", "gcdist-ibd", "roaddistibd", "riverdist-ibd"),
+  name = c("gcdist-ibs", "roaddist-ibs", "riverdist-ibs", "gcdist-ibd", "roaddist-ibd", "riverdist-ibd"),
   fulldata = list(ibS.gcdistmat,
                   ibS.roaddistmat,
                   ibS.riverdistmat,
@@ -148,6 +148,28 @@ easyout <- modLL %>%
 saveRDS(object = easyout, file = "data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
 
 
+#..............................................................
+# Add in data for imputation on clusters with only one
+# sample
+#..............................................................
+# global within cluster ibd to impute for clusters with only one sample
+modLL$global_fii <- purrr::map(modLL$distdata, function(dat){
+  # nested sapply loop
+  f_ii <- sapply(clsts, function(x){
+    ret <- mean( dat$relatedness[c(dat$K1 %in% x & dat$K2 %in% x)] )
+    return(ret)
+  })
+  global_fii <- mean(f_ii[!is.nan(f_ii)])
+  return(global_fii)
+})
+# clusters that we should impute on
+imputclst <- mtdt %>%
+  dplyr::group_by(hv001) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n == 1)
+imputclst <- imputclst$hv001
+# put in model
+modLL$imputclst <- lapply(1:nrow(modLL), function(x) return(imputclst))
 
 # for slurm on LL
 dir.create("results/distance_likelihoods", recursive = T)

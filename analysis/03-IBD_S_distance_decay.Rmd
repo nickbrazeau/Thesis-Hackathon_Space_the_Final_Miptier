@@ -92,6 +92,39 @@ ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 <!-- TODO This should all be one call or import -->
 
 
+# Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
+```{r}
+
+mainplot <- ibDdist %>% 
+ggplot() + 
+  geom_histogram(aes(x=malecotf, y = (..count../sum(..count..))*100), 
+                 color = "#000000", fill = "#d9d9d9") + 
+  xlab("IBD") + ylab("frequency (%)") + 
+  theme_classic()
+
+insetplot <- ibDdist %>% 
+ggplot() + 
+  geom_histogram(aes(x=malecotf, y = (..count../sum(..count..))*100), 
+                 color = "#000000", fill = "#d9d9d9") + 
+  xlab("IBD") + ylab("frequency (%)") + 
+  theme_classic() + 
+  coord_cartesian(xlim = c(0.5,1), ylim = c(0,0.002)) +
+  theme_bw() + 
+  theme(panel.background = element_rect(fill = "transparent"),
+        plot.background = element_rect(fill = "transparent"))
+
+```
+
+```{r, results='asis'}
+
+cowplot::ggdraw() +
+  cowplot::draw_plot(mainplot, x = 0, y = 0, width = 1, height = 1, scale = 1) +
+  cowplot::draw_plot(insetplot, x = 0.5, y= 0.3, width = 0.4, height = 0.4)
+
+
+```
+
+
 ## IBS/D Mantel Tests
 The mantel test assess the correlation between a genetic distance and a geographical distance. In this case, we will use IBS and IBD as the measures of genetic distance (although $F_{st}$, Nei's $\pi$, etc. could be used). Similarly, geographical distance is measured with either greater circle, road, or river distance. Another thank you to  Emmanuel Pardis for making this analyses easy with ape. We will use 10,000 permutations. _Note, we will use two-sided p-values_.  
 
@@ -1111,7 +1144,7 @@ plot(IBDdecay.plot)
 ## Cluster Inbreeding Coeff. Likelihood
 ```{r}
 
-llparams <- readRDS(file = "~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
+llparams <- readRDS(file = "~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
 
 # get all files
 llfiles <- list.files("~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/results/distance_likelihoods/_rslurm_distance_likelihoods_recursion/",
@@ -1130,14 +1163,25 @@ llfilesdf <- tibble::tibble(
 llparams$results <- unlist(purrr::map(llfilesdf$path, readRDS), 
                              recursive = F)
 
+# extract out LL
+llparams$LogLik <- purrr::map(llparams$results, "LL")
+llparams <- llparams %>% 
+  tidyr::unnest(cols = "LogLik")
+
+
 
 ```
 ```{r}
 # group by and sum up
-
+logliksumm <- llparams %>% 
+  group_by(name) %>% 
+  dplyr::summarise(
+    LogLik = sum(LogLik, na.rm = T)
+  )
 ```
 ```{r, results='asis'}
-llparams %>% 
+logliksumm %>% 
+  dplyr::arrange(., name) %>% 
   dplyr::mutate_if(is.numeric, round, 4) %>% 
   DT::datatable(.,
                 rownames = F,
@@ -1146,38 +1190,5 @@ llparams %>%
                   pageLength = 6,
                   dom = 'Bfrtip',
                   buttons = c('csv'))) 
-```
-
-
-## Appendix, Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
-```{r}
-
-mainplot <- ibDdist %>% 
-ggplot() + 
-  geom_histogram(aes(x=malecotf, y = (..count../sum(..count..))*100), 
-                 color = "#000000", fill = "#d9d9d9") + 
-  xlab("IBD") + ylab("frequency (%)") + 
-  theme_classic()
-
-insetplot <- ibDdist %>% 
-ggplot() + 
-  geom_histogram(aes(x=malecotf, y = (..count../sum(..count..))*100), 
-                 color = "#000000", fill = "#d9d9d9") + 
-  xlab("IBD") + ylab("frequency (%)") + 
-  theme_classic() + 
-  coord_cartesian(xlim = c(0.5,1), ylim = c(0,0.002)) +
-  theme_bw() + 
-  theme(panel.background = element_rect(fill = "transparent"),
-        plot.background = element_rect(fill = "transparent"))
-
-```
-
-```{r, results='asis'}
-
-cowplot::ggdraw() +
-  cowplot::draw_plot(mainplot, x = 0, y = 0, width = 1, height = 1, scale = 1) +
-  cowplot::draw_plot(insetplot, x = 0.5, y= 0.3, width = 0.4, height = 0.4)
-
-
 ```
 

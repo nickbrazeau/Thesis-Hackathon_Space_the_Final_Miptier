@@ -5,7 +5,9 @@
 # TODO take this into cpp so it is just distance matrix method
 # confirm likelihood power/legitimacy
 
-get_distance_geno_likelihood <- function(name, distdata, scalar, K1sub = NULL, K2sub = NULL){
+get_distance_geno_likelihood <- function(name, distdata, scalar,
+                                         K1sub = NULL, K2sub = NULL,
+                                         imputclst, global_fii){
   #..............................................................
   # Assertions
   #..............................................................
@@ -26,6 +28,14 @@ get_distance_geno_likelihood <- function(name, distdata, scalar, K1sub = NULL, K
     ret <- mean( distdata$relatedness[c(distdata$K1 %in% x & distdata$K2 %in% x)] )
     return(ret)
   })
+
+  # do global imputation for clusters with only one sample
+  if(is.null(K1sub) & is.null(K2sub)){
+    f_ii[clsts %in% imputclst] <- global_fii
+  } else {
+    f_ii[clsts %in% imputclst] <- global_fii
+    f_ii[clsts %in% c(K1sub, K2sub)]
+  }
 
   # find clusters for combinations which is different than clsts if we have subsetted
   if(is.null(K1sub) & is.null(K2sub)){
@@ -133,7 +143,6 @@ get_distance_geno_likelihood <- function(name, distdata, scalar, K1sub = NULL, K
     # If subset data, use adjacency lists
     #..............................................................
     # set up
-    f_ii <- f_ii[!is.nan(f_ii)]
     m_dij <- as.vector(unlist(m_dij))
     m_dij <- dexp(m_dij/scalar)
     m_dij.list <- split(m_dij, factor(m_ij.combns[,1]))

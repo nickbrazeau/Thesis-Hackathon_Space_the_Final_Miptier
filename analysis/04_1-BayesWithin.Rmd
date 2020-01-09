@@ -427,7 +427,6 @@ provmodels %>%
 ### Long Chain Runs
 Note, our goal is still to have the effective sample sizes (`n.effective`) to be at least 1,000 for all parameters. In addition, we will visually check for convergence among the four chains.  
   
-**Looks like the slope fitting models failed miserably. Going to drop those going forward**. 
 
 ##### Long Chain Param Diagnostics
 ```{r}
