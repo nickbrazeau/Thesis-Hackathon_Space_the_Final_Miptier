@@ -393,7 +393,7 @@ wrap_glm_long <- function(distcat, outcome, formula, data, burnin, n.sample){
   betacount <- stringr::str_count(formvec, "\\+") + 1 # plus one for intercept
   prior.var.betavec <- rep(5e4, betacount) # note prior setting here
 
-  mod <- CARBayes::S.glm(formula = formula,
+  ret <- CARBayes::S.glm(formula = formula,
                          family = "gaussian",
                          data = data,
                          burnin = burnin,
@@ -431,7 +431,6 @@ wrap_glm_long <- function(distcat, outcome, formula, data, burnin, n.sample){
 
 }
 
-}
 
 
 

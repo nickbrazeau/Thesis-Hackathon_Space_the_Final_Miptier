@@ -356,7 +356,7 @@ wrap_S.CARleroux_long <- function(distcat, outcome, formula, W, data, burnin, n.
   betacount <- stringr::str_count(formvec, "\\+") + 1 # plus one for intercept
   prior.var.betavec <- rep(5e4, betacount) # note prior setting here
 
-  mod <- CARBayes::S.CARleroux(formula = formula,
+  ret <- CARBayes::S.CARleroux(formula = formula,
                                family = "gaussian",
                                W = W,
                                data = data,
