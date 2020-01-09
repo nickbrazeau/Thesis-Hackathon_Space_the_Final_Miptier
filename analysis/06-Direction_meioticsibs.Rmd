@@ -335,24 +335,6 @@ graphics.off()
 plot(IBD_meiotic_direct_plot.urb)
 ```
 
-#### Neighboorhood Data
-```{r, results='asis'}
-ibD.meiotic.neighborhoodIBD_plotdf %>% 
-  dplyr::select(-c(dplyr::starts_with("long"),
-                   dplyr::starts_with("lat"),
-                   dplyr::starts_with("geometry"),
-                   neighborIBDdiff_scaled,
-                   neighborIBDdiff_lvls
-                   )) %>% 
-  DT::datatable(., extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 20,
-              dom = 'Bfrtip', 
-              buttons = c('csv')))
-
-```
-
 
 ### Pairwise Prevalence
 ```{r}
@@ -442,5 +424,221 @@ cowplot::plot_grid(IBD_meiotic_direct_plot.urb, IBD_meiotic_direct_plot.prev,
 graphics.off()
 ```
 
+
+### Neighboorhood Data Summary
+```{r, results='asis'}
+ibD.meiotic.neighborhoodIBD_plotdf %>% 
+  dplyr::select(-c(dplyr::starts_with("long"),
+                   dplyr::starts_with("lat"),
+                   dplyr::starts_with("geometry"),
+                   malecotf_gens,
+                   malecotf_gens_inv,
+                   neighborIBDdiff_scaled,
+                   neighborIBDdiff_lvls
+                   )) %>% 
+  dplyr::select(c("hv001.x", "hv001.y", "from", "to", dplyr::everything())) %>% 
+  dplyr::rename(
+    InferredFrom = from,
+    InferredTo = to
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv'))) 
+
+```
+
+#### Covariates Based on Directionality
+
+```{r}
+# inferred from and to 
+
+tofromcovar <- ibD.meiotic.neighborhoodIBD_plotdf %>% 
+  dplyr::mutate(prevfrom = ifelse(hv001.x == from, prevmean.x, prevmean.y),
+                prevto = ifelse(hv001.x == to, prevmean.x, prevmean.y),
+                urbanfrom = ifelse(hv001.x == from, urbanmedian.x, urbanmedian.y),
+                urbanto = ifelse(hv001.x == to, urbanmedian.x, urbanmedian.y)) %>% 
+  dplyr::select(c("from", "to", "hv001.x", "hv001.y", "smpl1", "smpl2", "malecotf", "neighborIBDdiff", "prevfrom", "prevto", "urbanfrom", "urbanto")) 
+
+```
+
+###### Prevalence 
+```{r, results='asis'}
+# histogram of differences
+prevdiffhist <- tofromcovar %>% 
+  dplyr::mutate(prevdiff = prevfrom - prevto) %>% 
+  ggplot() + 
+  geom_density(aes(x = prevdiff), fill = "#bdbdbd", color = NA) + 
+  geom_vline(xintercept = 0, color = "red") +
+  xlab("Prev Diff") + ggtitle("Clst Prev (from) - Clst Prev (to)") + 
+  theme_classic()
+
+# from clusters
+fromclstprev <- tofromcovar %>% 
+  dplyr::select(c("from", "prevfrom")) %>% 
+  dplyr::group_by(from) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    prev = unique(prevfrom) # same cluster by cluster
+  )
+
+fromclstprevplotObj <- fromclstprev %>% 
+  ggplot() + 
+  geom_point(aes(x = edgedens, y = prev, color = factor(from)), show.legend = F) +
+  ggtitle("Prev vs. Edge Density From Clst") + 
+  theme_classic()
+
+# to clusters
+toclstprev <- tofromcovar %>% 
+  dplyr::select(c("to", "prevto")) %>% 
+  dplyr::group_by(to) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    prev = unique(prevto) # same cluster by cluster
+  )
+
+tolstprevplotObj <- toclstprev %>% 
+  ggplot() + 
+  geom_point(aes(x = edgedens, y = prev, color = factor(to)), show.legend = F) +
+  ggtitle("Prev vs. Edge Density Into Clst") + 
+  theme_classic()
+
+
+cowplot::plot_grid(prevdiffhist, fromclstprevplotObj, tolstprevplotObj,
+                   nrow = 1, align = "h")
+  
+```
+
+
+###### Urbanicity 
+```{r, results='asis'}
+urbandiffhist <- tofromcovar %>% 
+  dplyr::mutate(urbandiff = urbanfrom - urbanto) %>% 
+  ggplot() + 
+  geom_density(aes(x = urbandiff), fill = "#bdbdbd", color = NA) + 
+  geom_vline(xintercept = 0, color = "red") +
+  xlab("Urban Diff") + ggtitle("Clst Urban (from) - Clst Urban (to)") + 
+  theme_classic()
+
+# from clusters
+fromclsturban <- tofromcovar %>% 
+  dplyr::select(c("from", "urbanfrom")) %>% 
+  dplyr::group_by(from) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    urbanicity = unique(urbanfrom) # same cluster by cluster
+  )
+
+fromclsturbanplotObj <- fromclsturban %>% 
+  ggplot() + 
+  geom_point(aes(x = edgedens, y = urbanicity, color = factor(from)), show.legend = F) +
+  ggtitle("Urban vs. Edge Density from Clst") + 
+  theme_classic()
+
+# to clusters
+toclsturban <- tofromcovar %>% 
+  dplyr::select(c("to", "urbanto")) %>% 
+  dplyr::group_by(to) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    urbanicity = unique(urbanto) # same cluster by cluster
+  )
+
+tolsturbanplotObj <- toclsturban %>% 
+  ggplot() + 
+  geom_point(aes(x = edgedens, y = urbanicity, color = factor(to)), show.legend = F) +
+  ggtitle("urban vs. Edge Density into Clst") + 
+  theme_classic()
+
+
+cowplot::plot_grid(urbandiffhist, fromclsturbanplotObj, tolsturbanplotObj,
+                   nrow = 1, align = "h")
+  
+
+```
+
+
+
+
+###### Urban-Prevalence 
+
+```{r, results='asis'}
+library(plotly)
+#..............................................................
+# From 
+#..............................................................
+fromcovars <- tofromcovar %>% 
+  dplyr::select(c("from", "prevfrom", "urbanfrom")) %>% 
+  dplyr::group_by(from) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    urban = unique(urbanfrom), 
+    prev = unique(prevfrom)
+  )
+
+from3dplotObj <- plotly::plot_ly(fromcovars, 
+                               x = ~edgedens, 
+                               y = ~urban, 
+                               z = ~prev,
+                               color = ~factor(from)) %>%
+  add_markers() %>%
+  layout(title = "Nodes are From/Source",
+         scene = list(xaxis = list(title = 'Edge Dens'),
+                     yaxis = list(title = 'Urban'),
+                     zaxis = list(title = 'Prev')))
+
+from3dplotObj
+```
+
+```{r, results='asis'}
+
+#..............................................................
+# To 
+#..............................................................
+tocovars <- tofromcovar %>% 
+  dplyr::select(c("to", "prevto", "urbanto")) %>% 
+  dplyr::group_by(to) %>% 
+  dplyr::summarise(
+    edgedens = n(),
+    urban = unique(urbanto), 
+    prev = unique(prevto)
+  )
+
+to3dplotObj <- plotly::plot_ly(tocovars, 
+                               x = ~edgedens, 
+                               y = ~urban, 
+                               z = ~prev,
+                               color = ~factor(to)) %>%
+  add_markers() %>%
+  layout(title = "Nodes are To/Sink",
+         scene = list(xaxis = list(title = 'Edge Dens'),
+                     yaxis = list(title = 'Urban'),
+                     zaxis = list(title = 'Prev')))
+
+to3dplotObj
+
+
+```
+
+###### Neighboorhood Data 
+
+```{r, results='asis'}
+tofromcovar %>% 
+  dplyr::rename(
+    InferredFrom = from,
+    InferredTo = to
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv'))) 
+
+```
 
 

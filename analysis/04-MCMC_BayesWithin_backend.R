@@ -324,7 +324,7 @@ mod.framework.sp <- dplyr::left_join(mod.framework.sp, mod.IBD.provCovar.nest,
 scrdir <- "/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/results/carbayes_within_prov_models"
 dir.create(scrdir, recursive = T)
 setwd(scrdir)
-ntry <- 1028 # max number of nodes
+ntry <- nrow(mod.framework.sp) # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_S.CARleroux,
                             params = mod.framework.sp,
                             jobname = 'CARleroux_DICs_within',

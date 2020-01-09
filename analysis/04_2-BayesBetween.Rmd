@@ -116,9 +116,10 @@ adm1name.pairs <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/deriv
     adm1name.y = stringr::str_split_fixed(btwn, "/", n=2)[,2],
   ) %>% 
   dplyr::select(-c("distcat")) %>% 
-  dplyr::filter(!duplicated(.))
+  dplyr::filter(!duplicated(.)) %>% 
+  dplyr::select(c("adm1name.x", "adm1name.y", "F_between_mean"))
 
-
+adm1name.pairs <- expand_distance_matrix(adm1name.pairs)
 ```
 
 ```{r, results='asis'}
@@ -160,23 +161,30 @@ adm1name.pairs %>%
 
 
 ```
+```{r, results='asis'}
+provnames <- data.frame(nms = DRCprov$adm1name, 
+                        coords = sf::st_centroid(DRCprov$geometry)) %>% 
+  dplyr::mutate(
+    long = sf::st_coordinates(geometry)[,1],
+    lat = sf::st_coordinates(geometry)[,2]
+  )
 
 
+provplot <- ggplot() +
+  geom_sf(data = DRCprov, 
+          fill = "#d9d9d9",
+          color = "#000000", size = 0.5) +
+  ggrepel::geom_text_repel(data = provnames, 
+                           aes(x = long, y = lat, label = nms),
+                           fontface = "bold", color = "#000000") +
+  map_theme + 
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+  
+cowplot::plot_grid(adm1name.pairs.plotObj, provplot, nrow = 1, align = "h")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
 ### MCMC Diagnostics
 Note, our goal is to have the effective sample sizes (`n.effective`) to be at least 500 for all parameters. In addition, we will visually check for convergence among the four chains.
@@ -184,11 +192,11 @@ Note, our goal is to have the effective sample sizes (`n.effective`) to be at le
 
 ```{r}
 
-provmodels <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_within_prov_models/_rslurm_CARleroux_DICs_within/") %>% 
+provmodels <- readRDS("~/Documents/MountPoints/mountedScratchLL/Projects/Space_the_Final_Miptier/results/carbayes_between_prov_models/_rslurm_betweenMods_DICs/params.RDS") %>% 
   dplyr::select(c("formula", "outcome", "distcat"))
 
 # get all files
-provformlist <- list.files("~/Documents/GitHub/Space_the_Final_Miptier/results/carbayes_sp_dics_LL/",
+provformlist <- list.files("~/Documents/MountPoints/mountedScratchLL/Projects/Space_the_Final_Miptier/results/carbayes_between_prov_models/_rslurm_betweenMods_DICs/",
                            pattern = ".RDS", full.names = T)
 provformlist <- provformlist[!grepl("f.RDS|params.RDS", provformlist)]
 

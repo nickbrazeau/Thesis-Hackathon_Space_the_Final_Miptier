@@ -87,7 +87,7 @@ ibD <- ibD %>%
 # These represent likely recent transmission events
 #..............................................................
 ibD.meiotic <- ibD %>% 
-  dplyr::filter(malecotf_gens <= 1)
+  dplyr::filter(malecotf >= 0.5)
 ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
 ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 # coord pts
@@ -112,7 +112,7 @@ ibD.meiotic_plot <- ggplot() +
   geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter), color = "#d9d9d9", size = 2, show.legend = F, alpha = 0.8) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
 
@@ -134,7 +134,7 @@ plot(ibD.meiotic_plot)
 ```{r, results=  'asis'}
 
 ibD_meiotic_table <- ibD.meiotic %>% 
-  dplyr::select(c("smpl1", "smpl2", "malecotf", "malecotf_gens", "hv001.x", "hv001.y"))
+  dplyr::select(c("smpl1", "smpl2", "malecotf", "hv001.x", "hv001.y"))
 
 mtdt.join <- mtdt %>% 
   dplyr::select(c("hv001", "adm1name")) %>% 
@@ -300,11 +300,11 @@ meiotic_clst.one.conn.map <- ggplot() +
   geom_curve(data = meiotic_clst.uni.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens),
+                 color = malectof),
              alpha = 0.5, size = 1.1) +
   geom_point(data = meiotic_clst.uni.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) + 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) + 
   ggtitle("IBD Pairs with only One Connection")
 
 plot(meiotic_clst.one.conn.map)
@@ -328,28 +328,14 @@ ibd.moreconn.map <- ggplot() +
   geom_curve(data = meiotic_clst.conn.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens),
+                 color = malectof),
              alpha = 0.5, size = 1.1) +
   geom_point(data = meiotic_clst.conn.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) + 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) + 
   ggtitle("IBD Pairs with more than One Connection")
 plot(ibd.moreconn.map)
 
-
-ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_curve(data = meiotic_clst.conn.edges,
-             aes(x = long_jitter.x, y = lat_jitter.x, 
-                 xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens),
-             alpha = 0.5, size = 1.1) +
-  geom_point(data = meiotic_clst.conn.nodes,
-             aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
-  ggrepel::geom_label_repel(data = meiotic_clst.conn.nodes,
-             aes(x = longnum, y = latnum, label = hv001)) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) + 
-  ggtitle("IBD Pairs with more than One Connection")
 
 ```
 
@@ -376,45 +362,6 @@ graphics.off()
 ```
 
 
-```{r}
-
-ibd.moreconn.map <- ggplot() +
-  # prettybasemap_nodrc_dark +   
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_curve(data = meiotic_clst.conn.edges,
-             aes(x = long_jitter.x, y = lat_jitter.x, 
-                 xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf),
-             alpha = 0.5, size = 1.1) +
-  geom_point(data = meiotic_clst.conn.nodes,
-             aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
-  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
-
-meiotic_clst.one.conn.map <- ggplot() + 
- # prettybasemap_nodrc_dark + 
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_curve(data = meiotic_clst.uni.edges,
-             aes(x = long_jitter.x, y = lat_jitter.x, 
-                 xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf),
-             alpha = 0.5, size = 1.1) +
-  geom_point(data = meiotic_clst.uni.nodes,
-             aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
-  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
-
-
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_IBDpairwise_connections_allpairwiseIBD.jpg",
-     height = 8, width = 11, units = "in", res = 500)
-cowplot::plot_grid(meiotic_clst.uni.plotobj, meiotic_clst.conn.PlotObj,
-                   meiotic_clst.one.conn.map, ibd.moreconn.map,
-                   nrow = 2, align = "v", labels = c("(A)", "(B)", "(C)", "(D)"))
-graphics.off()
-
-```
-
-
-
-
 ### Local Transmission Events
 Now mark clusters with local transmission events (regardless of number of connections). 
 ```{r, results='asis'}
@@ -427,9 +374,9 @@ local_trans_plot <- ibD.meiotic.network %>%
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_jitter(alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
-                 color = malecotf_gens),
+                 color = malectof),
              width = 0.05, height = 0.05) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
 plot(local_trans_plot)
 ```
@@ -476,11 +423,11 @@ long_trans_plot <- ggplot() +
    geom_curve(data = notsameclst.edges,
               aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens),
+                 color = malectof),
              alpha = 0.5, size = 1.1) +
   geom_point(data = notsameclst.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) + 
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
 plot(long_trans_plot)
 ```
@@ -704,7 +651,7 @@ ibD.meiotic_plot_urbanrstr <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.5, fill = NA) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
@@ -731,11 +678,11 @@ ibD.meiotic_plot <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = urbanmedian), 
              size = 2, shape = 21, stroke = 0) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) +
   scale_fill_distiller("Median Urbanicity", type = "div", palette = "RdYlBu") 
 
 
@@ -744,7 +691,6 @@ jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abo
      height = 8, width = 8, units = "in", res = 500)
 plot(ibD.meiotic_plot)
 graphics.off()
-
 
 ```
 
@@ -759,14 +705,14 @@ ibD.meiotic_plot <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = urbanmedian, shape = factor(urban_rura)), 
              size = 2) +
   geom_point(data = drccities, aes(x = longnum, y=latnum), color = "#f0f0f0") + 
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) +
   scale_fill_distiller("Median Urbanicity", type = "div", palette = "RdYlBu") +
   scale_shape_manual("Urban-Rural", values = c(21, 24))
 
@@ -801,10 +747,10 @@ ibD.meiotic_plot_urban_binary_rstr <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.5, fill = NA) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
 plot(ibD.meiotic_plot_urban_binary_rstr)
 ```
@@ -828,8 +774,6 @@ graphics.off()
 ```
 
 ```{r}
-
-
 urban.cities <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
@@ -968,10 +912,10 @@ ibD.meiotic_plot <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = prev.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.1, fill = NA) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
 plot(ibD.meiotic_plot)
 ```
@@ -992,11 +936,11 @@ ibD.meiotic_plot <- ggplot() +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf_gens)) +
+                 color = malectof)) +
   geom_point(data = prev.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = prevmean), 
              size = 2, shape = 21, stroke = 0) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) +
   scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") 
 
 plot(ibD.meiotic_plot)

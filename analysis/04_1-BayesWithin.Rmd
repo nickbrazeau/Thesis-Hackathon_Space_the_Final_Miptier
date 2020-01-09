@@ -300,14 +300,10 @@ DRC.Provwthn.plotObj <- ggplot() +
   #prettybasemap_nodrc_dark +
   geom_sf(data = DRC.Provwthn, aes(fill = wthnIBD), 
           color = "#525252", size = 0.05) +
-  scale_fill_viridis_c("Within IBD") +
+  scale_fill_viridis_c("Within IBD") 
 
 ```
-```{r, results='asis'}
 
-cowplot::plot_grid(DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
-
-```
 
 ```{r, results='asis'}
 
@@ -437,4 +433,21 @@ Note, our goal is still to have the effective sample sizes (`n.effective`) to be
 ```{r}
 provmodels <- readRDS("~/Documents/MountPoints/mountedScratchLL/Projects/Space_the_Final_Miptier/results/carbayes_within_prov_models/carbayes_long_chains_WITHIN.RDS")
 
+names(provmodels) <- c("gcdisance", "roaddistance", "riverdistance")
+provmodels <- provmodels %>% 
+  dplyr::bind_rows(., .id = "distcat") 
+
 ```
+```{r, results='asis'}
+
+provmodels %>% 
+    DT::datatable(.,
+                rownames = F,
+                options = list(
+                  searching = F,
+                  pageLength = 12,
+                  dom = 'Bfrtip',
+                  buttons = c('csv'))) 
+
+```
+

@@ -360,14 +360,14 @@ mod.framework.sp <- dplyr::left_join(mod.framework.sp, ibDdist.prov.between,
 scrdir <- "/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/results/carbayes_between_prov_models"
 dir.create(scrdir, recursive = T)
 setwd(scrdir)
-ntry <- 1028 # max number of nodes
+ntry <- nrow(mod.framework.sp) # max number of nodes
 sjob <- rslurm::slurm_apply(f = wrap_glm,
                             params = mod.framework.sp,
                             jobname = 'betweenMods_DICs',
                             nodes = ntry,
                             cpus_per_node = 1,
                             submit = T,
-                            slurm_options = list(mem = 16000,
+                            slurm_options = list(mem = 128000,
                                                  array = sprintf("0-%d%%%d",
                                                                  ntry,
                                                                  128),
