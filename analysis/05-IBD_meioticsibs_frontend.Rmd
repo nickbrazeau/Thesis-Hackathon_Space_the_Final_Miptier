@@ -48,17 +48,6 @@ perms <- permsparams %>%
 ```
 
 ```{r}
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>% 
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>% 
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% drcsmpls$name)
-
 # drc prov for plot
 DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 # load pretty map aesthetics 
@@ -66,7 +55,9 @@ load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_
 
 ```
 ```{r}
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds")
+
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 
 # log2 IBD measure
 ibD <- ibD %>% 
@@ -76,8 +67,6 @@ ibD <- ibD %>%
 
 ```
 
-
-<!-- TODO all above should be pre-done -->
 
 ### Meiotic Pair Plot
 ```{r}
@@ -90,13 +79,22 @@ ibD.meiotic <- ibD %>%
   dplyr::filter(malecotf >= 0.5)
 ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
 ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
+
+#..............................................................
+# Coordinate for meiotic pair edges
+# need to jitter very slightly to account for within cluster
+# edges -- otherwise lines edges can't be drawn
+#..............................................................
 # coord pts
 coords.pts <- mtdt %>% 
   dplyr::select(c("name", "hv001", "longnum", "latnum")) %>% 
   dplyr::filter(name %in% ibdmeioticsmpls)
 # add spatial jitter
-coords.pts$long_jitter <- coords.pts$long + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
-coords.pts$lat_jitter <- coords.pts$lat + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
+coords.pts$long_jitter <- coords.pts$longnum + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
+coords.pts$lat_jitter <- coords.pts$latnum + runif(n = nrow(coords.pts), min = -1e-3, max = 1e-3)
+coords.pts <- coords.pts %>% 
+  dplyr::select(c("name", "long_jitter", "lat_jitter"))
+
 
 # long connections
 colnames(coords.pts)[1] <- "smpl1"
@@ -108,13 +106,13 @@ colnames(coords.pts)[1] <- "name"
 
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = coords.pts, aes(x = long_jitter, y = lat_jitter), color = "#d9d9d9", size = 2, show.legend = F, alpha = 0.8) +
-  scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
 
 
@@ -130,24 +128,12 @@ graphics.off()
 plot(ibD.meiotic_plot)
 ```
 
-### Meiotic Pair Table
-```{r, results=  'asis'}
+### Meiotic Pair Table, Locations
+```{r, results = 'asis'}
 
-ibD_meiotic_table <- ibD.meiotic %>% 
-  dplyr::select(c("smpl1", "smpl2", "malecotf", "hv001.x", "hv001.y"))
-
-mtdt.join <- mtdt %>% 
-  dplyr::select(c("hv001", "adm1name")) %>% 
-  filter(!duplicated(.)) %>% 
-  dplyr::rename(hv001.x = hv001) 
-ibD_meiotic_table <- dplyr::left_join(ibD_meiotic_table, mtdt.join, by = "hv001.x")
-
-mtdt.join <- mtdt.join %>% 
-  dplyr::rename(hv001.y = hv001.x)
-ibD_meiotic_table <- dplyr::left_join(ibD_meiotic_table, mtdt.join, by = "hv001.y")
-
-
-DT::datatable(ibD_meiotic_table, extensions='Buttons',
+ibD.meiotic %>% 
+  dplyr::select(-c("malecotf_gens", "malecotf_gens_inv", dplyr::ends_with("jitter.x"), dplyr::ends_with("jitter.y")))
+  DT::datatable(., extensions='Buttons',
                options = list(
               searching = T,
               pageLength = 20,
@@ -156,6 +142,82 @@ DT::datatable(ibD_meiotic_table, extensions='Buttons',
   
 ```
 
+### Meiotic Pair Table, DHS
+```{r}
+dhsind <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/dhs_ind_covars.RDS")
+
+#..............................................................
+# drop so we can merge dhs
+#..............................................................
+ibD.meiotic.dhs.ind <- ibD.meiotic %>% 
+  dplyr::select(c("barcode.x", "barcode.y", "malecotf")) %>% 
+  dplyr::mutate(barcode.x = tolower(barcode.x),
+                barcode.y = tolower(barcode.y))
+# left
+dhsind <- dhsind %>% 
+  dplyr::rename(barcode.x = barcode)
+ibD.meiotic.dhs.ind <- dplyr::left_join(ibD.meiotic.dhs.ind, dhsind, by = "barcode.x")
+# right
+dhsind <- dhsind %>% 
+  dplyr::rename(barcode.y = barcode.x)
+ibD.meiotic.dhs.ind <- dplyr::left_join(ibD.meiotic.dhs.ind, dhsind, by = "barcode.y")
+
+
+```
+```{r, results = 'asis'}
+ibD.meiotic.dhs.ind %>% 
+  DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+  
+```
+
+### Meiotic Pair by Clst
+```{r, results = 'asis'}
+clsts <- mtdt %>% 
+  dplyr::select("hv001", "longnum", "latnum") 
+
+ibD.meiotic.clsts <- tibble::tibble(
+  hv001 = ibD.meiotic$hv001.x, ibD.meiotic$hv001.y
+  ) %>% 
+  dplyr::group_by(hv001) %>% 
+  dplyr::summarise(
+    ind_within_pairs = n()
+  )
+ibD.meiotic.clsts <- dplyr::left_join(clsts, ibD.meiotic.clsts, by = "hv001") %>% 
+  dplyr::mutate(ind_within_pairs = ifelse(is.na(ind_within_pairs), 0, ind_within_pairs))
+
+
+ibD.meiotic.clsts  %>% 
+  DT::datatable(., extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 20,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+  
+```
+
+``````{r, results = 'asis'}
+ ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ibD.meiotic.clsts, 
+              aes(x = longnum, y = latnum, size = ind_within_pairs),
+             color = "#fed976", alpha = 0.8, show.legend = T) +
+  scale_size("Cluster Size for \n Count of Ind in \n Highly Related Pair", range = c(1, 4)) +
+  theme(
+    legend.position = "left",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) + 
+   guides(fill=guide_legend(ncol=2))
+
+
+```
 
 ## Hypotheses
 We have three major questions regarding these strong genetic connections:  
@@ -171,8 +233,7 @@ Here we can look at IBD connections by cluster (color).
 # convert to network
 ibD.meiotic.network <- ibD.meiotic %>% 
   tidygraph::as_tbl_graph(., directed = F) %>% 
-  tidygraph::activate("nodes") %>% 
-  dplyr::left_join(., y = mtdt, by = "name") 
+  tidygraph::activate("nodes")
 
 # plot
 ibD.meiotic.network %>%
@@ -300,7 +361,7 @@ meiotic_clst.one.conn.map <- ggplot() +
   geom_curve(data = meiotic_clst.uni.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof),
+                 color = malecotf),
              alpha = 0.5, size = 1.1) +
   geom_point(data = meiotic_clst.uni.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
@@ -328,7 +389,7 @@ ibd.moreconn.map <- ggplot() +
   geom_curve(data = meiotic_clst.conn.edges,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof),
+                 color = malecotf),
              alpha = 0.5, size = 1.1) +
   geom_point(data = meiotic_clst.conn.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) +
@@ -342,12 +403,12 @@ plot(ibd.moreconn.map)
 ```{r}
 
 ibd.moreconn.map <- 
-  # prettybasemap_nodrc_dark + 
+  prettybasemap_nodrc_dark + 
   ibd.moreconn.map + 
   theme(plot.title = element_blank()) 
 
 meiotic_clst.one.conn.map <- 
- # prettybasemap_nodrc_dark + 
+ prettybasemap_nodrc_dark + 
   meiotic_clst.one.conn.map + 
   theme(plot.title = element_blank()) 
 
@@ -370,11 +431,11 @@ local_trans_plot <- ibD.meiotic.network %>%
   tidygraph::activate(., "edges") %>% 
   dplyr::filter(hv001.x == hv001.y) %>% 
   ggplot() +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   geom_jitter(alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
-                 color = malectof),
+                 color = malecotf),
              width = 0.05, height = 0.05) +
   scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
 
@@ -418,12 +479,12 @@ notsameclst.nodes <- ibD.meiotic.network %>%
 
 
 long_trans_plot <- ggplot() +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = notsameclst.edges,
               aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof),
+                 color = malecotf),
              alpha = 0.5, size = 1.1) +
   geom_point(data = notsameclst.nodes,
              aes(x = longnum, y = latnum, fill = factor(hv001)), shape = 21, show.legend = F) + 
@@ -647,11 +708,11 @@ ibD.meiotic_plot_urbanrstr <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.5, fill = NA) +
   scale_color_viridis_c("IBD Generations", option="plasma", direction = -1) 
@@ -674,11 +735,11 @@ plot(ibD.meiotic_plot)
 
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = urbanmedian), 
              size = 2, shape = 21, stroke = 0) +
@@ -701,11 +762,11 @@ plot(ibD.meiotic_plot)
 ```{r}
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = urbanmedian, shape = factor(urban_rura)), 
              size = 2) +
@@ -743,11 +804,11 @@ ibD.meiotic_plot_urban_binary_rstr <- ggplot() +
   ggspatial::layer_spatial(data = urbancatch, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   scale_fill_distiller("Urbanicity Binary", type = "div", palette = "RdYlBu") +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = urban.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.5, fill = NA) +
   scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
@@ -777,7 +838,7 @@ graphics.off()
 urban.cities <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  # prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA) +
@@ -908,11 +969,11 @@ ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
   scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = prev.pts, aes(x = long_jitter, y = lat_jitter), 
              size = 2, shape = 21, stroke = 0.1, fill = NA) +
   scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) 
@@ -932,11 +993,11 @@ graphics.off()
 
 ibD.meiotic_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malectof)) +
+                 color = malecotf)) +
   geom_point(data = prev.pts, aes(x = long_jitter, y = lat_jitter, 
                                     fill = prevmean), 
              size = 2, shape = 21, stroke = 0) +
@@ -1073,8 +1134,8 @@ ibD.meiotic_plot <- ggplot() +
   scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
- geom_point(data = drccities, aes(x = longnum, y=latnum)) 
-  #prettybasemap_nodrc_dark 
+ geom_point(data = drccities, aes(x = longnum, y=latnum)) + 
+ prettybasemap_nodrc_dark 
   
 plot(ibD.meiotic_plot)
 
@@ -1094,8 +1155,8 @@ ibD.meiotic_plot <- ggplot() +
  geom_point(data = local.trnsm.events, 
             aes(x = longnum.x, y = latnum.x),
             color = "#54278f", alpha = 0.5) +
-  ggtitle("Local Transmission and Prev")
-  #prettybasemap_nodrc_dark 
+  ggtitle("Local Transmission and Prev") +
+  prettybasemap_nodrc_dark 
 
 
 ```

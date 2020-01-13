@@ -93,7 +93,7 @@ tempdf <- tibble::tibble(namestemp = basename(tempfiles)) %>%
 #......................................................................................................
 # Precipitation and Temperature Considered by Month
 #......................................................................................................
-dt <- readRDS("data/derived_data/DHS_qPCR_allkids_geo.rds")
+dt <- readRDS("data/derived_data/DHS_qPCR_DRCsmpls_geo.rds")
 # drop observations with missing geospatial data
 dt <- dt %>%
   dplyr::filter(latnum != 0 & longnum != 0) %>%

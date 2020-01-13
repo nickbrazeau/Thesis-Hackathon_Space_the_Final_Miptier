@@ -22,17 +22,6 @@ source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
 ```
 
 ```{r}
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>% 
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>% 
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% drcsmpls$name)
-
 # drc prov for plot
 DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds")) 
 
@@ -44,7 +33,7 @@ load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 
 # log2 IBD measure
 ibD <- ibD %>% 
@@ -54,22 +43,6 @@ ibD <- ibD %>%
 ```
 
 ```{r}
-#..............................................................
-# mk mtdt 
-#..............................................................
-mtdt.clst <- mtdt %>% 
-  dplyr::select(c("name", "hv001")) %>% 
-  dplyr::rename(smpl1 = name)
-
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl1")
-
-# rename
-mtdt.clst <- mtdt.clst %>% 
-  dplyr::rename(smpl2 = smpl1)
-# rejoin
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl2")
-
-
 #..............................................................
 # Import geographic distance and combine with genetic
 #..............................................................
@@ -94,7 +67,6 @@ ibDdist.long <- ibDdist %>%
 
 ```
 
-<!-- TODO make above imported in already -->
 
 ## Bayesian Mixed (Spatial) Modeling/Epi Considerations
 Here we will analyze IBD using a traditional epidemiological approach as our outcome is a single measure of within-prov IBD. _Covariates_: Prov Mean observations; _Spatial Autocorrelation_: W (dexp Province). Gaussian Process (Cluster). _Link/family_: Given that we can normalize the IBD pairwise outcome, we will use a log-link and the Gaussian probability family for our generalized linear models. A log-link will be used given the expected exponential relationship of IBD and distance/covariates.   
@@ -151,7 +123,7 @@ provCovar.geo %>%
 ```{r, results='asis'}
 DRC.Provmprev <- dplyr::left_join(DRCprov, provCovar, by = "adm1name")
 DRC.Provmprev.plotObj <- ggplot() +
-  # prettybasemap_nodrc_dark + 
+    prettybasemap_nodrc_dark + 
     geom_sf(data = DRC.Provmprev, aes(fill = prev), 
           color = "#525252", size = 0.05) +
     scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") 
@@ -253,8 +225,8 @@ DRC.Provmean <- dplyr::left_join(DRCprov, Provmean, by = "adm1name")
 DRC.Provmean.plotObj <- ggplot() +
   geom_sf(data = DRC.Provmean, aes(fill = meanIBD), 
           color = "#525252", size = 0.05) +
-  scale_fill_viridis_c("Mean IBD") 
-  #prettybasemap_nodrc_dark 
+  scale_fill_viridis_c("Mean IBD")  +
+  prettybasemap_nodrc_dark 
 
 ```
 ```{r, results='asis'}
@@ -297,7 +269,7 @@ Provwthn %>%
 DRC.Provwthn <- dplyr::left_join(DRCprov, Provwthn, by = "adm1name")
 
 DRC.Provwthn.plotObj <- ggplot() +
-  #prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_dark +
   geom_sf(data = DRC.Provwthn, aes(fill = wthnIBD), 
           color = "#525252", size = 0.05) +
   scale_fill_viridis_c("Within IBD") 

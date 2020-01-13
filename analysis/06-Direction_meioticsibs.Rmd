@@ -20,17 +20,6 @@ source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
 ```
 
 ```{r}
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>% 
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>% 
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% drcsmpls$name)
-
 # drc prov for plot
 DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 # load pretty map aesthetics 
@@ -38,14 +27,9 @@ load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_
 
 ```
 ```{r}
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds")
 
-# merge in cluster informations
-colnames(drcsmpls)[1] <- "smpl1"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
-colnames(drcsmpls)[1] <- "smpl2"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
-colnames(drcsmpls)[1] <- "name" # need this for posterity/later blocks
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 # log2 IBD measure
 ibD <- ibD %>% 
   dplyr::mutate(malecotf_gens = -log2(malecotf),
@@ -54,7 +38,6 @@ ibD <- ibD %>%
 ```
 
 
-<!-- TODO all above should be pre-done -->
 
 ```{r}
 #..............................................................
@@ -260,7 +243,7 @@ ibD.meiotic.neighborhoodIBD_pointdf <- mtdt %>%
   dplyr::filter(!duplicated(.))
   
 IBD_meiotic_direct_plot <- ggplot() +
-  # prettybasemap_nodrc_dark + 
+  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
@@ -300,7 +283,7 @@ plot(IBD_meiotic_direct_plot)
 
 
 IBD_meiotic_direct_plot.urb <- ggplot() +
-  # prettybasemap_nodrc_dark + 
+  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
@@ -381,7 +364,7 @@ ibD.meiotic.neighborhoodIBD_plotdf <- dplyr::left_join(ibD.meiotic.neighborhoodI
 
 ```{r}
 IBD_meiotic_direct_plot.prev <- ggplot() +
-  # prettybasemap_nodrc_dark + 
+  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 

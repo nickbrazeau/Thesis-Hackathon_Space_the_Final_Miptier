@@ -36,6 +36,10 @@ drcrivers <- sf::st_read("data/raw_data/river_data/combined/combind_rivers_postg
 drcrivers.simp <- shp2graph::nt.connect(sf::as_Spatial(drcrivers))
 drcrivers.simp <- sf::st_as_sf(drcrivers.simp)
 
+# need to add back in geometry
+sf::st_crs(drcrivers.simp) <- sf::st_crs(drcrivers)
+
+
 # save this out for plotting later
 saveRDS(object = drcrivers.simp,
         file = "data/derived_data/river_network.RDS")
@@ -81,7 +85,7 @@ target_nodes <- nodes %>%
   dplyr::filter(start_end == 'end') %>%
   dplyr::pull(nodeID)
 
-edges = edges %>%
+edges <- edges %>%
   dplyr::mutate(from = source_nodes, to = target_nodes)
 
 
@@ -108,9 +112,9 @@ rivernetworkplotObj <- ggplot() +
   prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373") +
   geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
-          color = "#9ecae1") +
+          color = "#9ecae1", size = 0.05) +
   geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
-          size = 0.25, color = "#9ecae1") +
+          size = 0.05, color = "#9ecae1") +
   geom_sf(data = ge, color = "#ff2e2e") +
   theme(legend.position = "none") +
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
@@ -126,7 +130,13 @@ saveRDS(rivernetworkplotObj, file = "data/distance_data/rivernetworkplotObj.RDS"
 #............................................................................................................
 # Get nearest neighbors for river network
 #............................................................................................................
-gecoords <- sf::st_coordinates(ge)
+gecoords <- ge %>%
+  dplyr::mutate(
+    X = sf::st_coordinates(ge)[,1],
+    Y = sf::st_coordinates(ge)[,2]
+    ) %>%
+  dplyr::select(c("dhsclust", "X", "Y"))
+sf::st_geometry(gecoords) <- NULL
 
 rivercoords <- rivernetwork %>%
   activate(nodes) %>%
@@ -134,14 +144,14 @@ rivercoords <- rivernetwork %>%
   st_as_sf() %>%
   sf::st_coordinates()
 
-nn <- nabor::knn(data = rivercoords, query = gecoords, k=1)
+nn <- nabor::knn(data = rivercoords, query = gecoords[,c("X", "Y")], k=1)
 
-dhsclust.dict <- ge$dhsclust
-names(dhsclust.dict) <- unlist(nn$nn.idx)
 
 # make tibble for search
-dhsclust.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
-colnames(dhsclust.tofrom) <- c("to", "from")
+dhsclust.tofrom <- tibble::as_tibble(t( combn(x = gecoords$dhsclust, m = 2) ))
+rivernet.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
+dhsclust.tofrom <- cbind.data.frame(dhsclust.tofrom, rivernet.tofrom)
+colnames(dhsclust.tofrom) <- c("hv001.x", "hv001.y", "to", "from")
 
 
 
@@ -175,23 +185,15 @@ get_shortest_distance_length <- function(to, from){
   return(dist)
 }
 
-dhsclust.tofrom$riverdist <- furrr::future_pmap(dhsclust.tofrom,
+dhsclust.tofrom$riverdist <- furrr::future_pmap(dhsclust.tofrom[,c("to", "from")],
                                                 get_shortest_distance_length)
-dhsclust.tofrom <- dhsclust.tofrom %>%
+dhsclust.tofrom.unnested <- dhsclust.tofrom %>%
   tidyr::unnest(cols = riverdist)
 
 
 #............................................................................................................
 # Liftover to get cluster hv001 labels
 #............................................................................................................
-fromjoin = tibble::tibble(from = as.numeric( names(dhsclust.dict) ), dhsclustfrom = dhsclust.dict)
-tojoin = tibble::tibble(to = as.numeric( names(dhsclust.dict) ), dhsclustto = dhsclust.dict)
-
-dhsclust.tofrom <- dhsclust.tofrom %>%
-  dplyr::left_join(., fromjoin, by = "from") %>%
-  dplyr::left_join(., tojoin, by = "to")
-
-dhsclust.tofrom <- dhsclust.tofrom[!duplicated(dhsclust.tofrom), ] # nearest neighbor result can be duplicate for multiple clusters
 
 
 saveRDS(dhsclust.tofrom,
@@ -218,21 +220,26 @@ drcpov <- sf::st_as_sf(drcpov) # make centroids dominating geom
 #............................................................................................................
 # Get nearest neighbors for Province and run shortest distance calculation
 #............................................................................................................
-drcpovcoords <- sf::st_coordinates(drcpov)
+drcpovcoords <- drcpov %>%
+  dplyr::mutate(
+    X = sf::st_coordinates(drcpov)[,1],
+    Y = sf::st_coordinates(drcpov)[,2]
+    ) %>%
+  dplyr::select(c("adm1name", "X", "Y"))
+sf::st_geometry(drcpovcoords) <- NULL
 
-nn <- nabor::knn(data = rivercoords,
-                 query = drcpovcoords,
-                 k=1)
+nn <- nabor::knn(data = rivercoords, query = drcpovcoords[,c("X", "Y")],  k=1)
 
-drcpovcoords.dict <- drcpov$adm1name
-names(drcpovcoords.dict) <- unlist(nn$nn.idx)
+
 
 # make tibble for search
-drcpovcoords.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
-colnames(drcpovcoords.tofrom) <- c("to", "from")
+drcpovcoords.tofrom <- tibble::as_tibble(t( combn(x = drcpovcoords$adm1name, m = 2) ))
+rivernetprov.tofrom <- tibble::as_tibble(t( combn(x = nn$nn.idx, m = 2) ))
+drcpovcoords.tofrom <- cbind.data.frame(drcpovcoords.tofrom, rivernetprov.tofrom)
+colnames(drcpovcoords.tofrom) <- c("adm1name.x", "adm1name.y", "to", "from")
 
 # run function
-drcpovcoords.tofrom$riverdist <- purrr::pmap(drcpovcoords.tofrom,
+drcpovcoords.tofrom$riverdist <- purrr::pmap(drcpovcoords.tofrom[,c("to", "from")],
                                              get_shortest_distance_length)
 
 drcpovcoords.tofrom <- drcpovcoords.tofrom %>%
@@ -241,29 +248,10 @@ drcpovcoords.tofrom <- drcpovcoords.tofrom %>%
 #..............................................................
 # LIFTOVER to from table to prov names
 #..............................................................
-
-fromjoin = tibble::tibble(from = as.numeric( names(drcpovcoords.dict) ),
-                          dhsprovfrom = drcpovcoords.dict)
-tojoin = tibble::tibble(to = as.numeric( names(drcpovcoords.dict) ),
-                        dhsprovto = drcpovcoords.dict)
-
 drcpovcoords.tofrom <- drcpovcoords.tofrom %>%
-  dplyr::left_join(., fromjoin, by = "from") %>%
-  dplyr::left_join(., tojoin, by = "to")
-
-# liftover
-# prov dict
-provname.dict <- tibble::tibble(item1 = 1:26,
-                                dhsprovfrom = drcpov$adm1name)
-drcpovcoords.tofrom <- dplyr::left_join(drcpovcoords.tofrom, provname.dict,
-                                        by = "dhsprovfrom")
-
-provname.dict <- tibble::tibble(item2 = 1:26,
-                                dhsprovto = drcpov$adm1name)
-drcpovcoords.tofrom <- dplyr::left_join(drcpovcoords.tofrom, provname.dict,
-                                        by = "dhsprovto")
-
-drcpovcoords.tofrom <- drcpovcoords.tofrom[!duplicated(drcpovcoords.tofrom), ] # nearest neighbor result can be duplicate for multiple clusters
+  dplyr::select(c("adm1name.x", "adm1name.y", "riverdist")) %>%
+  dplyr::rename(from = adm1name.x,
+                to = adm1name.y)
 
 
 saveRDS(drcpovcoords.tofrom,

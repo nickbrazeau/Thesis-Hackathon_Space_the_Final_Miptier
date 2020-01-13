@@ -116,15 +116,8 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 sf::st_geometry(ge) <- NULL
 
 
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
   magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>%
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>%
-  dplyr::filter(name %in% drcsmpls$name) %>%
   dplyr::select(c("hv001", "longnum", "latnum")) %>%
   dplyr::left_join(., ge) %>%
   dplyr::filter(!duplicated(.))

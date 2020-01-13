@@ -17,38 +17,15 @@ source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
 source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
 library(tidyverse)
 
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>% 
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>% 
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% drcsmpls$name)
-
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
-ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 
 ```
 
 ```{r}
-#.....................
-# Manipulate for Decay Comparisons
-#.....................
-# merge in cluster informations
-colnames(drcsmpls)[1] <- "smpl1"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl1")
-
-colnames(drcsmpls)[1] <- "smpl2"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl2")
-
 #.......................................................................
 # Import Distance matrix
 #....................................................................... 
@@ -89,7 +66,6 @@ ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 
 ```
 
-<!-- TODO This should all be one call or import -->
 
 
 # Replicating Figure 4 from [Verity et al. 2019](https://www.biorxiv.org/content/10.1101/656561v1)
@@ -1147,7 +1123,7 @@ plot(IBDdecay.plot)
 llparams <- readRDS(file = "~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
 
 # get all files
-llfiles <- list.files("~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/results/distance_likelihoods/_rslurm_distance_likelihoods_recursion/",
+llfiles <- list.files("~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/results/distance_likelihoods_old/_rslurm_distance_likelihoods_recursion/",
                            pattern = ".RDS", full.names = T)
 llfiles <- llfiles[!grepl("f.RDS|params.RDS", llfiles)]
 

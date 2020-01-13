@@ -19,17 +19,8 @@ library(vcfRmanip)
 library(grid)
 ```
 
-````{r}
-mtdt <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::filter(country == "DRC")
-```
 ```{r}
-vcf <- vcfR::read.vcfR(file = "~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/polarized_biallelic_processed.wsaf.vcf.bgz")
-vcf.DRC <- vcfRmanip::select_samples(vcf, smplvctr = unlist(mtdt$id))
-vcf.DRC <- vcf.DRC[vcfR::is.biallelic(vcf.DRC), ]
-```
-```{r}
+vcf.DRC <- vcfR::read.vcfR("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
 LDcalc_vcf_DRC <- vcfRmanip::genautocorr(vcfR = vcf.DRC, biallelicsnps = T)
 
 
