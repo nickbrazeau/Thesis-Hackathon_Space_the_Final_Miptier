@@ -4,30 +4,12 @@
 library(tidyverse)
 source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
 set.seed(48)
-#..............................................................
-# get metadata
-#..............................................................
-drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001"))
 
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
-ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
-
-#.....................
-# Manipulate for Decay Comparisons
-#.....................
-# merge in cluster informations
-colnames(drcsmpls)[1] <- "smpl1"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl1")
-
-colnames(drcsmpls)[1] <- "smpl2"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl2")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 
 #.......................................................................
 # Import Distance matrix

@@ -12,45 +12,14 @@ source("R/basics.R")
 source("R/pairwise_helpers.R")
 set.seed(48)
 
-drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>%
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>%
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
-  dplyr::filter(name %in% drcsmpls$name)
-
-# drc prov for plot
-DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
-
-
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
-
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 # log2 IBD measure
 ibD <- ibD %>%
   dplyr::mutate(malecotf_gens = -log2(malecotf),
                 malecotf_gens_inv = 1/malecotf_gens)
-#..............................................................
-# mk mtdt
-#..............................................................
-mtdt.clst <- mtdt %>%
-  dplyr::select(c("name", "hv001")) %>%
-  dplyr::rename(smpl1 = name)
-
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl1")
-
-# rename
-mtdt.clst <- mtdt.clst %>%
-  dplyr::rename(smpl2 = smpl1)
-# rejoin
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl2")
-
 
 #..............................................................
 # Import geographic distance and combine with genetic
@@ -70,14 +39,6 @@ ibDdist$gcdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 ibDdist$roaddistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 
-p1 <- mtdt %>%
-  dplyr::select(c("name", "adm1name")) %>%
-  dplyr::rename(smpl1 = name)
-
-p2 <- mtdt %>%
-  dplyr::select(c("name", "adm1name")) %>%
-  dplyr::rename(smpl2 = name)
-
 
 
 ################################################################################
@@ -88,12 +49,9 @@ p2 <- mtdt %>%
 #..............................................................
 # here we we don't need long format since we can parse on
 # pairwise comparisons
-ibDdist.mtdt <- ibDdist %>%
-  dplyr::left_join(., y = p1, by = "smpl1") %>%
-  dplyr::left_join(., y = p2, by = "smpl2")
 
-provs <- sort( unique(c(as.character(ibDdist.mtdt$adm1name.x),
-                  as.character(ibDdist.mtdt$adm1name.y))) )
+provs <- sort( unique(c(as.character(ibDdist$adm1name.x),
+                  as.character(ibDdist$adm1name.y))) )
 # get between provs
 provs.btwn <- t(combn(x = c(provs), m = 2))
 # bind self
@@ -107,7 +65,7 @@ ibDdist.prov.between <- rbind.data.frame(provs.btwn,
 #..............................................................
 # Make Model Dataframe for Mapping Regression Models
 #..............................................................
-ibDdist.mtdt <- ibDdist.mtdt %>%
+ibDdist.mtdt <- ibDdist %>%
   dplyr::rename(riverdistance = riverdist) %>%
   dplyr::select(c("smpl1", "smpl2", "adm1name.x", "adm1name.y", "malecotf", "malecotf_gens", dplyr::ends_with("distance")))
 
@@ -189,9 +147,8 @@ ibDdist.prov.between$predMat <- purrr::map(ibDdist.prov.between$btwn, function(x
 prov.gcdist <- readRDS("data/distance_data/greater_circle_distance_forprovinces.rds")
 prov.roaddist <- readRDS("data/distance_data/prov_road_distmeters_long.rds")
 prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds") %>%
-  dplyr::select(c("dhsprovfrom", "dhsprovto", "riverdist")) %>%
-  dplyr::rename(item1 = dhsprovfrom,
-                item2 = dhsprovto)
+  dplyr::rename(item1 = from,
+                item2 = to)
 
 prov.dist <- dplyr::left_join(x = prov.gcdist,
                               y = prov.roaddist, by = c("item1", "item2")) %>%

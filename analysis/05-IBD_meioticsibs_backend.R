@@ -5,27 +5,13 @@
 library(tidyverse)
 library(rslurm)
 #..............................................................
-# Read in metadata
+# Read in data
 #..............................................................
-drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>%
-  dplyr::rename(name = id)
-
 mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>%
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
-  dplyr::filter(name %in% drcsmpls$name)
-#..............................................................
-# Read in IBD data
-#..............................................................
-ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
+  dplyr::select(c("name", "barcode", "hv001", "longnum", "latnum"))
 
-# log2 IBD measure
-ibD <- ibD %>%
-  dplyr::mutate(malecotf_gens = -log2(malecotf),
-                malecotf_gens_inv = 1/malecotf_gens)
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+
 
 #..............................................................
 # Idenity samples with IBD that are greater than half the
@@ -33,7 +19,7 @@ ibD <- ibD %>%
 # These represent likely recent transmission events
 #..............................................................
 ibD.meiotic <- ibD %>%
-  dplyr::filter(malecotf_gens <= 1)
+  dplyr::filter(malecotf >= 0.5)
 ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
 ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 
@@ -120,7 +106,7 @@ simdf <- tibble::tibble(
   IBDwi = list(IBDwi),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)
 )
-iters <- 1e1
+iters <- 1e4
 simdf <- lapply(1:iters, function(x) return(simdf)) %>%
   dplyr::bind_rows() %>%
   dplyr::arrange(name)

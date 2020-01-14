@@ -108,13 +108,16 @@ rivernetwork <- tidygraph::tbl_graph(nodes = nodes,
 
 
 load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+# just for plotting
+rivernetwork.sub <- rivernetwork %>%
+  activate(edges) %>%
+  dplyr::filter(HYC_DESCRI == "Perennial/Permanent" | waterway == "river")
+
 rivernetworkplotObj <- ggplot() +
   prettybasemap_nodrc_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373") +
-  geom_sf(data = rivernetwork %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
-          color = "#9ecae1", size = 0.05) +
-  geom_sf(data = rivernetwork %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
-          size = 0.05, color = "#9ecae1") +
+  geom_sf(data = rivernetwork.sub %>% activate(edges) %>% as_tibble() %>% st_as_sf(),
+          color = "#9ecae1", size = 0.125) +
   geom_sf(data = ge, color = "#ff2e2e") +
   theme(legend.position = "none") +
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),

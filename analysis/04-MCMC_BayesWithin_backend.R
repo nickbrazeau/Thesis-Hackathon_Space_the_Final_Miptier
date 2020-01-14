@@ -12,17 +12,6 @@ source("R/basics.R")
 source("R/pairwise_helpers.R")
 set.seed(48)
 
-drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>%
-  dplyr::rename(name = id)
-
-mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>%
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
-  dplyr::filter(name %in% drcsmpls$name)
-
 # drc prov for plot
 DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 
@@ -30,27 +19,11 @@ DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
-
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 # log2 IBD measure
 ibD <- ibD %>%
   dplyr::mutate(malecotf_gens = -log2(malecotf),
                 malecotf_gens_inv = 1/malecotf_gens)
-#..............................................................
-# mk mtdt
-#..............................................................
-mtdt.clst <- mtdt %>%
-  dplyr::select(c("name", "hv001")) %>%
-  dplyr::rename(smpl1 = name)
-
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl1")
-
-# rename
-mtdt.clst <- mtdt.clst %>%
-  dplyr::rename(smpl2 = smpl1)
-# rejoin
-ibD <- dplyr::left_join(ibD, mtdt.clst, by = "smpl2")
-
 
 #..............................................................
 # Import geographic distance and combine with genetic
@@ -74,18 +47,6 @@ ibDdist.long <- ibDdist %>%
   dplyr::select(-c(dplyr::starts_with("hv001"))) %>%
   expand_distance_matrix(.)
 
-p1 <- mtdt %>%
-  dplyr::select(c("name", "adm1name")) %>%
-  dplyr::rename(smpl1 = name)
-
-p2 <- mtdt %>%
-  dplyr::select(c("name", "adm1name")) %>%
-  dplyr::rename(smpl2 = name)
-
-ibDdist.long.mtdt <- ibDdist.long %>%
-  dplyr::left_join(., y = p1, by = "smpl1") %>%
-  dplyr::left_join(., y = p2, by = "smpl2")
-
 
 ################################################################################
 ##############             Diagnostic Models         ###########################
@@ -95,7 +56,7 @@ ibDdist.long.mtdt <- ibDdist.long %>%
 #..............................................................
 # here we want the long format since we want to be able to group_by
 # adm1name.x so need every pairwise to be there
-ibDdist.prov.within <- ibDdist.long.mtdt %>%
+ibDdist.prov.within <- ibDdist.long %>%
   dplyr::rename(riverdistance = riverdist) %>%
   dplyr::select(c("smpl1", "smpl2", "adm1name.x", "adm1name.y", "malecotf", "malecotf_gens", dplyr::ends_with("distance"))) %>%
   tidyr::gather(., key = "distcat", value = "geodist", 7:9) %>%

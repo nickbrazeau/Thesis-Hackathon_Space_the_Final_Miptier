@@ -123,10 +123,10 @@ provCovar.geo %>%
 ```{r, results='asis'}
 DRC.Provmprev <- dplyr::left_join(DRCprov, provCovar, by = "adm1name")
 DRC.Provmprev.plotObj <- ggplot() +
-    prettybasemap_nodrc_dark + 
     geom_sf(data = DRC.Provmprev, aes(fill = prev), 
           color = "#525252", size = 0.05) +
-    scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") 
+    scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
+    prettybasemap_nodrc_dark
 
 plot(DRC.Provmprev.plotObj)
 
@@ -159,21 +159,10 @@ Looks relatively normal considering...
 **NB, zero-truncated (i.e. excluded IBD=0)**.
 ```{r, results='asis'}
 
-p1 <- mtdt %>% 
-  dplyr::select(c("name", "adm1name")) %>% 
-  dplyr::rename(smpl1 = name)
-
-p2 <- mtdt %>% 
-  dplyr::select(c("name", "adm1name")) %>% 
-  dplyr::rename(smpl2 = name)
-
-ibDdist.long.mtdt <- ibDdist.long %>% 
-  dplyr::left_join(., y = p1, by = "smpl1") %>% 
-  dplyr::left_join(., y = p2, by = "smpl2")  
 
 # because we want to group by ad1name.x 
 # we need to use long here
-ibDdist.long.mtdt %>% 
+ibDdist.long %>% 
   dplyr::filter(malecotf != 0) %>% 
   ggplot() + 
   ggridges::stat_density_ridges(
@@ -192,7 +181,7 @@ ibDdist.long.mtdt %>%
 ```{r}
 # because we want to group by ad1name.x 
 # we need to use long here
-Provmean <- ibDdist.long.mtdt %>% 
+Provmean <- ibDdist.long %>% 
   dplyr::group_by(adm1name.x) %>% 
   dplyr::summarise(
     n = n(),
@@ -229,7 +218,7 @@ DRC.Provmean.plotObj <- ggplot() +
   prettybasemap_nodrc_dark 
 
 ```
-```{r, results='asis'}
+```{r, results='asis', fig.width=11, fig.height=8}
 
 cowplot::plot_grid(DRC.Provmean.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
 
@@ -237,7 +226,7 @@ cowplot::plot_grid(DRC.Provmean.plotObj, DRC.Provmprev.plotObj, nrow = 1, align 
 
 #### Within IBD by Prov
 ```{r}
-Provwthn <- ibDdist.long.mtdt %>% 
+Provwthn <- ibDdist.long %>% 
   dplyr::filter(adm1name.x == adm1name.y) %>% 
   dplyr::group_by(adm1name.x) %>% 
   dplyr::summarise(
@@ -269,15 +258,15 @@ Provwthn %>%
 DRC.Provwthn <- dplyr::left_join(DRCprov, Provwthn, by = "adm1name")
 
 DRC.Provwthn.plotObj <- ggplot() +
-  prettybasemap_nodrc_dark +
   geom_sf(data = DRC.Provwthn, aes(fill = wthnIBD), 
           color = "#525252", size = 0.05) +
-  scale_fill_viridis_c("Within IBD") 
+  scale_fill_viridis_c("Within IBD") +
+  prettybasemap_nodrc_dark 
 
 ```
 
 
-```{r, results='asis'}
+```{r, results='asis', fig.width=11, fig.height=8}
 
 cowplot::plot_grid(DRC.Provmean.plotObj, DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v")
 

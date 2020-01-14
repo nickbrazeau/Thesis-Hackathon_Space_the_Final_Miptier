@@ -300,10 +300,9 @@ ibSdist.river.summary %>%
 ## IBS Decay Plots - Continuous
 
 ```{r}
-
 IBSdecay.df <- ibSdist %>%
-  dplyr::select(-c("gcdistance", "roaddistance", "riverdist")) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "hammings", dplyr::ends_with("_cat"))) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
                                                      "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
@@ -333,23 +332,83 @@ plot(IBSdecay.plot)
 
 ```
 
+## IBS Decay Plots - Means
+
+```{r}
+
+IBSdecay.df <- ibSdist %>%
+  dplyr::select(c("smpl1", "smpl2", "hammings", dplyr::ends_with("distance"), "riverdist")) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
+  dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
+                                                            seq(100, 2000, by = 100),
+                                                            Inf),
+                                 right = F, #
+                                 labels = c("Within", "100km",
+                                            "200km", "300km", "400km", "500km", "600km",
+                                            "700km", "800km", "900km", "1000km", "1100km",
+                                            "1200km", "1300km", "1400km", "1500km", "1600km",
+                                            "1700km", "1800km", "1900km", "2000km", ">2000km")
+                                 ),
+                distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
+                                                    "riverdist"), 
+                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
+                ) %>% 
+  dplyr::group_by(distcat, distmetcat) %>% 
+  dplyr::summarise(
+    n = n(),
+    meanIBS = mean(hammings),
+    sdIBS = sd(hammings),
+    seIBS = sdIBS/sqrt(n),
+    U95CI = meanIBS + 1.96 * seIBS,
+    L95CI = meanIBS - 1.96 * seIBS
+  )
+  
+  
+  
+
+IBSdecay.plot <- IBSdecay.df %>%
+  ggplot() +
+  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI)) + 
+  scale_y_continuous("Mean IBS") +
+  facet_wrap(distcat~.) +
+  plot_theme +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(angle = 90, size = 8, face = "bold"),
+        axis.line.x = element_line(size = 1.1, color = "#000000"),
+        panel.grid.minor.x = element_line(color = "#bdbdbd"),
+        panel.grid.minor.y = element_line(color = "#bdbdbd")
+        )
+
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_meanIBS.jpg",
+     unit = "in", height = 8, width = 11, res = 500)
+plot(IBSdecay.plot)
+graphics.off()
+
+```
+
+```{r, results='asis'}
+plot(IBSdecay.plot)
+
+```
+
+
 
 ## IBS Decay by Province
 Note, here we are including all pairwise comparisons for a given sample in a province. 
 ### IBS Decay Plots - Continuous, Facet Province
 
 ```{r}
-admhv001 <- mtdt %>% 
-  dplyr::select(c("adm1name", "hv001")) %>% 
-  dplyr::rename(hv001.x = hv001)
 
 ibSdist.long <- expand_distance_matrix(ibSdist) %>% 
-  dplyr::left_join(., y = admhv001, by = "hv001.x")
+  dplyr::rename(adm1name = adm1name.x)
 
 
 IBSdecay.df <- ibSdist.long %>%
-  dplyr::select(-c("gcdistance", "roaddistance", "riverdist")) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "adm1name", "hammings", dplyr::ends_with("_cat"))) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
                                                      "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
@@ -384,9 +443,10 @@ plot(IBSdecay.plot)
 
 ```{r}
 
+
 IBSdecay.df <- ibSdist.long %>%
-  dplyr::select(-c(dplyr::ends_with("_cat"))) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+    dplyr::select(c("smpl1", "smpl2", "adm1name", "hammings", dplyr::ends_with("distance"), "riverdist")) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
                                                             seq(100, 2000, by = 100),
                                                             Inf),
@@ -447,68 +507,6 @@ plot(IBSdecay.plot)
 ```
 
 
-
-## IBS Decay Plots - Means
-
-```{r}
-
-IBSdecay.df <- ibSdist %>%
-  dplyr::select(-c(dplyr::ends_with("_cat"))) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
-  dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
-                                                            seq(100, 2000, by = 100),
-                                                            Inf),
-                                 right = F, #
-                                 labels = c("Within", "100km",
-                                            "200km", "300km", "400km", "500km", "600km",
-                                            "700km", "800km", "900km", "1000km", "1100km",
-                                            "1200km", "1300km", "1400km", "1500km", "1600km",
-                                            "1700km", "1800km", "1900km", "2000km", ">2000km")
-                                 ),
-                distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
-                                                    "riverdist"), 
-                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
-                ) %>% 
-  dplyr::group_by(distcat, distmetcat) %>% 
-  dplyr::summarise(
-    n = n(),
-    meanIBS = mean(hammings),
-    sdIBS = sd(hammings),
-    seIBS = sdIBS/sqrt(n),
-    U95CI = meanIBS + 1.96 * seIBS,
-    L95CI = meanIBS - 1.96 * seIBS
-  )
-  
-  
-  
-
-IBSdecay.plot <- IBSdecay.df %>%
-  ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI)) + 
-  scale_y_continuous("Mean IBS") +
-  facet_wrap(distcat~.) +
-  plot_theme +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.text.x = element_text(angle = 90, size = 8, face = "bold"),
-        axis.line.x = element_line(size = 1.1, color = "#000000"),
-        panel.grid.minor.x = element_line(color = "#bdbdbd"),
-        panel.grid.minor.y = element_line(color = "#bdbdbd")
-        )
-
-
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_meanIBS.jpg",
-     unit = "in", height = 8, width = 11, res = 500)
-plot(IBSdecay.plot)
-graphics.off()
-
-```
-
-```{r, results='asis'}
-plot(IBSdecay.plot)
-
-```
 
 
 ## IBD vs. Distances
@@ -654,8 +652,8 @@ ibDdist.river.summary %>%
 ```{r}
 
 IBDdecay.df <- ibDdist %>%
-  dplyr::select(-c("gcdistance", "roaddistance", "riverdist")) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", dplyr::ends_with("_cat"))) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
                                                      "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
@@ -691,8 +689,8 @@ plot(IBDdecay.plot)
 ```{r}
 
 IBDdecay.df <- ibDdist %>%
-  dplyr::select(-c(dplyr::ends_with("_cat"))) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", dplyr::ends_with("distance"), "riverdist")) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26, 
                                                             seq(100, 2000, by = 100),
                                                             Inf),
@@ -747,75 +745,6 @@ graphics.off()
 plot(IBDdecay.plot)
 ```
 
-## IBD vs. Distance Model Comparison
-```{r}
-#..............................................................
-# Make Model Fit based on Log and linear RSS estimates
-# going to liftover categories to somewhat representative numerics
-#..............................................................
-catlvls <- levels(factor(ibDdist$gcdistance_cat))
-catnumlvls <- log( c(50, seq(100, 2000, by = 100), 3000) )
-
-liftover <- tibble::tibble(
-  distmetcat = catlvls,
-  distmetcat_num = catnumlvls
-)
-
-ibDdist.logfit <- IBDdecay.df %>% 
-  dplyr::left_join(., y = liftover)
-
-ibDdist.logfit <- ibDdist.logfit %>% 
-  dplyr::group_by(distcat) %>% 
-  tidyr::nest()
-
-
-ibDdist.logfit$modfit <- purrr::map(ibDdist.logfit$data, function(x){
-  ret <- lm(meanIBD ~ distmetcat_num, 
-            data = x)
-  return(ret)
-  
-})
-
-
-# get prediction intervals
-ibDdist.logfit$preds <- purrr::map(ibDdist.logfit$modfit, function(x){
-  ret <- predict(x, interval = "predict")
-  return(tibble::as_tibble(ret))
-})
-
-
-# get residual sum of squares
-ibDdist.logfit$rss <- purrr::map(ibDdist.logfit$modfit, function(x){
-  ret <- anova(x)["Residuals", "Sum Sq"]
-  return(ret)
-})
-
-ibDdist.logfit.plotdf <- ibDdist.logfit %>% 
-  dplyr::select(-c("modfit")) %>% 
-  tidyr::unnest(cols = c("data", "preds", "rss"))
-
-
-ibDdist.logfit.plot <- ibDdist.logfit.plotdf %>% 
-  dplyr::mutate(rss = round(rss, 6), size = 4,
-                family = "Helvetica", fontface = "bold") %>% 
-  ggplot() + 
-  geom_ribbon(aes(x = distmetcat_num, ymin = lwr, ymax = upr), fill = "#d8daeb", alpha = 0.8) +
-  geom_point(aes(x = distmetcat_num, y = fit), color = "#542788") + 
-  geom_point(aes(x = distmetcat_num, y = meanIBD), color = "#dfc27d", alpha = 0.8) +
-  geom_text(aes(x = 6.3, y = 0.05, label = paste("RSS:", rss))) +
-  facet_wrap(distcat ~ .) + 
-  plot_theme +
-  xlab("Distance Metric Category (numeric liftover)") +
-  ylab("Mean IBD Estimate") +  
-  labs(caption = "Truth in gold; Predictions in purple; prediction interval in light purple")
-
-
-```
-
-```{r, results='asis'}
-plot(ibDdist.logfit.plot)
-```
-
 
 ## IBD Decay by Province
 Note, here we are including all pairwise comparisons for a given sample in a province. 
@@ -824,17 +753,14 @@ Note, here we are including all pairwise comparisons for a given sample in a pro
 
 #### All
 ```{r}
-admhv001 <- mtdt %>% 
-  dplyr::select(c("adm1name", "hv001")) %>% 
-  dplyr::rename(hv001.x = hv001)
 
 ibDdist.long <- expand_distance_matrix(ibDdist) %>% 
-  dplyr::left_join(., y = admhv001, by = "hv001.x")
+  dplyr::rename(adm1name = adm1name.x)
 
 
 IBDdecay.df <- ibDdist.long %>%
-  dplyr::select(-c("gcdistance", "roaddistance", "riverdist")) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", "adm1name", dplyr::ends_with("cat"))) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
                                                      "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
@@ -942,8 +868,8 @@ graphics.off()
 ```{r}
 
 IBDdecay.df <- ibDdist.long %>%
-  dplyr::select(-c(dplyr::ends_with("_cat"))) %>%
-  tidyr::gather(., key = "distcat", value = "distmetric", 6:8) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", "adm1name", dplyr::ends_with("distance"), "riverdist")) %>%
+  tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>% 
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
                                                             seq(100, 2000, by = 100),
                                                             Inf),

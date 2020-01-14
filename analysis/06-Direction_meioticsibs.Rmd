@@ -62,10 +62,10 @@ ibdmeioticsmpls.coords.pts <- mtdt %>%
   dplyr::select(c("name", "hv001", "longnum", "latnum")) %>% 
   dplyr::filter(name %in% ibdmeioticsmpls)
 ibdmeioticsmpls.coords.pts <- sf::st_as_sf(ibdmeioticsmpls.coords.pts, 
-                                           coords = c("longnum", "latnum"))
-sf::st_crs(ibdmeioticsmpls.coords.pts) <- 4326
-ibdmeioticsmpls.coords.pts <- sf::st_transform(ibdmeioticsmpls.coords.pts, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
-
+                                           coords = c("longnum", "latnum"),
+                                           crs = sf::st_crs(DRCprov))
+ibdmeioticsmpls.coords.pts <- sf::st_transform(ibdmeioticsmpls.coords.pts, 
+                                               crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
 
 #..............................................................
 # subset mtdt to just what we need to make a meiotic table
@@ -74,7 +74,7 @@ mtdt.light <- mtdt %>%
   sf::st_as_sf(., coords = c("longnum", "latnum")) %>% 
   dplyr::select(c("hv001")) %>% 
   dplyr::filter(!duplicated(.))
-sf::st_crs(mtdt.light) <- 4326
+sf::st_crs(mtdt.light) <- sf::st_crs(DRCprov)
 mtdt.light <- sf::st_transform(mtdt.light, crs = "+proj=utm +zone=34 +datum=WGS84 +units=m")
 
 #..............................................................
@@ -82,7 +82,8 @@ mtdt.light <- sf::st_transform(mtdt.light, crs = "+proj=utm +zone=34 +datum=WGS8
 # 10-km radius because it corresponds to the maximum flight distance of blood-fed A gambiae
 # 10km wasn't enough... so moved on to where we thought we saw an inflection point in the data for falling off of distance approximately 100km 
 #..............................................................
-meiotic.buff <- sf::st_buffer(ibdmeioticsmpls.coords.pts, dist = 100*1e3) # m to km
+meiotic.buff <- sf::st_buffer(ibdmeioticsmpls.coords.pts, 
+                              dist = 100*1e3) # m to km
 meiotic.buff <- split(meiotic.buff, 1:nrow(meiotic.buff))
 ibdmeioticsmpls.coords.pts$clst_intersects <- lapply(meiotic.buff, function(buff){
   ret <- sf::st_intersection(mtdt.light, buff)
@@ -125,9 +126,17 @@ liftover_ibd_neighborhood <- function(ibd_dict, smpls = drcsmpls, genrelated = i
   
 }
 
+#..............................................................
+# Make this for function
+#..............................................................
+drcsmpls <- mtdt %>% 
+  dplyr::select(c("hv001", "name"))
+
+#..............................................................
+# Run Function
+#..............................................................
 ibdmeioticsmpls.coords.pts.list <- split(ibdmeioticsmpls.coords.pts, 
                                          1:nrow(ibdmeioticsmpls.coords.pts))
-# run function
 ibdmeioticsmpls_neighborIBD <- lapply(ibdmeioticsmpls.coords.pts.list,
                                       liftover_ibd_neighborhood,
                                       smpls = drcsmpls, genrelated = ibD)
@@ -243,7 +252,6 @@ ibD.meiotic.neighborhoodIBD_pointdf <- mtdt %>%
   dplyr::filter(!duplicated(.))
   
 IBD_meiotic_direct_plot <- ggplot() +
-  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
@@ -266,7 +274,8 @@ IBD_meiotic_direct_plot <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  )
+  ) +
+  prettybasemap_nodrc_dark 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot)
@@ -283,7 +292,6 @@ plot(IBD_meiotic_direct_plot)
 
 
 IBD_meiotic_direct_plot.urb <- ggplot() +
-  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
@@ -307,7 +315,8 @@ IBD_meiotic_direct_plot.urb <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  )
+  ) + 
+  prettybasemap_nodrc_dark
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_urban.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot.urb)
@@ -364,7 +373,6 @@ ibD.meiotic.neighborhoodIBD_plotdf <- dplyr::left_join(ibD.meiotic.neighborhoodI
 
 ```{r}
 IBD_meiotic_direct_plot.prev <- ggplot() +
-  prettybasemap_nodrc_dark + 
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
    geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
               aes(x = long.start, y = lat.start, 
@@ -388,7 +396,8 @@ IBD_meiotic_direct_plot.prev <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  )
+  ) + 
+  prettybasemap_nodrc_dark 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_prev.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot.prev)
