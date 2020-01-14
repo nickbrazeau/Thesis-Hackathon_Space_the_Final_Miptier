@@ -16,14 +16,14 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
 # Genetic Data
 #...................
 # IBD
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 # rename for recursive function
 ibD <- ibD %>%
   dplyr::rename(relatedness = malecotf) %>%
   dplyr::select(c("smpl1", "smpl2", "relatedness", "hv001.x", "hv001.y"))
 
 # ibs
-ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
+ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 # rename for recursive function
 ibS <- ibS %>%
   dplyr::rename(relatedness = hammings) %>%
