@@ -694,19 +694,20 @@ urban.pts <- sf::st_as_sf(urban.pts, coords = c("longnum", "latnum"), crs = 4326
 
 urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
 
-urbanmedian <- rep(NA, nrow(urban.pts)) 
+urbanmean <- rep(NA, nrow(urban.pts)) 
 for (i in 1:nrow(urban.pts)) {
-  urbanmedian[i] <-  raster::extract(x = urban,
-                                     y = sf::as_Spatial(urban.pts$geometry[i]),
-                                     buffer = urban.pts$urban_rura_ext[i],
-                                     fun = median, na.rm = T
+  urbanmean[i] <-  raster::extract(x = urban,
+                                   y = sf::as_Spatial(urban.pts$geometry[i]),
+                                   buffer = urban.pts$urban_rura_ext[i],
+                                   fun = mean, na.rm = T
   )
 }
 
 urban.pts <- urban.pts %>% 
   dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
                 latnum = sf::st_coordinates(geometry)[,2],
-                urbanmedian = urbanmedian)
+                urbanmean = urbanmean)
+sf::st_geometry(urban.pts) <- NULL
 
 ```
 
@@ -865,7 +866,6 @@ plot(urban.cities)
 
 
 
-
 #### Permutation Test for Urbanicity
 ```{r}
 perms.urb <- perms %>% 
@@ -876,7 +876,7 @@ perms.urb <- perms %>%
 # look at medians here since non-normal
 perms.urb <- perms.urb %>% 
   dplyr::mutate(
-    urbanmeandiff = purrr::map(results, median)
+    urbanmeandiff = purrr::map(results, mean)
   ) %>% 
   tidyr::unnest(cols = urbanmeandiff)
 
@@ -895,11 +895,11 @@ urban.pts <- urban.pts %>%
 obsurb <- dplyr::left_join(obsurb, urban.pts, by = "hv001.y") %>% 
   dplyr::select(c(dplyr::starts_with("malecot"),
                   "hv001.x", "hv001.y",
-                  "urbanmedian.x", "urbanmedian.y")) %>% 
-  dplyr::mutate(urbanmediandiff =  (urbanmedian.x - urbanmedian.y)^2)
+                  "urbanmean.x", "urbanmean.y")) %>% 
+  dplyr::mutate(urbanmeandiff =  (urbanmean.x - urbanmean.y)^2)
 
 
-obsurb.urbnmeandiff <- mean(obsurb$urbanmediandiff)
+obsurb.urbnmeandiff <- mean(obsurb$urbanmeandiff)
 
 
 ```
@@ -912,7 +912,8 @@ obsurb.urbnmeandiff
 # will fix at 0 and 13 to capture it
 
 urb.perm.plotObj <- ggplot() +
-  geom_density(data = perms.urb, aes(x = urbanmeandiff), fill = "#969696", color = "#969696") 
+  geom_density(data = perms.urb, aes(x = urbanmeandiff), fill = "#969696", color = "#969696") +
+  xlim(0,430)
 
 perms.urb.pval <- quantile(perms.urb$urbanmeandiff, probs = c(0.025, 0.975))
 # extract ggplot data
@@ -949,7 +950,10 @@ plot(urb.perm.plotObj)
 parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/parasiterate.grd")
 
 # extract out coordinate information and join in prevdata
-prev.pts <- sf::st_as_sf(coords.pts, coords = c("longnum", "latnum"), crs = 4326)
+prev.pts <- mtdt %>% 
+  dplyr::select(c("hv001", "name", "longnum", "latnum")) %>% 
+  dplyr::filter(name %in% c(ibdmeioticsmpls))
+
 prev.pts <- prev.pts %>% 
   dplyr::filter(!duplicated(hv001)) %>% 
   dplyr::left_join(., ge, by = "hv001") %>% 

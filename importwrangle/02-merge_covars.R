@@ -139,7 +139,7 @@ for (i in 1:nrow(mtdt.sf)){
                                             na.rm = T)
 }
 
-# 301 clusters has missing values around it -- impute mean
+#  cluster 301 has missing values around it -- impute mean
 impvalues <- apply(covar.raw.extract, 2, function(x){
   if (any(is.na(x))) {
     ret <- mean(x, na.rm = T)
@@ -169,7 +169,7 @@ for (i in 1:nrow(mtdt.sf)){
 }
 
 
-# 301 clusters has missing values around it -- impute mean
+# clusters 301 has missing values around it -- impute mean
 impvalues <- apply(covar.scaled.extract, 2, function(x){
   if (any(is.na(x))) {
     ret <- mean(x, na.rm = T)

@@ -101,7 +101,7 @@ if(!all(names(IBDwi) == IBDdistrib)){
 #..............................................................
 simdf <- tibble::tibble(
   name = c("prev", "urban", "clstwthn"),
-  nsmpls = nrow(drcsmpls),
+  nsmpls = nrow(mtdt),
   IBDdistrib = list(IBDdistrib),
   IBDwi = list(IBDwi),
   covardistrib = list(prevdistrib, citydistrib, unique_clst_vs_same_distrib)

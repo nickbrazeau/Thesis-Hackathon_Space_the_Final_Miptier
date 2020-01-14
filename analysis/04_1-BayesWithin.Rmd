@@ -277,7 +277,12 @@ jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/provibD_within_
 cowplot::plot_grid(DRC.Provmean.plotObj, DRC.Provwthn.plotObj, DRC.Provmprev.plotObj, nrow = 1, align = "v", labels = c("(A)", "(B)", "(C)"))
 graphics.off()
 ```
+```{r}
 
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/provibD_within_alone.jpg", width = 11, height = 8, units = "in", res = 600)
+plot(DRC.Provwthn.plotObj)
+graphics.off()
+```
 
 
 ## Hierarchial Bayesian Spatial Models for Province Gen-Geo 

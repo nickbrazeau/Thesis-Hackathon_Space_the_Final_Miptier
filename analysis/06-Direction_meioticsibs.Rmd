@@ -46,7 +46,7 @@ ibD <- ibD %>%
 # These represent likely recent transmission events
 #..............................................................
 ibD.meiotic <- ibD %>% 
-  dplyr::filter(malecotf_gens <= 1)
+  dplyr::filter(malecotf >= 0.5)
 ibdmeioticsmpls <- as.character(ibD.meiotic$smpl1)
 ibdmeioticsmpls <- c(ibdmeioticsmpls, as.character(ibD.meiotic$smpl2))
 
@@ -89,13 +89,13 @@ ibdmeioticsmpls.coords.pts$clst_intersects <- lapply(meiotic.buff, function(buff
   ret <- sf::st_intersection(mtdt.light, buff)
   ret <- ret$hv001
   return(ret)
-  })
+})
 
 # we no longer need geographic information
 # as we now have the meiotic sample and which clusters it is closest to 
 sf::st_geometry(ibdmeioticsmpls.coords.pts) <- NULL
 
-  
+
 ```
 
 ```{r}
@@ -117,8 +117,8 @@ liftover_ibd_neighborhood <- function(ibd_dict, smpls = drcsmpls, genrelated = i
     dplyr::filter( c(
       smpl1 %in% smpls_intersect$name & smpl2 == ibd_dict$name | # transivity of iBD measures
         smpl2 %in% smpls_intersect$name & smpl1 == ibd_dict$name
-                    )
-      )
+    )
+    )
   # calculate neighborhood IBD
   neighborhood_ibd <- mean(ibD_intersect$malecotf)
   
@@ -192,12 +192,12 @@ urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived
 urbanmedian <- rep(NA, nrow(coord.pts)) 
 for (i in 1:nrow(coord.pts)) {
   urbanmedian[i] <-  raster::extract(x = urban,
-                                   y = sf::as_Spatial(coord.pts$geometry[i]),
-                                   buffer = coord.pts$urban_rura_ext[i],
-                                   fun = median, na.rm = T
+                                     y = sf::as_Spatial(coord.pts$geometry[i]),
+                                     buffer = coord.pts$urban_rura_ext[i],
+                                     fun = median, na.rm = T
   )
 }
-  
+
 urban.pts <- coord.pts %>% 
   dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
                 latnum = sf::st_coordinates(geometry)[,2],
@@ -250,15 +250,16 @@ ibD.meiotic.neighborhoodIBD_pointdf <- mtdt %>%
   dplyr::filter(hv001 %in% c(ibD.meiotic.neighborhoodIBD_plotdf$hv001.x, ibD.meiotic.neighborhoodIBD_plotdf$hv001.y)) %>% 
   dplyr::select(c("hv001", "longnum", "latnum")) %>% 
   dplyr::filter(!duplicated(.))
-  
+
 IBD_meiotic_direct_plot <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
-              aes(x = long.start, y = lat.start, 
+  prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+             aes(x = long.start, y = lat.start, 
                  xend = long.end, yend = lat.end, 
                  color = malecotf,
                  size = neighborIBDdiff_lvls),
-              arrow = arrow(length = unit(0.02, "npc")),
+             arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
   geom_point(data = ibD.meiotic.neighborhoodIBD_pointdf,
              aes(x = longnum, y = latnum), 
@@ -274,8 +275,7 @@ IBD_meiotic_direct_plot <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  ) +
-  prettybasemap_nodrc_dark 
+  )  
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot)
@@ -293,12 +293,13 @@ plot(IBD_meiotic_direct_plot)
 
 IBD_meiotic_direct_plot.urb <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
-              aes(x = long.start, y = lat.start, 
+  prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+             aes(x = long.start, y = lat.start, 
                  xend = long.end, yend = lat.end, 
                  color = malecotf,
                  size = neighborIBDdiff_lvls),
-              arrow = arrow(length = unit(0.02, "npc")),
+             arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
   geom_point(data = urban.pts,
              aes(x = longnum, y = latnum,
@@ -315,8 +316,7 @@ IBD_meiotic_direct_plot.urb <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  ) + 
-  prettybasemap_nodrc_dark
+  ) 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_urban.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot.urb)
@@ -344,12 +344,12 @@ prev.pts$urban_rura_ext[prev.pts$hv001 == 54] <- 6000
 prevmean <- rep(NA, nrow(prev.pts)) 
 for (i in 1:nrow(prev.pts)) {
   prevmean[i] <-  raster::extract(x = parasiterate,
-                                   y = sf::as_Spatial(prev.pts$geometry[i]),
-                                   buffer = prev.pts$urban_rura_ext[i],
-                                   fun = mean, na.rm = T
+                                  y = sf::as_Spatial(prev.pts$geometry[i]),
+                                  buffer = prev.pts$urban_rura_ext[i],
+                                  fun = mean, na.rm = T
   )
 }
-  
+
 prev.pts <- prev.pts %>% 
   dplyr::mutate(long = sf::st_coordinates(geometry)[,1],
                 lat = sf::st_coordinates(geometry)[,2],
@@ -374,12 +374,13 @@ ibD.meiotic.neighborhoodIBD_plotdf <- dplyr::left_join(ibD.meiotic.neighborhoodI
 ```{r}
 IBD_meiotic_direct_plot.prev <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-   geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
-              aes(x = long.start, y = lat.start, 
+  prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+             aes(x = long.start, y = lat.start, 
                  xend = long.end, yend = lat.end, 
                  color = malecotf,
                  size = neighborIBDdiff_lvls),
-              arrow = arrow(length = unit(0.02, "npc")),
+             arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
   geom_point(data = prev.pts,
              aes(x = long, y = lat,
@@ -396,8 +397,7 @@ IBD_meiotic_direct_plot.prev <- ggplot() +
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
-  ) + 
-  prettybasemap_nodrc_dark 
+  ) 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_prev.jpg", width = 8, height = 8, units = "in", res = 500)
 plot(IBD_meiotic_direct_plot.prev)
@@ -412,7 +412,7 @@ plot(IBD_meiotic_direct_plot.prev)
 ```{r}
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_facet.jpg", width = 11, height = 6, units = "in", res = 500)
 cowplot::plot_grid(IBD_meiotic_direct_plot.urb, IBD_meiotic_direct_plot.prev,
-                  labels = c("(A)", "(B)"), align = "h")
+                   labels = c("(A)", "(B)"), align = "h")
 graphics.off()
 ```
 
@@ -427,7 +427,7 @@ ibD.meiotic.neighborhoodIBD_plotdf %>%
                    malecotf_gens_inv,
                    neighborIBDdiff_scaled,
                    neighborIBDdiff_lvls
-                   )) %>% 
+  )) %>% 
   dplyr::select(c("hv001.x", "hv001.y", "from", "to", dplyr::everything())) %>% 
   dplyr::rename(
     InferredFrom = from,
@@ -435,11 +435,11 @@ ibD.meiotic.neighborhoodIBD_plotdf %>%
   ) %>% 
   dplyr::mutate_if(is.numeric, round, 2) %>% 
   DT::datatable(., extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 20,
-              dom = 'Bfrtip', 
-              buttons = c('csv'))) 
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv'))) 
 
 ```
 
@@ -501,7 +501,7 @@ tolstprevplotObj <- toclstprev %>%
 
 cowplot::plot_grid(prevdiffhist, fromclstprevplotObj, tolstprevplotObj,
                    nrow = 1, align = "h")
-  
+
 ```
 
 
@@ -548,7 +548,7 @@ tolsturbanplotObj <- toclsturban %>%
 
 cowplot::plot_grid(urbandiffhist, fromclsturbanplotObj, tolsturbanplotObj,
                    nrow = 1, align = "h")
-  
+
 
 ```
 
@@ -572,15 +572,15 @@ fromcovars <- tofromcovar %>%
   )
 
 from3dplotObj <- plotly::plot_ly(fromcovars, 
-                               x = ~edgedens, 
-                               y = ~urban, 
-                               z = ~prev,
-                               color = ~factor(from)) %>%
+                                 x = ~edgedens, 
+                                 y = ~urban, 
+                                 z = ~prev,
+                                 color = ~factor(from)) %>%
   add_markers() %>%
   layout(title = "Nodes are From/Source",
          scene = list(xaxis = list(title = 'Edge Dens'),
-                     yaxis = list(title = 'Urban'),
-                     zaxis = list(title = 'Prev')))
+                      yaxis = list(title = 'Urban'),
+                      zaxis = list(title = 'Prev')))
 
 from3dplotObj
 ```
@@ -607,8 +607,8 @@ to3dplotObj <- plotly::plot_ly(tocovars,
   add_markers() %>%
   layout(title = "Nodes are To/Sink",
          scene = list(xaxis = list(title = 'Edge Dens'),
-                     yaxis = list(title = 'Urban'),
-                     zaxis = list(title = 'Prev')))
+                      yaxis = list(title = 'Urban'),
+                      zaxis = list(title = 'Prev')))
 
 to3dplotObj
 
@@ -625,11 +625,11 @@ tofromcovar %>%
   ) %>% 
   dplyr::mutate_if(is.numeric, round, 2) %>% 
   DT::datatable(., extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 20,
-              dom = 'Bfrtip', 
-              buttons = c('csv'))) 
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv'))) 
 
 ```
 

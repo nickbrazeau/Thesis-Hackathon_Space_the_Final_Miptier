@@ -9,53 +9,33 @@ source("R/recursive_likelihood.R")
 #..............................................................
 # Model Setup
 #..............................................................
-#...................
-# meta Data
-#...................
-drcsmpls <- readRDS("data/distance_data/drcsmpls_foruse.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::select(c("id", "hv001")) %>%
-  dplyr::rename(name = id)
-
 mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  magrittr::set_colnames(tolower(colnames(.))) %>%
-  dplyr::rename(name = id) %>%
-  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum")) %>%
-  dplyr::filter(name %in% drcsmpls$name)
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum"))
+
 #...................
 # Genetic Data
 #...................
 # IBD
-ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD_polarized_biallelic_processed.long.rds")
-# merge in cluster informations
-colnames(drcsmpls)[1] <- "smpl1"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl1")
-
-colnames(drcsmpls)[1] <- "smpl2"
-ibD <- dplyr::left_join(ibD, drcsmpls, by = "smpl2")
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 # rename for recursive function
 ibD <- ibD %>%
-  dplyr::rename(relatedness = malecotf)
+  dplyr::rename(relatedness = malecotf) %>%
+  dplyr::select(c("smpl1", "smpl2", "relatedness", "hv001.x", "hv001.y"))
 
 # ibs
-ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS_polarized_biallelic_processed.long.rds")
-# merge in cluster informations
-colnames(drcsmpls)[1] <- "smpl1"
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl1")
-
-colnames(drcsmpls)[1] <- "smpl2"
-ibS <- dplyr::left_join(ibS, drcsmpls, by = "smpl2")
+ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 # rename for recursive function
 ibS <- ibS %>%
-  dplyr::rename(relatedness = hammings)
+  dplyr::rename(relatedness = hammings) %>%
+  dplyr::select(c("smpl1", "smpl2", "relatedness", "hv001.x", "hv001.y"))
 
 #...................
 # Distance Data
 #...................
 distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 distancematrix.cluster <- distancematrix.cluster %>%
-  dplyr::filter(hv001.x %in% unique(drcsmpls$hv001)) %>%
-  dplyr::filter(hv001.y %in% unique(drcsmpls$hv001))
+  dplyr::filter(hv001.x %in% unique(mtdt$hv001)) %>%
+  dplyr::filter(hv001.y %in% unique(mtdt$hv001))
 distancematrix.cluster <- expand_distance_matrix(distancematrix.cluster)
 
 gcdistmat <- distancematrix.cluster %>%
@@ -100,6 +80,17 @@ ibD.riverdistmat <- dplyr::left_join(ibD, riverdistmat, by = c("hv001.x", "hv001
   dplyr::mutate(distance = ifelse(K1 == K2, 0, distance))
 
 #...................
+# get scalars
+#...................
+distscale <- lapply(list(gcdistmat, roaddistmat, riverdistmat),
+                    function(x){
+                      return(mean(x$distance))
+                    })
+distscale <- c(distscale, distscale)
+
+
+
+#...................
 #  Model framework
 #...................
 
@@ -111,7 +102,7 @@ modLL <- tibble::tibble(
                   ibD.gcdistmat,
                   ibD.roaddistmat,
                   ibD.riverdistmat),
-  scalar = 1
+  scalar = distscale
 )
 
 
