@@ -116,7 +116,7 @@ kesteda.plotObj <- keda.df %>%
   ggplot() +
   geom_line(aes(x=k, y=totalwss)) +
   geom_point(aes(x=k, y=totalwss)) +
-  geom_vline(xintercept = 26, color = "red", linetype = 2, alpha = 0.8) +
+  geom_vline(xintercept = 15, color = "red", linetype = 2, alpha = 0.8) +
   theme_minimal() +
   ylab("Total Within-Cluster Sum of Squares") +
   xlab("K")

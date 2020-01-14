@@ -151,8 +151,9 @@ prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds") 
                 item2 = to)
 
 prov.dist <- dplyr::left_join(x = prov.gcdist,
-                              y = prov.roaddist, by = c("item1", "item2")) %>%
-  dplyr::left_join(., y = prov.riverdist, by = c("item1", "item2")) %>%
+                              y = prov.roaddist, by = c("item1", "item2"))
+prov.dist <- long_distance_matrix_join(prov.dist, y = prov.riverdist,
+                                       by = c("item1", "item2")) %>%
   dplyr::rename(riverdistance = riverdist)
 
 
