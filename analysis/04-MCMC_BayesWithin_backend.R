@@ -134,6 +134,7 @@ make_symm_mat <- function(x){
   ret[upper.tri(ret)] <- t(ret)[upper.tri(ret)]
   return(ret)
 }
+
 #..............................................................
 # get distance matrices
 #..............................................................
@@ -160,12 +161,14 @@ W.roaddist <- dexp(W.roaddist/scale) # scale to help with variance and change ra
 
 # river
 prov.riverdist <- readRDS("data/distance_data/river_distance_forprovinces.rds")
+prov.riverdist$riverdist <- as.vector(prov.riverdist$riverdist) # drop m attribute
 W.riverdist <- prov.riverdist %>%
-  dplyr::select(c("dhsprovfrom", "dhsprovto", "riverdist")) %>%
-  dplyr::rename(item1 = dhsprovfrom,
-                item2 = dhsprovto) %>%
-  tidyr::spread(., key = "item2", value = "riverdist") %>%
-  dplyr::select(-c("item1"))
+  dplyr::select(c("from", "to", "riverdist")) %>%
+  dplyr::rename(item1 = from,
+                item2 = to) %>%
+  tidyr::spread(., key = "item1", value = "riverdist") %>%
+  dplyr::select(-c("item2")) # note different items here because river dist order different
+
 # now make it a symm matrix
 W.riverdist <- make_symm_mat(W.riverdist)
 scale <- mean(W.riverdist[lower.tri(W.riverdist, diag = T)])

@@ -8,7 +8,7 @@
 library(raster)
 library(tidyverse)
 source("R/basics.R")
-
+set.seed(48)
 # need this for bounding box
 DRC <- sf::as_Spatial(osmdata::getbb("Democratic Republic of the Congo",
                                      featuretype = "country",
@@ -96,12 +96,14 @@ sd(values(worldpop), na.rm = T)
 #..............................................................
 # https://stackoverflow.com/questions/19866009/pca-using-raster-datasets-in-r
 rasters <- stack(c(trav, fric, nightlights, worldpop))
+names(rasters) <- c("trav", "fric", "nightlight", "worldpop")
 rasters.pts <- values(rasters)
+rasters.pts.boolean <- apply(rasters.pts, 1, function(x) return(!any(is.na(x))))
 
 #.............
 # PCA on random sample
 #.............
-pca <- stats::prcomp(rasters.pts)
+pca <- stats::prcomp(rasters.pts[rasters.pts.boolean,])
 
 # compute variance explained and Zi values
 pca$var <- (pca$sdev ^ 2) / sum(pca$sdev ^ 2) * 100
@@ -140,9 +142,10 @@ ggplot2::autoplot(pca,
 urbanicity <- raster::predict(rasters,
                               pca,
                               index=1) # just use PC1
-
-# invert scale, PCA has cities going towards negative
-values(urbanicity) <- values(urbanicity) * -1
+# cap it at the 99.9% for outliers
+val <- quantile(values(urbanicity), c(0.999), na.rm = T)
+values(urbanicity)[values(urbanicity) >= val] <- val
+plot(urbanicity)
 
 
 
@@ -151,27 +154,7 @@ values(urbanicity) <- values(urbanicity) * -1
 #................
 dir.create("data/derived_data/urbanicity_raster")
 raster::writeRaster(urbanicity,
-                    filename = "data/derived_data/urbanicity_raster/urbanicity.grd")
-
-
-#..............................................................
-# Urabnicity as a Catchment Area
-#..............................................................
-# Urbanitity in the top third quartile is "city-ish" and below is rural.
-urban.class <- urban
-thirdquart <- quantile(values(urban), probs = 0.75, na.rm = T)
-values(urban.class)[values(urban.class) < thirdquart] <- 0
-values(urban.class)[values(urban.class) >= thirdquart] <- 1
-ggplot() +
-  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
-  scale_fill_distiller("Urbanicity Score", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc +
-  theme(legend.position = "right",
-        legend.title = element_text(size = 13, face = "bold", angle = 0, vjust = 0.5, hjust = 0.5),
-        legend.text = element_text(size = 12, face = "bold", angle = 0))
-
-raster::writeRaster(urban.class,
-                    filename = "data/derived_data/urbanicity_raster/urbanicity_binary.grd")
-
+                    filename = "data/derived_data/urbanicity_raster/urbanicity.grd",
+                    overwrite = T)
 
 
