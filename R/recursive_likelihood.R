@@ -25,8 +25,8 @@ get_distance_geno_likelihood <- function(name, distdata, scalar,
   #..............................................................
   # get mean fii
   f_ii <- sapply(clsts, function(x){
-    ret <- mean( distdata$relatedness[c(distdata$K1 %in% x & distdata$K2 %in% x)] )
-    return(ret)
+   ret <- mean( distdata$relatedness[c(distdata$K1 %in% x & distdata$K2 %in% x)] )
+   return(ret)
   })
 
   # do global imputation for clusters with only one sample
@@ -102,7 +102,9 @@ get_distance_geno_likelihood <- function(name, distdata, scalar,
     for (i in 1:length(clsts)) {
       cat("Iteration i: ", i, "\n")
       for (j in 1:length(clsts)) {
-        cat("     Iteration j: ", j, "\n")
+        if(j%%10 == 0){
+          cat("     Iteration j: ", j, "\n")
+        }
         if (i != j) {
 
           # first term
@@ -114,66 +116,70 @@ get_distance_geno_likelihood <- function(name, distdata, scalar,
             if(v == i){
               next
             } else {
-              p_ijv <- m_dij.dist[i,i] * m_dij.dist[j,v] * f_dij.dist[i,j]
+              p_ijv <- m_dij.dist[j,i] * m_dij.dist[j,v] * f_dij.dist[i,j]
               p_ij2 <- p_ij2 + p_ijv
             }
           } # end V iter
 
           pij_final[i,j] <- p_ij1 + p_ij2
 
-          # clean up pij_final for out
-          pij_final <- as.data.frame(pij_final)
-          colnames(pij_final) <- clsts
-          rownames(pij_final) <- clsts
-
-          #..............................................................
-          # Calculate log-likelihood
-          #..............................................................
-          LL <- sum(log(
-            as.vector(pij_final[lower.tri(pij_final, diag = F)],
-                      pij_final[upper.tri(pij_final, diag = F)]) # need both sides of matrix triangle since I have said that u != v, which means 1,2 and 2,1 are not the same
-          ))
-
         } # end i
       } # end j
-    }
 
-  } else {
-    #..............................................................
-    # If subset data, use adjacency lists
-    #..............................................................
-    # set up
-    m_dij <- as.vector(unlist(m_dij))
-    m_dij <- dexp(m_dij/scalar)
-    m_dij.list <- split(m_dij, factor(m_ij.combns[,1]))
-    # need to account for transitivity
-    m_dij.list[[2]] <- append(m_dij.list[[2]], m_dij.list[[1]][[1]])
+    } # end recursion
 
+    # clean up pij_final for out
+    pij_final <- as.data.frame(pij_final)
+    colnames(pij_final) <- clsts
+    rownames(pij_final) <- clsts
 
-    for (i in 1:length(c(K1sub, K2sub))) {
-      cat("Iteration i: ", i, "\n")
-      for (j in 1:length(c(K1sub, K2sub))) {
-        cat("     Iteration j: ", j, "\n")
-        # first term
-        p_ij1 <- 1* 1* f_ii # m_iu * m_ju * f_ii
-
-        # second term, we have already made migration adj list to not include ii,
-        # so can just loop through here
-        p_ij2 <- 0
-        for (v in  1:(length(clsts)-1)) {
-          p_ijv <- 1 * m_dij.list[[j]][v] * f_ij # m_iu * m_jv * f_ij
-          p_ij2 <- p_ij2 + p_ijv
-        } # end V iter
-
-        pij_final <- p_ij1 + p_ij2
-
-
-      } # end i for adj list
-    } # end j for adj list
     #..............................................................
     # Calculate log-likelihood
     #..............................................................
-    LL <- log(pij_final)
+    ccf <- c(pij_final[lower.tri(pij_final, diag = F)], pij_final[upper.tri(pij_final, diag = F)])
+
+    #..............................................................
+    # Underflo catch
+    #..............................................................
+    ccf[ccf == 0] <- .Machine$double.xmin
+    LL <- sum(log(ccf)) # need both sides of matrix triangle since I have said that u != v, which means 1,2 and 2,1 are not the same
+
+  } else {
+  #   #..............................................................
+  #   # If subset data, use adjacency lists
+  #   #..............................................................
+  #   # set up
+  #   m_dij <- as.vector(unlist(m_dij))
+  #   m_dij <- dexp(m_dij/scalar)
+  #   m_dij.list <- split(m_dij, factor(m_ij.combns[,1]))
+  #   # need to account for transitivity
+  #   m_dij.list[[2]] <- append(m_dij.list[[2]], m_dij.list[[1]][[1]])
+  #
+  #
+  #   for (i in 1:length(c(K1sub, K2sub))) {
+  #     cat("Iteration i: ", i, "\n")
+  #     for (j in 1:length(c(K1sub, K2sub))) {
+  #       cat("     Iteration j: ", j, "\n")
+  #       # first term
+  #       p_ij1 <- 1* 1* f_ii # m_iu * m_ju * f_ii
+  #
+  #       # second term, we have already made migration adj list to not include ii,
+  #       # so can just loop through here
+  #       p_ij2 <- 0
+  #       for (v in  1:(length(clsts)-1)) {
+  #         p_ijv <- 1 * m_dij.list[[j]][v] * f_ij # m_ju * m_jv * f_ij
+  #         p_ij2 <- p_ij2 + p_ijv
+  #       } # end V iter
+  #
+  #       pij_final <- p_ij1 + p_ij2
+  #
+  #
+  #     } # end i for adj list
+  #   } # end j for adj list
+  #   #..............................................................
+  #   # Calculate log-likelihood
+  #   #..............................................................
+  #   LL <- log(pij_final)
   } # end if else
 
   #..............................................................

@@ -20,7 +20,7 @@ ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.lon
 urban <- raster::raster("data/derived_data/urbanicity_raster/urbanicity.grd")
 urbanmean <- rep(NA, nrow(mtdt))
 for (i in 1:nrow(mtdt)){
-  urbanmean[i] <- raster::extract(x = urban,
+  urbanmean[i] <- raster::extract(x = urban.bi.rstr,
                                   y = sf::as_Spatial(mtdt$geometry[i]),
                                   buffer = mtdt$urban_rura_ext[i],
                                   fun = mean,

@@ -364,9 +364,9 @@ wrap_S.CARleroux_long <- function(distcat, outcome, formula, W, data, burnin, n.
 # Longer run for final models with best DIC based
 # on above fits
 #..............................................................
-finalformulas <- list(as.formula("withinprovIBD ~ 1"), # gc
-                      as.formula("withinprovIBD ~ 1"), # road
-                      as.formula("withinprovIBD ~ 1") # river
+finalformulas <- list(as.formula("withinprovIBD ~ precip + prev + 1"), # gc
+                      as.formula("withinprovIBD ~ precip + prev + 1"), # road
+                      as.formula("withinprovIBD ~ precip + prev + 1") # river
 )
 long.mod.framework <- mod.framework.sp <- tibble(formula = finalformulas,
                                                  burnin = 1e4,

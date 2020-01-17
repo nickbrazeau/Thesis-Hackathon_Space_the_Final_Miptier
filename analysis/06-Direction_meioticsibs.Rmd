@@ -83,7 +83,7 @@ mtdt.light <- sf::st_transform(mtdt.light, crs = "+proj=utm +zone=34 +datum=WGS8
 # 10km wasn't enough... so moved on to where we thought we saw an inflection point in the data for falling off of distance approximately 100km 
 #..............................................................
 meiotic.buff <- sf::st_buffer(ibdmeioticsmpls.coords.pts, 
-                              dist = 100*1e3) # m to km
+                              dist = 20*1e3) # m to km, min is 25 km in data
 meiotic.buff <- split(meiotic.buff, 1:nrow(meiotic.buff))
 ibdmeioticsmpls.coords.pts$clst_intersects <- lapply(meiotic.buff, function(buff){
   ret <- sf::st_intersection(mtdt.light, buff)
@@ -159,6 +159,13 @@ ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
                                                 ibdmeioticsmpls.neighborhood,
                                                 by = "smpl2")
 
+#..............................................................
+# Lift over if no neighbors
+#..............................................................
+#TODO is this fair
+ibD.meiotic.neighborhoodIBD$neighborhoodIBD.x[is.nan(ibD.meiotic.neighborhoodIBD$neighborhoodIBD.x)] <- 0
+ibD.meiotic.neighborhoodIBD$neighborhoodIBD.y[is.nan(ibD.meiotic.neighborhoodIBD$neighborhoodIBD.y)] <- 0
+
 ```
 
 ```{r}
@@ -186,6 +193,10 @@ coord.pts <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/da
   dplyr::filter(hv001 %in% unique(mtdt$hv001)) %>% 
   dplyr::mutate(urban_rura_ext = ifelse(urban_rura == "R", 10000, 2000))
 
+
+#..............................................................
+# urban continuous
+#..............................................................
 urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
 
 
@@ -205,6 +216,42 @@ urban.pts <- coord.pts %>%
   dplyr::select(c("hv001", "longnum", "latnum", "urbanmedian")) %>% 
   dplyr::filter(hv001 %in% c(ibD.meiotic.neighborhoodIBD$hv001.x, ibD.meiotic.neighborhoodIBD$hv001.y))
 
+#..............................................................
+# urban binary
+#..............................................................
+urban.bi.rstr <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity_binary.grd")
+
+urbanbi <- rep(NA, nrow(coord.pts)) 
+for (i in 1:nrow(coord.pts)) {
+  urbanbi[i] <-  raster::extract(x = urban.bi.rstr,
+                                     y = sf::as_Spatial(coord.pts$geometry[i]),
+                                     buffer = coord.pts$urban_rura_ext[i],
+                                     fun = sum, na.rm = T
+  )
+}
+
+#..............................................................
+# Just so we can define
+#..............................................................
+
+all.urban.pts.bi <- coord.pts %>% 
+  dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
+                latnum = sf::st_coordinates(geometry)[,2],
+                urbanbi = as.numeric(urbanbi >= 1)) %>% 
+  dplyr::select(c("hv001", "longnum", "latnum", "urbanbi")) 
+
+#..............................................................
+# Subset all 
+#..............................................................
+urban.pts.bi <- all.urban.pts.bi %>% 
+  dplyr::filter(hv001 %in% c(ibD.meiotic.neighborhoodIBD$hv001.x, ibD.meiotic.neighborhoodIBD$hv001.y))
+
+
+```
+
+**How many urban clusters vs. rural cluster**
+```{r}
+knitr::kable(table(all.urban.pts.bi$urbanbi))
 
 ```
 
@@ -222,6 +269,18 @@ colnames(urban.pts)[1] <- "hv001.y"
 ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
                                                 urban.pts, 
                                                 by = "hv001.y")
+
+colnames(urban.pts.bi)[1] <- "hv001.x"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
+                                                urban.pts.bi, 
+                                                by = "hv001.x")
+
+colnames(urban.pts.bi)[1] <- "hv001.y"
+ibD.meiotic.neighborhoodIBD <- dplyr::left_join(ibD.meiotic.neighborhoodIBD,
+                                                urban.pts.bi, 
+                                                by = "hv001.y")
+
+
 
 ```
 
@@ -286,8 +345,48 @@ graphics.off()
 plot(IBD_meiotic_direct_plot)
 ```
 
+### Pairwise-Urbanicity Binary
+```{r}
 
-### Pairwise-Urbanicity
+
+IBD_meiotic_direct_plot.urb.bi <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_curve(data = ibD.meiotic.neighborhoodIBD_plotdf,
+             aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf,
+                 size = neighborIBDdiff_lvls),
+             arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.5) +
+  geom_point(data = urban.pts.bi,
+             aes(x = longnum, y = latnum,
+                 fill = urbanbi), 
+             shape = 21) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = -1) +
+  scale_size_manual("IBD Nieghborhood \n Differences", values = c(0.4, 0.6, 0.8, 1, 1.2)) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
+  map_theme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, vjust = 0.5, size = 12),
+    legend.text = element_text(family = "Helvetica", size = 11, hjust = 0.5, vjust = 0.5, angle = 0),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  ) 
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_meiotic_sibs_directionality_urban_binary.jpg", width = 8, height = 8, units = "in", res = 500)
+plot(IBD_meiotic_direct_plot.urb.bi)
+graphics.off()
+```
+
+```{r, results='asis'}
+plot(IBD_meiotic_direct_plot.urb.bi)
+```
+
+
+### Pairwise-Urbanicity Continuous
 ```{r}
 
 
@@ -451,9 +550,11 @@ ibD.meiotic.neighborhoodIBD_plotdf %>%
 tofromcovar <- ibD.meiotic.neighborhoodIBD_plotdf %>% 
   dplyr::mutate(prevfrom = ifelse(hv001.x == from, prevmean.x, prevmean.y),
                 prevto = ifelse(hv001.x == to, prevmean.x, prevmean.y),
-                urbanfrom = ifelse(hv001.x == from, urbanmedian.x, urbanmedian.y),
-                urbanto = ifelse(hv001.x == to, urbanmedian.x, urbanmedian.y)) %>% 
-  dplyr::select(c("from", "to", "hv001.x", "hv001.y", "smpl1", "smpl2", "malecotf", "neighborIBDdiff", "prevfrom", "prevto", "urbanfrom", "urbanto")) 
+                urban_cont_from = ifelse(hv001.x == from, urbanmedian.x, urbanmedian.y),
+                urban_cont_to = ifelse(hv001.x == to, urbanmedian.x, urbanmedian.y),
+                urban_bi_from = ifelse(hv001.x == from, urbanbi.x, urbanbi.y),
+                urban_bi_to = ifelse(hv001.x == to, urbanbi.x, urbanbi.y)) %>% 
+  dplyr::select(c("from", "to", "hv001.x", "hv001.y", "smpl1", "smpl2", "malecotf", "neighborIBDdiff", "prevfrom", "prevto", "urban_cont_from", "urban_cont_to", "urban_bi_from", "urban_bi_to")) 
 
 ```
 
@@ -508,7 +609,7 @@ cowplot::plot_grid(prevdiffhist, fromclstprevplotObj, tolstprevplotObj,
 ###### Urbanicity 
 ```{r, results='asis'}
 urbandiffhist <- tofromcovar %>% 
-  dplyr::mutate(urbandiff = urbanfrom - urbanto) %>% 
+  dplyr::mutate(urbandiff = urban_cont_from - urban_cont_to) %>% 
   ggplot() + 
   geom_density(aes(x = urbandiff), fill = "#bdbdbd", color = NA) + 
   geom_vline(xintercept = 0, color = "red") +
@@ -517,11 +618,11 @@ urbandiffhist <- tofromcovar %>%
 
 # from clusters
 fromclsturban <- tofromcovar %>% 
-  dplyr::select(c("from", "urbanfrom")) %>% 
+  dplyr::select(c("from", "urban_cont_from")) %>% 
   dplyr::group_by(from) %>% 
   dplyr::summarise(
     edgedens = n(),
-    urbanicity = unique(urbanfrom) # same cluster by cluster
+    urbanicity = unique(urban_cont_from) # same cluster by cluster
   )
 
 fromclsturbanplotObj <- fromclsturban %>% 
@@ -532,11 +633,11 @@ fromclsturbanplotObj <- fromclsturban %>%
 
 # to clusters
 toclsturban <- tofromcovar %>% 
-  dplyr::select(c("to", "urbanto")) %>% 
+  dplyr::select(c("to", "urban_cont_to")) %>% 
   dplyr::group_by(to) %>% 
   dplyr::summarise(
     edgedens = n(),
-    urbanicity = unique(urbanto) # same cluster by cluster
+    urbanicity = unique(urban_cont_to) # same cluster by cluster
   )
 
 tolsturbanplotObj <- toclsturban %>% 
@@ -563,11 +664,11 @@ library(plotly)
 # From 
 #..............................................................
 fromcovars <- tofromcovar %>% 
-  dplyr::select(c("from", "prevfrom", "urbanfrom")) %>% 
+  dplyr::select(c("from", "prevfrom", "urban_cont_from")) %>% 
   dplyr::group_by(from) %>% 
   dplyr::summarise(
     edgedens = n(),
-    urban = unique(urbanfrom), 
+    urban = unique(urban_cont_from), 
     prev = unique(prevfrom)
   )
 
@@ -591,11 +692,11 @@ from3dplotObj
 # To 
 #..............................................................
 tocovars <- tofromcovar %>% 
-  dplyr::select(c("to", "prevto", "urbanto")) %>% 
+  dplyr::select(c("to", "prevto", "urban_cont_to")) %>% 
   dplyr::group_by(to) %>% 
   dplyr::summarise(
     edgedens = n(),
-    urban = unique(urbanto), 
+    urban = unique(urban_cont_to), 
     prev = unique(prevto)
   )
 

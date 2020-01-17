@@ -396,9 +396,9 @@ wrap_glm_long <- function(distcat, outcome, formula, data, burnin, n.sample){
 # Longer run for final models with best DIC based
 # on above fits
 #..............................................................
-finalformulas <- list(as.formula("F_between_mean ~ provlvl + deltadistance + 1"), # gc
-                      as.formula("F_between_mean ~ provlvl + deltadistance + 1"), # road
-                      as.formula("F_between_mean ~ provlvl + deltadistance + 1") # river
+finalformulas <- list(as.formula("F_between_mean ~ housing + precip + urban + provlvl + deltadistance + 1"), # gc
+                      as.formula("F_between_mean ~ housing + precip + urban + provlvl + deltadistance + 1"), # road
+                      as.formula("F_between_mean ~ housing + precip + urban + provlvl + deltadistance + 1") # river
                       )
 long.mod.framework <- mod.framework.sp <- tibble(formula = finalformulas,
                                                  burnin = 1e4,

@@ -139,9 +139,9 @@ ggplot2::autoplot(pca,
 #..............................................................
 # Predict New Raster Surface from PCA
 #..............................................................
-urbanicity <- raster::predict(rasters,
-                              pca,
-                              index=1) # just use PC1
+urbanicity.raw <- urbanicity <- raster::predict(rasters,
+                                                pca,
+                                                index=1) # just use PC1
 # cap it at the 99.9% for outliers
 val <- quantile(values(urbanicity), c(0.999), na.rm = T)
 values(urbanicity)[values(urbanicity) >= val] <- val
@@ -157,4 +157,31 @@ raster::writeRaster(urbanicity,
                     filename = "data/derived_data/urbanicity_raster/urbanicity.grd",
                     overwrite = T)
 
+#..............................................................
+# Save out raw
+#..............................................................
+raster::writeRaster(urbanicity.raw,
+                    filename = "data/derived_data/urbanicity_raster/urbanicity_raw_nottrunc.grd",
+                    overwrite = T)
+
+#..............................................................
+# Urbanicity as a Binary
+#..............................................................
+urbanicity.binary <- raster::predict(rasters,
+                                     pca,
+                                     index=1) # just use PC1
+urbanicity.binary.bool <- is.na(values(urbanicity.binary))
+cutoffval <- quantile(urbanicity.binary, 0.95, na.rm = T)
+
+values(urbanicity.binary)[!urbanicity.binary.bool] <-
+  as.numeric( values(urbanicity.binary)[!urbanicity.binary.bool] > cutoffval )
+
+plot(urbanicity.binary)
+
+#..............................................................
+# out
+#..............................................................
+raster::writeRaster(urbanicity.binary,
+                    filename = "data/derived_data/urbanicity_raster/urbanicity_binary.grd",
+                    overwrite = T)
 

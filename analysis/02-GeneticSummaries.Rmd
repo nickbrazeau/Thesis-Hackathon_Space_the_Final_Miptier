@@ -252,13 +252,13 @@ drcsmpls.ge <- drcsmpls.ge %>%
                    longnum = mean(longnum),
                    latnum = mean(latnum)) # geocoords same w/in clust
 
-drcsmpls.ge$smpls <- "Sampled"
+drcsmpls.ge$smpls <- "Y"
 ge.notsmpl <- ge %>% 
   dplyr::select(c("hv001", "longnum", "latnum")) %>% 
   dplyr::filter(!hv001 %in% drcsmpls.ge$hv001) %>% 
   dplyr::mutate(
-    n = 0.8, 
-    smpls = "Not Sampled"
+    n = 1, 
+    smpls = "N"
   )
 # bring together for plot
 ge.plotpts <- rbind.data.frame(drcsmpls.ge, ge.notsmpl)
@@ -272,14 +272,13 @@ smplocations <- ggplot() +
   geom_point(data = ge.plotpts, 
               aes(x = longnum, y = latnum, size = n, color = factor(smpls)), 
               alpha = 0.8, show.legend = F) +
-  scale_color_viridis_d("DHS Cluster") +
-  scale_size("Cluster Size", range = c(1, 4)) +
+  scale_color_manual("DHS \n Cluster", values = c("#a6bddb", "#ef3b2c")) +
+  scale_size("Cluster \n Size", range = c(1, 4)) +
   theme(
-    legend.position = "left",
+    legend.position = "bottom",
     legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
     legend.text = element_text(face = "bold", size = 11)
-  ) + 
-   guides(fill=guide_legend(ncol=2))
+  ) 
 
 jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocations_clster.jpg",
      width = 8, height = 8, units = "in", res = 300)

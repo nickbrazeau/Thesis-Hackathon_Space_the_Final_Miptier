@@ -30,11 +30,15 @@ options(digits = 2)
 ```{r, child = 'analysis/03-IBD_S_distance_decay.Rmd'}
 ```
 
-```{r, child = 'analysis/04_1-BayesWithin.Rmd'}
-```
 
-```{r, child = 'analysis/04_2-BayesBetween.Rmd'}
-```
+
+<!-- ```{r, child = 'analysis/04_1-BayesWithin.Rmd'} -->
+<!-- ``` -->
+
+<!-- ```{r, child = 'analysis/04_2-BayesBetween.Rmd'} -->
+<!-- ``` -->
+
+
 
 ```{r, child = 'analysis/05-IBD_meioticsibs_frontend.Rmd'}
 ```

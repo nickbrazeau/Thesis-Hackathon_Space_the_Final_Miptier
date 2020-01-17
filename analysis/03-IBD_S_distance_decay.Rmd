@@ -1046,51 +1046,22 @@ plot(IBDdecay.plot)
 ## Cluster Inbreeding Coeff. Likelihood
 ```{r}
 
-llparams <- readRDS(file = "~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/data/derived_data/Likelihood_backend_pairwise_comparisons_params_nodata.RDS")
-
-# get all files
-llfiles <- list.files("~/Documents/MountPoints/mountedMeshnick/Projects/Space_the_Final_Miptier/results/distance_likelihoods_old/_rslurm_distance_likelihoods_recursion/",
-                           pattern = ".RDS", full.names = T)
-llfiles <- llfiles[!grepl("f.RDS|params.RDS", llfiles)]
-
-
-llfilesdf <- tibble::tibble(
-  path = llfiles
-  ) %>% 
-  dplyr::mutate(fileord = stringr::str_extract(path, "[0-9]+"),
-                fileord = as.numeric(fileord)) %>% 
-  dplyr::arrange(fileord)
-
-# now get results 
-llparams$results <- unlist(purrr::map(llfilesdf$path, readRDS), 
-                             recursive = F)
-
-# extract out LL
-llparams$LogLik <- purrr::map(llparams$results, "LL")
-llparams <- llparams %>% 
-  tidyr::unnest(cols = "LogLik")
-
+modLL <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/distance_likelihoods_local/model_likelihoods.RDS")
 
 
 ```
-```{r}
-# group by and sum up
-logliksumm <- llparams %>% 
-  group_by(name) %>% 
-  dplyr::summarise(
-    LogLik = sum(LogLik, na.rm = T)
-  )
-```
+
 ```{r, results='asis'}
-logliksumm %>% 
-  dplyr::arrange(., name) %>% 
-  dplyr::mutate_if(is.numeric, round, 4) %>% 
+modLL %>%
+  dplyr::arrange(., name) %>%
+  dplyr::select(c("name", "LogLik")) %>% 
+  dplyr::mutate_if(is.numeric, round, 4) %>%
   DT::datatable(.,
                 rownames = F,
                 options = list(
                   searching = F,
                   pageLength = 6,
                   dom = 'Bfrtip',
-                  buttons = c('csv'))) 
+                  buttons = c('csv')))
 ```
 
