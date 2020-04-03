@@ -9,7 +9,7 @@ snakemake \
 	--snakefile $SNAKE/run_snake_params.py \
 	--configfile $SNAKE/config_temp.yaml \
 	--directory $ROOT \
-	--cluster $ROOT/launch.py \
+	--cluster $SNAKE/launch.py \
 	-j $NODES \
 	--printshellcmds \
 	--rerun-incomplete \
