@@ -1,7 +1,7 @@
 #! /bin/bash
 
-ROOT=/Users/nickbrazeau/Documents/GitHub/Space_the_Final_Miptier/ # root directory for project (non-scratch)
-SNAKE=/Users/nickbrazeau/Documents/GitHub/Space_the_Final_Miptier/analysis/cluster_inbreeding
+ROOT=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/ # root directory for project (non-scratch)
+SNAKE=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analysis/cluster_inbreeding
 WAIT=30 # lag for system
 
 snakemake \
