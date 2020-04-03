@@ -1,0 +1,358 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Genetic Pairwise & Geographic Summaries
+Let's look at pairwise comparison of the identity by state and identity by descent of all of our samples. We will look at them with respect to Province just for some sembalance of "space". 
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+```
+
+
+```{r}
+source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
+library(tidyverse)
+# drc prov for plot
+DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+
+#....................................................................................
+# Import Genetic Data
+#....................................................................................
+ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
+
+```
+
+
+## Pairwise IBS
+```{r}
+#.....................
+# EDA of Our Genetic Data
+# for IBS
+#.....................
+# Pairwise Comparisons
+ibS.exp.hv001 <- expand_distance_matrix(ibS)
+
+pairwiseibS.plotObj <- ibS.exp.hv001 %>%
+  dplyr::mutate(smpl1 = forcats::fct_rev(forcats::fct_reorder(.f = smpl1, .x = adm1name.x, .fun = length)),
+                smpl2 = forcats::fct_rev(forcats::fct_reorder(.f = smpl2, .x = adm1name.y, .fun = length))) %>%
+  ggplot() +
+  geom_tile(aes(x=smpl1, y=smpl2, fill = hammings)) +
+  ggtitle("Pairwise Identity by State") +
+  scale_fill_viridis_c("Ihat") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    legend.position = "right",
+    legend.text = element_text(hjust = 0.5, vjust = 0.5, size = 8),
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/pairwiseibS_plot.jpg",
+     unit = "in", height = 8, width = 11, res = 500)
+plot(pairwiseibS.plotObj)
+graphics.off()
+
+```
+
+```{r, results='asis', fig.width=11, fig.height=8, fig.align='center'}
+plot(pairwiseibS.plotObj)
+```
+
+
+### Pairwise IBS Stats
+##### Sample
+```{r, results='asis'}
+ibS.exp.hv001 %>% # selfs already excluded
+  dplyr::group_by(smpl1) %>% 
+  dplyr::summarise(
+    n = n(),
+    minIBS = min(hammings),
+    quart25IBS = quantile(hammings, 0.25),
+    medIBS = median(hammings),
+    meanIBS = mean(hammings),
+    sdIBS = sd(hammings),
+    quart75IBS = quantile(hammings, 0.75),
+    maxIBS = max(hammings)
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv')))
+
+```
+
+
+#### Prov
+```{r, results='asis'}
+ibS.exp.hv001 %>% # selfs already excluded
+  dplyr::group_by(adm1name.x) %>% 
+  dplyr::summarise(
+    n = n(),
+    minIBS = min(hammings),
+    quart25IBS = quantile(hammings, 0.25),
+    medIBS = median(hammings),
+    meanIBS = mean(hammings),
+    sdIBS = sd(hammings),
+    quart75IBS = quantile(hammings, 0.75),
+    maxIBS = max(hammings)
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv')))
+
+```
+
+
+#### Cluster
+```{r, results='asis'}
+ibS.exp.hv001 %>% # selfs already excluded
+  dplyr::group_by(hv001.x) %>% 
+  dplyr::summarise(
+    n = n(),
+    minIBS = min(hammings),
+    quart25IBS = quantile(hammings, 0.25),
+    medIBS = median(hammings),
+    meanIBS = mean(hammings),
+    sdIBS = sd(hammings),
+    quart75IBS = quantile(hammings, 0.75),
+    maxIBS = max(hammings)
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv')))
+
+```
+
+## Pairwise IBD
+```{r}
+#.....................
+# EDA of Our Genetic Data
+# for IBD
+#.....................
+# Pairwise Comparisons
+ibD.exp.hv001 <- expand_distance_matrix(ibD)
+
+pairwiseibD.plotObj <- ibD.exp.hv001 %>%
+  dplyr::mutate(smpl1 = forcats::fct_rev(forcats::fct_reorder(.f = smpl1, .x = adm1name.x, .fun = length)),
+                smpl2 = forcats::fct_rev(forcats::fct_reorder(.f = smpl2, .x = adm1name.y, .fun = length))) %>%
+  ggplot() +
+  geom_tile(aes(x=smpl1, y=smpl2, fill = malecotf)) +
+  ggtitle("Pairwise Identity by Descent") +
+  scale_fill_viridis_c("Ihat") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    legend.position = "right",
+    legend.text = element_text(hjust = 0.5, vjust = 0.5, size = 8),
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/pairwiseibD_plot.jpg",
+     unit = "in", height = 8, width = 11, res = 500)
+plot(pairwiseibD.plotObj)
+graphics.off()
+
+```
+
+```{r, results='asis', fig.width=11, fig.height=8, fig.align='center'}
+plot(pairwiseibD.plotObj)
+```
+
+
+
+### Pairwise IBD Stats
+#### Prov
+```{r, results='asis'}
+ibD.exp.hv001 %>% # selfs already excluded
+  dplyr::group_by(smpl1) %>% 
+  dplyr::summarise(
+    n = n(),
+    minIBS = min(malecotf),
+    quart25IBS = quantile(malecotf, 0.25),
+    medIBS = median(malecotf),
+    meanIBS = mean(malecotf),
+    sdIBS = sd(malecotf),
+    quart75IBS = quantile(malecotf, 0.75),
+    maxIBS = max(malecotf)
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv')))
+
+```
+
+
+
+
+#### Cluster
+```{r, results='asis'}
+ibD.exp.hv001 %>% # selfs already excluded
+  dplyr::group_by(hv001.x) %>% 
+  dplyr::summarise(
+    n = n(),
+    minIBS = min(malecotf),
+    quart25IBS = quantile(malecotf, 0.25),
+    medIBS = median(malecotf),
+    meanIBS = mean(malecotf),
+    sdIBS = sd(malecotf),
+    quart75IBS = quantile(malecotf, 0.75),
+    maxIBS = max(malecotf)
+  ) %>% 
+  dplyr::mutate_if(is.numeric, round, 2) %>% 
+  DT::datatable(., extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip', 
+                  buttons = c('csv')))
+
+```
+
+## Sampling Locations
+```{r}
+#..............................................................
+# import for plotting
+#..............................................................
+drcsmpls <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/sample_metadata.rds") %>% 
+  dplyr::select(c("barcode", "hv001"))
+ge <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/spacemips_GE.rds")
+load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+
+#..............................................................
+# wrangle for plot
+#..............................................................
+drcsmpls.ge <- dplyr::left_join(drcsmpls, ge, by = "hv001")
+drcsmpls.ge <- drcsmpls.ge %>% 
+  dplyr::group_by(hv001) %>% 
+  dplyr::summarise(n = n(),
+                   longnum = mean(longnum),
+                   latnum = mean(latnum)) # geocoords same w/in clust
+
+drcsmpls.ge$smpls <- "Y"
+ge.notsmpl <- ge %>% 
+  dplyr::select(c("hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(!hv001 %in% drcsmpls.ge$hv001) %>% 
+  dplyr::mutate(
+    n = 1, 
+    smpls = "N"
+  )
+# bring together for plot
+ge.plotpts <- rbind.data.frame(drcsmpls.ge, ge.notsmpl)
+
+#..............................................................
+# plot
+#..............................................................
+smplocations <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts, 
+              aes(x = longnum, y = latnum, size = n, color = factor(smpls), shape = factor(smpls)), 
+              alpha = 0.8) +
+  scale_color_manual(name = "DHS Cluster", 
+                     labels = c("Not Sampled", "Sampled"),
+                     values = c("#a6bddb", "#ef3b2c")) +
+  scale_shape_manual(name = "DHS Cluster", 
+                     labels = c("Not Sampled", "Sampled"),
+                     values = c(4, 20)) +
+  scale_size("Cluster Size", range = c(1, 4)) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocations_clster.jpg",
+     width = 8, height = 8, units = "in", res = 300)
+plot(smplocations)
+graphics.off()
+
+```
+```{r, results='asis'}
+plot(smplocations)
+```
+```{r, results='asis'}
+roadnetworkplotObj <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/roadnetworkplotObj.RDS")
+rivernetworkplotObj <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/rivernetworkplotObj.RDS")
+
+
+cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
+                   nrow = 1, align = "h")
+```
+
+```{r}
+
+smplocations.nolegend <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts, 
+              aes(x = longnum, y = latnum, size = n, color = factor(smpls), shape = factor(smpls)), 
+              alpha = 0.8) +
+  scale_color_manual("DHS \n Cluster", values = c("#a6bddb", "#ef3b2c")) +
+  scale_size("Cluster \n Size", range = c(1, 4)) +
+  theme(
+    legend.position = "none",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+
+jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/smplocationsroad_river_clster.jpg",
+     width = 11, height = 8, units = "in", res = 300)
+cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, rivernetworkplotObj,
+                   nrow = 1, align = "h", labels = c("(A)", "(B)", "(C)"))
+graphics.off()
+
+```
+
+## Clusters with Single Sample
+```{r}
+
+# bring together for plot
+ge.plotpts.onesample <- rbind.data.frame(drcsmpls.ge, ge.notsmpl) %>% 
+  dplyr::filter(n == 1) %>% 
+  dplyr::filter(smpls == "Y")
+
+#..............................................................
+# plot
+#..............................................................
+smplocations.onesample <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts.onesample, 
+              aes(x = longnum, y = latnum, 
+              alpha = 0.8), color = "#ef3b2c", shape = 8) +
+  theme(
+    legend.position = "none",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+```
+```{r, results='asis'}
+plot(smplocations.onesample)
+```
+**Overall, there are `r nrow(ge.plotpts.onesample)` clusters that only have a single sample within the cluster.
+
+
