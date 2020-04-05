@@ -13,6 +13,6 @@ snakemake \
 	--rerun-incomplete \
 	--keep-going \
 	--latency-wait $WAIT \
-#	--cluster $SNAKE/launch.py \
-#	-j $NODES \
-	--dryrun -p
+	--cluster $SNAKE/launch.py \
+	-j $NODES \
+#	--dryrun -p
