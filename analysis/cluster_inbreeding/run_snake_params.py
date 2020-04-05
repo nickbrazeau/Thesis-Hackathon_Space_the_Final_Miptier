@@ -31,7 +31,7 @@ clst_inb_outDIR = config["outdir"]
 final_target = []
 for i in parampath:
 	final_target.append( os.path.join(clst_inb_outDIR, "{}.RDS".format(i)) )
-print(final_target)
+
 
 rule all:
 	input: final_target
