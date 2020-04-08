@@ -141,6 +141,29 @@ prettybasemap_nodrc_dark <- list(
         axis.title = element_blank()) # overwrite vivid theme
 )
 
+prettybasemap_nodrc_nonorth_dark <- list(
+  geom_sf(data = brdrcnt[[1]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[2]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[3]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[4]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[5]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[6]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[7]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[8]], fill = "#525252", color = "#737373",lwd = 0.5),
+  geom_sf(data = brdrcnt[[9]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[10]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[11]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = brdrcnt[[12]], fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = oceans, fill = "#9ecae1"),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
+           datum = NA),
+  theme(panel.background = element_rect(fill = "#9ecae1"),
+        panel.grid = element_line(colour="transparent"),
+        axis.text = element_blank(),
+        axis.title = element_blank()) # overwrite vivid theme
+)
+
 
 
 
@@ -151,6 +174,7 @@ prettybasemap_nodrc_dark <- list(
 save(prettybasemap_nodrc,
      prettybasemap_nodrc_nonorth,
      prettybasemap_nodrc_dark,
+     prettybasemap_nodrc_nonorth_dark,
      file = "data/map_bases/space_mips_maps_bases.rda")
 saveRDS(DRCprov, file = "data/map_bases/spacemips_DRCprov.rds")
 
