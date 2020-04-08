@@ -7,12 +7,12 @@ WAIT=30 # lag for system
 
 snakemake \
 	--snakefile $SNAKE/run_snake_params.py \
-	--configfile $SNAKE/config_temp.yaml \
+	--configfile $SNAKE/config.yaml \
 	--directory $ROOT \
-	--cluster $SNAKE/launch.py \
-	-j $NODES \
 	--printshellcmds \
 	--rerun-incomplete \
 	--keep-going \
 	--latency-wait $WAIT \
-	--dryrun -p
+	--cluster $SNAKE/launch.py \
+	-j $NODES \
+#	--dryrun -p
