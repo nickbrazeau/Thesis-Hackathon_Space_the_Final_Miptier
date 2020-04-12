@@ -38,11 +38,12 @@ rule all:
 
 rule params_out:
 	input: clst_inb_paramDIR + "{params}.RDS"
-	output: clst_inb_outDIR + "{params}.RDS"
+	output: ret = clst_inb_outDIR + "{params}.RDS",
+			log = clst_inb_outDIR + "{params}_log.RDS",
 	shell:
 		r"""
 		Rscript --max-ppsize=500000 --vanilla \
 			R/clst_inb_coeff_run.R \
 			--mastermap {input} \
-			-O {output}
+			-O {output.ret} 2> {output.log}
 		"""
