@@ -14,8 +14,10 @@ library(tidyverse)
 # read in GE as import
 mtdt <- readRDS("data/derived_data/sample_metadata.rds")
 clsts <- sort(unique(c(mtdt$hv001)))
-fs <- sort(c(0, 1, seq(0.1, 0.9, by = 0.1)))
-ms <- c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0.1, 0.25, 0.5, 0.75, 1)
+#fs <- sort(c(0, 1, seq(0.1, 0.9, by = 0.1)))
+#ms <- c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 0.1, 0.25, 0.5, 0.75, 1)
+fs <- c(0.25, 0.33, 0.5)
+ms <- c(1e-6, 1e-4, 1e-2)
 
 
 
@@ -33,7 +35,9 @@ params <- cbind(fparams, "m" = ms)
 #..............................................................
 # Add in Learning Rate
 #..............................................................
-learningrate <- c(1e-6, 1e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 0.05, 0.1, 0.2)
+#learningrate <- c(1e-6, 1e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
+learningrate <- c(1e-6, 1e-4)
+
 lrandparams <- lapply(1:length(learningrate), function(x){return(params)}) %>%
   do.call("rbind.data.frame", .)
 lrandparams <- lrandparams[order(lrandparams$`1`), ]
