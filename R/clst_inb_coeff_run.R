@@ -7,7 +7,7 @@
 # Note, this funciton is not generalizable -- purpose is
 # project specfici
 #..............................................................
-remotes::install_github("nickbrazeau/MIPanalyzer", ref = "238ccb6c47a6d9c8148122a46f0b3bfe3f2b24c3")
+#remotes::install_github("nickbrazeau/MIPanalyzer", ref = "238ccb6c47a6d9c8148122a46f0b3bfe3f2b24c3")
 library(MIPanalyzer)
 library(optparse)
 
