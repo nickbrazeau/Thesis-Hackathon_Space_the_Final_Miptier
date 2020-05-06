@@ -55,7 +55,7 @@ ret <- MIPanalyzer::cluster_inbreeding_coef(clst_gendist_geodist = input,
                                             m_lowerbound = 0,
                                             m_upperbound = 1,
                                             learningrate = snake_learn,
-                                            steps = 1e3,
+                                            steps = 1e4,
                                             report_progress = TRUE)
 
 #..............................................................
