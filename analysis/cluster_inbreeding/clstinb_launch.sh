@@ -3,7 +3,7 @@
 ROOT=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/ # root directory for project (non-scratch)
 SNAKE=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analysis/cluster_inbreeding
 NODES=1028 # max number of cluster nodes
-WAIT=600 # lag for system
+WAIT=30 # lag for system
 
 snakemake \
 	--snakefile $SNAKE/run_snake_params.py \
