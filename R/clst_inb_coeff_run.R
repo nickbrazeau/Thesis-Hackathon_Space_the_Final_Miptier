@@ -52,8 +52,8 @@ snake_learn <- as.numeric( params["learningrate"] )
 
 ret <- MIPanalyzer::cluster_inbreeding_coef(clst_gendist_geodist = input,
                                             start_params = snake_start_params,
-                                            m_lowerbound = 0,
-                                            m_upperbound = 1,
+                                            m_lowerbound = 1e-25,
+                                            m_upperbound = 5e-4,
                                             learningrate = snake_learn,
                                             steps = 1e4,
                                             report_progress = TRUE)

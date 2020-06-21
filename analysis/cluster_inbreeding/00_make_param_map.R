@@ -15,7 +15,7 @@ library(tidyverse)
 mtdt <- readRDS("data/derived_data/sample_metadata.rds")
 clsts <- sort(unique(c(mtdt$hv001)))
 fs <- seq(0.1, 0.9, by = 0.1)
-ms <- c(0.001, 0.01, 0.1, 1, 10, 100, 1000)
+ms <- c(1e-12, 1e-10, 1e-8, 1e-6, 1e-4)
 
 #..............................................................
 # Start Parameters
@@ -31,7 +31,7 @@ params <- cbind(fparams, "m" = ms)
 #..............................................................
 # Add in Learning Rate
 #..............................................................
-learningrate <- c(1e-15, 1e-10, 1e-7, 1e-4)
+learningrate <- c(1e-12, 1e-10, 1e-7, 1e-4)
 
 lrandparams <- lapply(1:length(learningrate), function(x){return(params)}) %>%
   do.call("rbind.data.frame", .)
