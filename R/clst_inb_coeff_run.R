@@ -43,22 +43,22 @@ if(is.null(opt$output)){
 #..............................................................
 params <- readRDS(file = opt$mastermap)
 params <- unlist(params)
-snake_start_params <- as.numeric( params[!names(params) %in% c("learningrate", "inputpath")] )
-names(snake_start_params) <- names(params[!names(params) %in% c("learningrate", "inputpath")] )
+snake_start_params <- as.numeric( params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath")] )
+names(snake_start_params) <- names(params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath")] )
 input <- params["inputpath"]
 input <- readRDS(input)
 f_learningrate <- as.numeric( params["f_learningrate"] )
 m_learningrate <- as.numeric( params["m_learningrate"] )
 
 
-ret <- MIPanalyzer::cluster_inbreeding_coef(K_gendist_geodist = input,
-                                            start_params = snake_start_params,
-                                            m_lowerbound = 1e-25,
-                                            m_upperbound = 5e-4,
-                                            f_learningrate = f_learningrate,
-                                            m_learningrate = m_learningrate,
-                                            steps = 1e4,
-                                            report_progress = TRUE)
+ret <- MIPanalyzer::deme_inbreeding_coef(K_gendist_geodist = input,
+                                         start_params = snake_start_params,
+                                         m_lowerbound = 1e-25,
+                                         m_upperbound = 5e-4,
+                                         f_learningrate = f_learningrate,
+                                         m_learningrate = m_learningrate,
+                                         steps = 1e4,
+                                         report_progress = TRUE)
 
 #..............................................................
 # out
