@@ -47,14 +47,16 @@ snake_start_params <- as.numeric( params[!names(params) %in% c("learningrate", "
 names(snake_start_params) <- names(params[!names(params) %in% c("learningrate", "inputpath")] )
 input <- params["inputpath"]
 input <- readRDS(input)
-snake_learn <- as.numeric( params["learningrate"] )
+f_learningrate <- as.numeric( params["f_learningrate"] )
+m_learningrate <- as.numeric( params["m_learningrate"] )
 
 
-ret <- MIPanalyzer::cluster_inbreeding_coef(clst_gendist_geodist = input,
+ret <- MIPanalyzer::cluster_inbreeding_coef(K_gendist_geodist = input,
                                             start_params = snake_start_params,
                                             m_lowerbound = 1e-25,
                                             m_upperbound = 5e-4,
-                                            learningrate = snake_learn,
+                                            f_learningrate = f_learningrate,
+                                            m_learningrate = m_learningrate,
                                             steps = 1e4,
                                             report_progress = TRUE)
 

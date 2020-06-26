@@ -13,7 +13,12 @@ library(PrevMap)
 #..............................................................
 # read in data
 #..............................................................
-clst_inbd <- readRDS("data/derived_data/clst_inbreeding_dat/clst_inbreeding_convfilt_results.RDS")
+clst_inbd <- readRDS("~/Desktop/temp.RDS")
+Fi_runs <- clst_inbd$fi_run %>%
+  do.call("rbind.data.frame", .)
+plot(Fi_runs[,1])
+
+
 clst_inbd <- clst_inbd %>%
   tidyr::gather(., key = "hv001", value = "Fclst", 3:ncol(.))
 clst_inbd_m <- clst_inbd %>%
@@ -39,8 +44,8 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::filter(!duplicated(.))
 
 
-
-temp <- dplyr::left_join(clst_inbd_f$data[[1]], clsts, by = "hv001")
+tempdat <- data.frame(hv001 = clsts$hv001, Fclst = clst_inbd$Final_Fis)
+temp <- dplyr::left_join(tempdat, clsts, by = "hv001")
 temp <- temp %>%
   dplyr::mutate(Fclst_logit = logit(as.numeric(Fclst))) %>%
   dplyr::filter(!hv001 %in% c("m", "conv_pass"))
@@ -65,7 +70,7 @@ load("data/map_bases/space_mips_maps_bases.rda")
 drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
   dplyr::filter(population > 350000)
 
-jpeg("~/Desktop/temp.jpg", width = 11, height = 8, units = "in", res = 500)
+jpeg("~/Desktop/temp_map.jpg", width = 11, height = 8, units = "in", res = 500)
 Fclst_raster.plot +
   scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
   prettybasemap_nodrc_nonorth_dark +

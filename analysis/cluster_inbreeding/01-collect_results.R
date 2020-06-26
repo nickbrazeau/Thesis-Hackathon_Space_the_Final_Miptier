@@ -30,33 +30,30 @@ mastermap <- mastermap.lg %>%
 # read in data from slurm scr
 #..............................................................
 # NB cluster names are sorted for Fij results sort(clsts$hv001)
-
-filepaths <- list.files("data/derived_data/clst_inbreeding_dat/clust_inbd_results/",
+filepaths <- list.files("data/derived_data/clst_inbreeding_dat/clust_results/",
                         pattern = ".RDS", full.names = T)
 
-read_results <- function(path, clstnames){
+read_cost_results <- function(path, clstnames){
   dat <- readRDS(path)
-  param_set_name <- gsub(".RDS", "", basename(path))
+  # just pull out costs and see if cost was at end (or if learning rate was too large) -- monotonic dec
+  mincost <- min(dat$cost)
+  monoton_cost_dec <- !any(diff(dat$cost) > 0)
 
-  #......................
-  # process data to see if we have convergence
-  #......................
-  mconv <- max( dat$m_run[(length(dat$m_run)-999):length(dat$m_run)] - lag(dat$m_run[(length(dat$m_run)-1000):length(dat$m_run)])[2:1001] )
-  f_run <- do.call("rbind.data.frame",  dat$fi_run)
-  fconv <- apply(f_run, 2, function(x){ max( x[(length(x)-999):length(x)] - lag(x[(length(x)-1000):length(x)])[2:1001] ) })
-  # bring together
-  convvec <- c(fconv, mconv)
-  names(convvec) <- c("m_conv", paste0(clstnames, "_conv"))
-  # out
-  out <- tibble::as_tibble(matrix(c(dat$Final_Fis, dat$Final_m), nrow = 1))
-  colnames(out) <- c(clstnames, "m")
-  out$param_set <- param_set_name
-  out$conv_stats <- list(convvec)
+  # make out
+  out <- tibble::tibble(
+    param_set = sub(".RDS", "", basename(path)),
+    mincost = mincost,
+    monoton_cost_dec = monoton_cost_dec
+  )
   return(out)
 }
 
-clst_rets <- purrr::map(filepaths, read_results, clstnames = sort(clsts$hv001)) %>%
-  dplyr::bind_rows()
+
+cost_rets <- purrr::map(filepaths, read_cost_results) %>%
+  dplyr::bind_rows() %>%
+  dplyr::left_join(mastermap, ., by = "param_set")
+
+
 # save out for later use
 saveRDS(clst_rets, "data/derived_data/clst_inbreeding_dat/clust_inbd_results/collective_clust_inbd_results.RDS")
 #............................................................
