@@ -46,6 +46,8 @@ rule params_out:
 			R/clst_inb_coeff_run.R \
 			--mastermap {input} \
 			--seed 48 \
+			--mlowerbound 1e-25 \
+			--mupperbound 5e-4 \
 			-O {output} \
 			>& {log}
 		"""
