@@ -17,6 +17,21 @@ option_list=list(
               default = NULL,
               help = paste("start parameters path"),
               metavar = "character"),
+  make_option(c("-s", "--seed"),
+              type = "numeric",
+              default = NULL,
+              help = paste("Seed to use"),
+              metavar = "numeric"),
+  make_option(c("-l", "--mlowerbound"),
+              type = "numeric",
+              default = NULL,
+              help = paste("Lower bound for M"),
+              metavar = "numeric"),
+  make_option(c("-u", "--mupperbound"),
+              type = "numeric",
+              default = NULL,
+              help = paste("Upper bound for M"),
+              metavar = "numeric"),
   make_option(c("-O", "--output"),
               type = "character",
               default = NULL,
@@ -32,12 +47,29 @@ if(is.null(opt$mastermap)){
   stop("Missing input argument", call. = FALSE)
 }
 
+if(is.null(opt$seed)){
+  print_help(opt_parser)
+  stop("Missing seed argument", call. = FALSE)
+}
+
+if(is.null(opt$mlowerbound)){
+  print_help(opt_parser)
+  stop("Missing lower bound argument for m", call. = FALSE)
+}
+
+if(is.null(opt$mupperbound)){
+  print_help(opt_parser)
+  stop("Missing upper bound argument for m", call. = FALSE)
+}
+
+
 if(is.null(opt$output)){
   print_help(opt_parser)
   stop("Missing output argument", call. = FALSE)
 }
 
 
+set.seed(opt$seed)
 #..............................................................
 # extract and run
 #..............................................................
