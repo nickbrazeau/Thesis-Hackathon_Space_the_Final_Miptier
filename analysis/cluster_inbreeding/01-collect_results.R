@@ -17,7 +17,7 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
 #.............................................................
 mastermap.lg <- readRDS("data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS")
 mastermap <- mastermap.lg %>%
-  dplyr::select(c("1", "m", "learningrate", "inputpath", "parampath")) %>% # note, fstart are same across other params
+  dplyr::select(c("1", "m", "m_learningrate", "f_learningrate", "inputpath", "parampath")) %>% # note, fstart are same across other params
   dplyr::rename(param_set = parampath,
                 fstart = 1,
                 mstart = m) %>%
@@ -29,8 +29,7 @@ mastermap <- mastermap.lg %>%
 #..............................................................
 # read in data from slurm scr
 #..............................................................
-# NB cluster names are sorted for Fij results sort(clsts$hv001)
-filepaths <- list.files("data/derived_data/clst_inbreeding_dat/clust_results/",
+filepaths <- list.files("results/clust_inbd_results/",
                         pattern = ".RDS", full.names = T)
 
 read_cost_results <- function(path, clstnames){
@@ -49,83 +48,50 @@ read_cost_results <- function(path, clstnames){
 }
 
 
-cost_rets <- purrr::map(filepaths, read_cost_results) %>%
+mastermap <- purrr::map(filepaths, read_cost_results) %>%
   dplyr::bind_rows() %>%
   dplyr::left_join(mastermap, ., by = "param_set")
 
 
-# save out for later use
-saveRDS(clst_rets, "data/derived_data/clst_inbreeding_dat/clust_inbd_results/collective_clust_inbd_results.RDS")
 #............................................................
-# Process Results to see if Convergence was Reached
+# Process Results to extract Min Cost
 #...........................................................
-clst_rets <- readRDS("data/derived_data/clst_inbreeding_dat/clust_inbd_results/collective_clust_inbd_results.RDS")
+mastermap_mincost <- mastermap %>%
+  dplyr::group_by(spacetype) %>%
+  dplyr::filter( mincost == min(mincost) )
 
-# going to make a seperate data frame for looking at convergence for a given param set
-conv_filter_map <- clst_rets %>%
-  dplyr::select(c("param_set", "conv_stats")) %>%
-  dplyr::left_join(., y = mastermap, by = "param_set")
+#............................................................
+# pull out min results
+#...........................................................
+clust_inb <- mastermap_mincost %>%
+  dplyr::select(c("spacetype", "mincost", "param_set")) %>%
+  dplyr::mutate(param_set = paste0("results/clust_inbd_results/", param_set, ".RDS"),
+                param_set = purrr::map(param_set, readRDS),
+                cost = purrr::map(param_set, "cost"))
+#......................
+# check by eye that Grad Descent looks reasonable
+#......................
+plot(clust_inb$cost[[1]])
+plot(clust_inb$cost[[2]])
+plot(clust_inb$cost[[3]])
+plot(clust_inb$cost[[4]])
 
-check_conv <- function(conv_stats, conv_alpha, learningrate) {
-  mean(sapply(conv_stats, function(x, y) {x <= y}, y = -conv_alpha*learningrate))
-}
 
-conv_filter_map <- conv_filter_map %>%
-  dplyr::mutate(conv_pass = purrr::pmap_dbl(.l = conv_filter_map[,c("conv_stats", "learningrate")],
-                                            .f = check_conv,
-                                            conv_alpha = 1e-5)) %>%
-  dplyr::select(c("param_set", "conv_pass", "spacetype"))
+#......................
+# process final Inbreeding coeffs
+#......................
+clust_inb$inbreed_ests <- purrr::map(clust_inb$param_set, function(prmst) {
+                                                          tibble::tibble(param = c(prmst$deme_key$Deme, "m"),
+                                                                         est = c(prmst$Final_Fis, prmst$Final_m))
+                                                           })
 
-# now attach to master map and fitler
-mastermap.results <- dplyr::left_join(clst_rets, conv_filter_map, by = "param_set") %>%
-  dplyr::filter(conv_pass >= 0.99) %>%
-  dplyr::select(-c("conv_stats")) %>%
-  dplyr::select(c("param_set", "spacetype", dplyr::everything()))
 
 #..............................................................
 #out
 #..............................................................
-write_rds(x = mastermap.results,
-          path = "data/derived_data/clst_inbreeding_dat/clst_inbreeding_convfilt_results.RDS")
-
-
-#..............................................................
-# play
-#..............................................................
-
-mastermap.results %>%
-  dplyr::select(-c("conv_pass")) %>%
-  dplyr::filter(m < 0.99) %>%
-  dplyr::select(-c("m")) %>%
-  tidyr::gather(., key = "param", value = "est", 3:ncol(.)) %>%
-  dplyr::group_by(spacetype, param) %>%
-  dplyr::summarise(
-    n = dplyr::n(),
-    accepted = n/(nrow(mastermap.lg)/3),
-    min = min(est),
-    LCI = quantile(est, 0.025),
-    median = median(est),
-    mean = mean(est),
-    UCI = quantile(est, 0.975),
-    max = max(est)
-  ) %>%
-  ggplot() +
-  geom_pointrange(aes(x = param, y = mean, ymin = LCI, ymax = UCI)) +
-  facet_wrap(~ spacetype, nrow = 4) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 90)
-  )
-
-
-
-
-
-
-
-
-
-
+dir.create("results/min_cost_inbreedingresults/", recursive = TRUE)
+write_rds(x = clust_inb,
+          path = "results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
 
 
 

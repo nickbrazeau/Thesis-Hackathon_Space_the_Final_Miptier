@@ -10,29 +10,54 @@ source("R/gauss_proc_simple_functions.R")
 library(tidyverse)
 library(PrevMap)
 
+#............................................................
+# function for spatial model
+#...........................................................
+make_spat_mod <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5) {
+  #......................
+  # process
+  #......................
+  clst_inbdset <- clst_inbdset %>%
+    dplyr::filter(param != "m") %>%
+    dplyr::rename(hv001 = param,
+                  Finbd = est)
+  clst_inbdset <- dplyr::left_join(clst_inbdset, clsts, by = "hv001") %>%
+    dplyr::mutate(Finbd_logit = logit(as.numeric(Finbd)))
+  #......................
+  # run internal prevmap functions
+  #......................
+  poly <- cbind(c(17,32,32,12,12), c(-14,-14,6,6,-14))
+  grid.pred <- splancs::gridpts(poly, xs=0.1, ys=0.1)
+  colnames(grid.pred) <- c("long","lat")
+
+  Fclst_raster <- fit_pred_spMLE(data = clst_inbdset,
+                                 outcome = "Finbd_logit", covar = covar,
+                                 long_var = "longnum", lat_var = "latnum",
+                                 grid.pred = grid.pred, kappa = kappa,
+                                 pred.reps = 1e3)
+
+  Fclst_raster_plot <- prevmaprasterplotter(Fclst_raster$pred,
+                                            alpha = 1, smoothfct = 8)
+
+  Fclst_raster_plot_obj <- Fclst_raster_plot +
+    scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
+    prettybasemap_nodrc_nonorth_dark +
+    geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
+    geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
+              hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold",
+              size = 3,
+              alpha = 0.8)
+
+  return(Fclst_raster_plot_obj)
+}
+
 #..............................................................
 # read in data
 #..............................................................
-clst_inbd <- readRDS("~/Desktop/temp.RDS")
-Fi_runs <- clst_inbd$fi_run %>%
-  do.call("rbind.data.frame", .)
-plot(Fi_runs[,1])
-
-
-clst_inbd <- clst_inbd %>%
-  tidyr::gather(., key = "hv001", value = "Fclst", 3:ncol(.))
-clst_inbd_m <- clst_inbd %>%
-  dplyr::filter(hv001 == "m") %>%
-  dplyr::rename(param = hv001)
-clst_inbd_f <- clst_inbd %>%
-  dplyr::filter(hv001 != "m" & hv001 != "param_set")
-
-#......................
-# split F clust results
-#......................
-clst_inbd_f <- clst_inbd_f %>%
-  dplyr::group_by(param_set, spacetype) %>%
-  tidyr::nest()
+clst_inbd <- readRDS("results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
+  dplyr::select(c("spacetype", "inbreed_ests")) %>%
+  tidyr::unnest(cols = inbreed_ests)
+clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
 
 #......................
 # geo
@@ -42,75 +67,28 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::select(c("hv001", "latnum", "longnum")) %>%
   dplyr::mutate(hv001 = as.character(hv001)) %>%
   dplyr::filter(!duplicated(.))
-
-
-tempdat <- data.frame(hv001 = clsts$hv001, Fclst = clst_inbd$Final_Fis)
-temp <- dplyr::left_join(tempdat, clsts, by = "hv001")
-temp <- temp %>%
-  dplyr::mutate(Fclst_logit = logit(as.numeric(Fclst))) %>%
-  dplyr::filter(!hv001 %in% c("m", "conv_pass"))
-
-#..............................................................
-# temp
-#..............................................................
-
-poly <- cbind(c(17,32,32,12,12), c(-14,-14,6,6,-14))
-grid.pred <- splancs::gridpts(poly, xs=0.1, ys=0.1)
-colnames(grid.pred) <- c("long","lat")
-
-Fclst_raster <- fit_pred_spMLE(data = temp,
-                               outcome = "Fclst_logit", covar = "1",
-                               long_var = "longnum", lat_var = "latnum",
-                               grid.pred = grid.pred, kappa = 0.5,
-                               pred.reps = 1e2)
-
-Fclst_raster.plot <- prevmaprasterplotter(Fclst_raster$pred,
-                                          alpha = 1, smoothfct = 8)
 load("data/map_bases/space_mips_maps_bases.rda")
 drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
   dplyr::filter(population > 350000)
 
-jpeg("~/Desktop/temp_map.jpg", width = 11, height = 8, units = "in", res = 500)
-Fclst_raster.plot +
-  scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-  geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold", alpha = 0.8)
+
+
+#..............................................................
+# run functions
+#..............................................................
+clst_inbd.plots <- lapply(clst_inbd.list, make_spat_mod, clsts = clsts, DRCprov = DRCprov)
+
+jpeg("~/Desktop/inbred_fig.jpg", width = 11, height = 8, units = 'in', res = 600)
+cowplot::plot_grid(clst_inbd.plots[[1]], clst_inbd.plots[[2]],
+                   clst_inbd.plots[[3]], clst_inbd.plots[[4]],
+                   nrow = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
 graphics.off()
 
 
 
 
 
-svglite::svglite("~/Desktop/temp.jpg", width = 8, height = 8)
-Fclst_raster.plot +
-  scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-  geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold", alpha = 0.8)
-graphics.off()
 
-pfinc <- raster::raster("data/derived_data/MAPrasters/pfincidence.grd")
-jpeg("~/Desktop/temp2.jpg", width = 11, height = 8, units = "in", res = 500)
-ggplot() +
-  ggspatial::layer_spatial(data = pfinc, aes(fill = stat(band1))) +
-  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-  geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold", alpha = 0.8)
-graphics.off()
 
-svglite::svglite("~/Desktop/temp2.svg", height = 8, width = 8)
-ggplot() +
-  ggspatial::layer_spatial(data = pfinc, aes(fill = stat(band1))) +
-  scale_fill_distiller("Prevalence", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-  geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
-            hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold", alpha = 0.8)
-graphics.off()
 
 # sanity

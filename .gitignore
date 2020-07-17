@@ -17,6 +17,7 @@ rdhs.json
 sandbox/
 ignore/
 results/
+sharepoint/
 
 # RStudio files
 .Rproj.user/
