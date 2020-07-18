@@ -21,7 +21,9 @@ library(tidyverse)
 #....................................................................................
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
-
+vcf.DRC <- vcfR::read.vcfR("data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
+CHROMPOS <- tibble::tibble(CHROM = vcfR::getCHROM(vcf.DRC),
+                           POS = vcfR::getPOS(vcf.DRC))
 ```
 
 ## Overview of Loci Genetic Information
@@ -81,21 +83,24 @@ plot(pairwiseibS.plotObj)
 ###### Sample
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
-  make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "smpl1")
-  
+  summ_var(df = ., x = "hammings", groupingvar = "smpl1") %>% 
+  pretty_DT_tab(.)
+
 ```
 
 ##### Cluster
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
   dplyr::group_by(hv001.x) %>% 
-  make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "hv001.x")
+  summ_var(df = ., x = "hammings", groupingvar = "hv001.x") %>% 
+  pretty_DT_tab(.)
 ```
 
 ##### Prov
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
-  make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "adm1name.x")
+  summ_var(df = ., x = "hammings", groupingvar = "adm1name.x") %>% 
+  pretty_DT_tab(.)
 
 ```
 
@@ -143,7 +148,8 @@ plot(pairwiseibD.plotObj)
 ###### Sample
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
-  make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "smpl1")
+  summ_var(df = ., x = "malecotf", groupingvar = "smpl1") %>% 
+  pretty_DT_tab(.)
   
 ```
 
@@ -151,12 +157,14 @@ ibS.exp.hv001 %>% # selfs already excluded
 ##### Cluster
 ```{r, results='asis'}
 ibD.exp.hv001 %>% # selfs already excluded
-  make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "hv001.x")
+  summ_var(df = ., x = "malecotf", groupingvar = "hv001.x") %>% 
+  pretty_DT_tab(.)
 
 ```
 
 ##### Prov
 ```{r, results='asis'}
 ibD.exp.hv001 %>% # selfs already excluded
-  make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "adm1name.x")
+  summ_var(df = ., x = "malecotf", groupingvar = "adm1name.x") %>% 
+  pretty_DT_tab(.)
 ```

@@ -20,7 +20,7 @@ pretty_DT_tab <- function(df) {
 #' @param groupingvar character; name of grouping var
 #' @import dplyr
 
-summ_var <- function(df,  x, groupingvar) {
+summ_var <- function(df, x, groupingvar) {
   p1 <- df %>%
     dplyr::group_by_at(groupingvar) %>%
     summarise_at(x, .funs = c(min = min, mean = mean, median = median, max = max))
@@ -47,6 +47,7 @@ logit <- function(x, tol=1e-4){
   return( log(((x+tol)/(1-x+tol))) )
 }
 
+
 #' @title Expit Transformation
 #' @details Reverse the logistic transformation
 #' @param x numeric vector
@@ -69,27 +70,6 @@ my.scale <- function(x, ...){
   } else{
     stop("Matrix has more than one column")
   }
-}
-
-#' @title Pretty Summary Table
-make_pretty_summ_table <- function(dat, sumvar, groupingvar = "") {
-  dat %>%
-    group_by_at(groupingvar) %>%
-    dplyr::summarise_at(., .vars = sumvar, .funs = list(n = length,
-                                                        min = min,
-                                                        median = median,
-                                                        mean = mean,
-                                                        stdev = sd,
-                                                        max = max)) %>%
-    dplyr::mutate_if(is.numeric, round, 2) %>%
-    DT::datatable(., extensions='Buttons',
-                  options = list(
-                    searching = T,
-                    pageLength = 20,
-                    dom = 'Bfrtip',
-                    buttons = c('csv')))
-
-
 }
 
 
