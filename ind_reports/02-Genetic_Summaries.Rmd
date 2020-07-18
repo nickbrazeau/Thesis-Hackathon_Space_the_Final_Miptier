@@ -3,8 +3,8 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-# Genetic Pairwise Comparisons
-Let's look at pairwise comparison of the identity by state and identity by descent of all of our samples. 
+# Genetic Loci Descriptive Statistics 
+
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
                       fig.align = 'center', fig.width = 8, fig.height = 8)
@@ -24,8 +24,26 @@ ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.lon
 
 ```
 
+## Overview of Loci Genetic Information
+### Number of sites 
 
-## Pairwise IBS
+```{r, results='asis'}
+CHROMPOS.num <- CHROMPOS %>% 
+  dplyr::group_by(CHROM) %>% 
+  dplyr::summarise(n = n())
+
+DT::datatable(CHROMPOS.num, extensions='Buttons',
+               options = list(
+              searching = T,
+              pageLength = 14,
+              dom = 'Bfrtip', 
+              buttons = c('csv')))
+
+```
+
+## Pairwise Genetics Comparions
+Let's look at pairwise comparison of the identity by state and identity by descent of all of our samples. 
+### Pairwise IBS
 ```{r}
 #.....................
 # EDA of Our Genetic Data
@@ -60,22 +78,21 @@ jpgsnapshot(outpath = "results/figures/pairwiseibS_plot.jpg", plot = pairwiseibS
 plot(pairwiseibS.plotObj)
 ```
 
-### Pairwise IBS Stats
-##### Sample
+###### Sample
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
   make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "smpl1")
   
 ```
 
-#### Cluster
+##### Cluster
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
   dplyr::group_by(hv001.x) %>% 
   make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "hv001.x")
 ```
 
-#### Prov
+##### Prov
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
   make_pretty_summ_table(dat = ., sumvar = "hammings", groupingvar = "adm1name.x")
@@ -83,7 +100,7 @@ ibS.exp.hv001 %>% # selfs already excluded
 ```
 
 
-## Pairwise IBD
+### Pairwise IBD
 ```{r}
 #.....................
 # EDA of Our Genetic Data
@@ -123,9 +140,7 @@ plot(pairwiseibD.plotObj)
 
 
 
-### Pairwise IBD Stats
-
-##### Sample
+###### Sample
 ```{r, results='asis'}
 ibS.exp.hv001 %>% # selfs already excluded
   make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "smpl1")
@@ -133,14 +148,14 @@ ibS.exp.hv001 %>% # selfs already excluded
 ```
 
 
-#### Cluster
+##### Cluster
 ```{r, results='asis'}
 ibD.exp.hv001 %>% # selfs already excluded
   make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "hv001.x")
 
 ```
 
-#### Prov
+##### Prov
 ```{r, results='asis'}
 ibD.exp.hv001 %>% # selfs already excluded
   make_pretty_summ_table(dat = ., sumvar = "malecotf", groupingvar = "adm1name.x")
