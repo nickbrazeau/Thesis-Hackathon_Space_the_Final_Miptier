@@ -4,7 +4,6 @@
 #
 # Author: Nicholas F. Brazeau
 #
-# Date: April 01 2020
 #########################################################################\
 library(tidyverse)
 
@@ -15,7 +14,7 @@ library(tidyverse)
 mtdt <- readRDS("data/derived_data/sample_metadata.rds")
 clsts <- sort(unique(c(mtdt$hv001)))
 fs <- seq(0.1, 0.9, by = 0.1)
-ms <- c(1e-12, 1e-10, 1e-8, 1e-6, 1e-4)
+ms <- c(1e-12, 1e-10, 1e-8, 1e-6, 1e-5)
 
 #..............................................................
 # Start Parameters
@@ -25,19 +24,22 @@ colnames(fparams) <- clsts
 fparams <- lapply(1:length(ms), function(x){return(fparams)}) %>%
   do.call("rbind.data.frame", .)
 fparams <- fparams[order(fparams$`1`), ]
-# all params
+# all f and m params
 params <- cbind(fparams, "m" = ms)
 
 #..............................................................
 # Add in Learning Rate
 #..............................................................
-learningrate <- c(1e-12, 1e-10, 1e-7, 1e-4)
+f_learningrate <- c(1e-7, 1e-6, 1e-5, 1e-4)
+m_learningrate <- c(1e-18, 1e-15, 1e-12, 1e-10)
+learningrates <- expand.grid(f_learningrate, m_learningrate)
+colnames(learningrates) <- c("f_learningrate", "m_learningrate")
 
-lrandparams <- lapply(1:length(learningrate), function(x){return(params)}) %>%
+lrandparams <- lapply(1:nrow(learningrates), function(x){return(params)}) %>%
   do.call("rbind.data.frame", .)
 lrandparams <- lrandparams[order(lrandparams$`1`), ]
 # all params
-lrandparams <- cbind(lrandparams, "learningrate" = learningrate)
+lrandparams <- cbind(lrandparams, learningrates)
 
 #..............................................................
 # add in inputs

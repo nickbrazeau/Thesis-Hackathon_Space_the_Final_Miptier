@@ -90,7 +90,7 @@ clst_airport_distmat <- dplyr::left_join(clst_airport_distmat, ge.airportdist, b
 # add and then drop
 #..................
 clst_airport_distmat <- clst_airport_distmat %>%
-  dplyr::mutate(airport_distance = airportdist.x + airportdist.y) %>%
+  dplyr::mutate(airportdistance = airportdist.x + airportdist.y) %>%
   dplyr::select(-c("airportdist.x", "airportdist.y"))
 
 #..................
