@@ -1,9 +1,7 @@
 #########################################################################
-# Purpose: Collect the results from the cluster inbreeding calculation
+# Purpose: Collect the results from the Malecot's Spatial Gradient Descent (cluster level)
 #
-# Author: Nicholas F. Brazeau
-#
-# Date: April 08 2020
+# Notes:
 #########################################################################
 library(tidyverse)
 #..............................................................

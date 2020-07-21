@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 """
-Master script for running MVN RF
+Master script for running Malecot's Spatial Gradient Descent
 """
 
 from __future__ import print_function
