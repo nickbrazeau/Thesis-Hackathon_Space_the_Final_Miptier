@@ -86,7 +86,7 @@ prettybasemap_nodrc <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 
@@ -113,7 +113,7 @@ prettybasemap_nodrc_nonorth <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 prettybasemap_nodrc_dark <- list(
@@ -138,7 +138,7 @@ prettybasemap_nodrc_dark <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 prettybasemap_nodrc_nonorth_dark <- list(
@@ -171,7 +171,8 @@ prettybasemap_nodrc_nonorth_dark <- list(
 #----------------------------------------------------------------------------------------------------
 # Save Objects & Write out
 #----------------------------------------------------------------------------------------------------
-save(prettybasemap_nodrc,
+save(smpl_bckgrnd,
+     prettybasemap_nodrc,
      prettybasemap_nodrc_nonorth,
      prettybasemap_nodrc_dark,
      prettybasemap_nodrc_nonorth_dark,
