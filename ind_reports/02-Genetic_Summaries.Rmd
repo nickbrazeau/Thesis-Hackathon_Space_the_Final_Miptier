@@ -16,9 +16,17 @@ knitr::opts_knit$set(root.dir = here::here())
 source("R/basics.R")
 source("R/pairwise_helpers.R")
 library(tidyverse)
-#....................................................................................
+library(cowplot)
+#...................... 
+# metadata
+#......................
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum"))
+
+#......................
 # Import Genetic Data
-#....................................................................................
+#......................
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 vcf.DRC <- vcfR::read.vcfR("data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
@@ -35,54 +43,36 @@ CHROMPOS.num <- CHROMPOS %>%
   dplyr::summarise(n = n())
 
 DT::datatable(CHROMPOS.num, extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 14,
-              dom = 'Bfrtip', 
-              buttons = c('csv')))
+              options = list(
+                searching = T,
+                pageLength = 14,
+                dom = 'Bfrtip', 
+                buttons = c('csv')))
 
 ```
+
 
 ## Pairwise Genetics Comparions
 Let's look at pairwise comparison of the identity by state and identity by descent of all of our samples. 
 ### Pairwise IBS
 ```{r}
-#.....................
-# EDA of Our Genetic Data
-# for IBS
-#.....................
 # Pairwise Comparisons -- want full matrix
-ibS.exp.hv001 <- expand_distance_matrix(ibS)
+ibS.long.smpl <- ibS %>% 
+  dplyr::select(c("smpl1", "smpl2", "hammings")) %>% 
+  expand_distance_matrix(.)
 
-pairwiseibS.plotObj <- ibS.exp.hv001 %>%
-  dplyr::mutate(smpl1 = forcats::fct_rev(forcats::fct_reorder(.f = smpl1, .x = adm1name.x, .fun = length)),
-                smpl2 = forcats::fct_rev(forcats::fct_reorder(.f = smpl2, .x = adm1name.y, .fun = length))) %>%
-  ggplot() +
-  geom_tile(aes(x=smpl1, y=smpl2, fill = hammings)) +
-  ggtitle("Pairwise Identity by State") +
-  scale_fill_viridis_c("Ihat") +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    legend.position = "right",
-    legend.text = element_text(hjust = 0.5, vjust = 0.5, size = 8),
-    plot.background = element_blank(),
-    panel.grid = element_blank()
-  )
+ibS.long.clst <- ibS %>% 
+  dplyr::select(c("hv001.x", "hv001.y", "hammings")) %>% 
+  expand_distance_matrix(.)
 
-jpgsnapshot(outpath = "results/figures/pairwiseibS_plot.jpg", plot = pairwiseibS.plotObj)
-
-```
-
-```{r, results='asis', fig.width=11, fig.height=8, fig.align='center'}
-plot(pairwiseibS.plotObj)
+ibS.long.prov <- ibS %>% 
+  dplyr::select(c("adm1name.x", "adm1name.y", "hammings")) %>% 
+  expand_distance_matrix(.)
 ```
 
 ###### Sample
 ```{r, results='asis'}
-ibS.exp.hv001 %>% # selfs already excluded
+ibS.long.smpl %>% # selfs already excluded
   summ_var(df = ., x = "hammings", groupingvar = "smpl1") %>% 
   pretty_DT_tab(.)
 
@@ -90,7 +80,7 @@ ibS.exp.hv001 %>% # selfs already excluded
 
 ##### Cluster
 ```{r, results='asis'}
-ibS.exp.hv001 %>% # selfs already excluded
+ibS.long.clst %>% # selfs already excluded
   dplyr::group_by(hv001.x) %>% 
   summ_var(df = ., x = "hammings", groupingvar = "hv001.x") %>% 
   pretty_DT_tab(.)
@@ -98,65 +88,124 @@ ibS.exp.hv001 %>% # selfs already excluded
 
 ##### Prov
 ```{r, results='asis'}
-ibS.exp.hv001 %>% # selfs already excluded
+ibS.long.prov %>% # selfs already excluded
   summ_var(df = ., x = "hammings", groupingvar = "adm1name.x") %>% 
   pretty_DT_tab(.)
 
 ```
 
-
-### Pairwise IBD
-```{r}
-#.....................
-# EDA of Our Genetic Data
-# for IBD
-#.....................
-# Pairwise Comparisons
-ibD.exp.hv001 <- expand_distance_matrix(ibD)
-
-pairwiseibD.plotObj <- ibD.exp.hv001 %>%
-  dplyr::mutate(smpl1 = forcats::fct_rev(forcats::fct_reorder(.f = smpl1, .x = adm1name.x, .fun = length)),
-                smpl2 = forcats::fct_rev(forcats::fct_reorder(.f = smpl2, .x = adm1name.y, .fun = length))) %>%
+```{r, results='asis', fig.width = 11, fig.height = 8, fig.align = 'center'}
+#...................... 
+# plot this
+#......................
+# smpl
+smpl_plot <- ibS.long.smpl %>%
+  dplyr::mutate(smpl1 = factor(smpl1),
+                smpl2 = factor(smpl2)) %>%
   ggplot() +
-  geom_tile(aes(x=smpl1, y=smpl2, fill = malecotf)) +
-  ggtitle("Pairwise Identity by Descent") +
-  scale_fill_viridis_c("Ihat") +
+  geom_tile(aes(x=smpl1, y=smpl2, fill = hammings)) +
+  xlab("Samples") + ylab("Samples") + 
+  scale_fill_viridis_c("Mean IBS") +
   theme_minimal() +
   theme(
-    plot.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
-    axis.title = element_blank(),
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
     axis.text = element_blank(),
-    legend.position = "right",
-    legend.text = element_text(hjust = 0.5, vjust = 0.5, size = 8),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+# cluster -- white spaces are those 93 clusters with only one sample, no w/in comparison
+clst_plot <- ibS.long.clst %>%
+  dplyr::group_by_at(c("hv001.x", "hv001.y"), .drop = F) %>% 
+  dplyr::summarise(
+    meanIBS = mean(hammings)
+  ) %>% 
+  dplyr::mutate(hv001.x = factor(hv001.x),
+                hv001.y = factor(hv001.y)) %>%
+  ggplot() +
+  geom_tile(aes(x=hv001.x, y=hv001.y, fill = meanIBS)) +
+  xlab("Clusters") + ylab("Clusters") + 
+  scale_fill_viridis_c("IBS") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text = element_blank(),
+    legend.position = "none",
     plot.background = element_blank(),
     panel.grid = element_blank()
   )
 
-jpeg("results/figures/pairwiseibD_plot.jpg",
-     unit = "in", height = 8, width = 11, res = 500)
-plot(pairwiseibD.plotObj)
-graphics.off()
+# prov
+prov_plot <- ibS.long.prov %>%
+  dplyr::group_by_at(c("adm1name.x", "adm1name.y")) %>% 
+  dplyr::summarise(
+    meanIBS = mean(hammings)
+  ) %>% 
+  dplyr::mutate(adm1name.x = factor(adm1name.x),
+                adm1name.y = factor(adm1name.y)) %>%
+  ggplot() +
+  geom_tile(aes(x=adm1name.x, y=adm1name.y, fill = meanIBS)) +
+  xlab("Provinces") + ylab("Provinces") + 
+  scale_fill_viridis_c("IBS") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text = element_blank(),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+
+legend <- get_legend(
+  clst_plot +  
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.title = element_text(vjust = 0.5, hjust = 0.5, size = 14, face = "bold"),
+          legend.text = element_text(vjust = 0.5, hjust = 0.5, size = 12, face = "bold")
+    )
+)
+firstrow <- cowplot::plot_grid(smpl_plot, clst_plot, prov_plot, 
+                               labels = c("(A)", "(B)", "(C)"),
+                               align = "h")
+
+cowplot::plot_grid(firstrow, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+
 
 ```
 
-```{r, results='asis', fig.width=11, fig.height=8, fig.align='center'}
-plot(pairwiseibD.plotObj)
-```
 
+
+### Pairwise IBD
+```{r}
+# Pairwise Comparisons -- want full matrix
+ibD.long.smpl <- ibD %>% 
+  dplyr::select(c("smpl1", "smpl2", "malecotf")) %>% 
+  expand_distance_matrix(.)
+
+ibD.long.clst <- ibD %>% 
+  dplyr::select(c("hv001.x", "hv001.y", "malecotf")) %>% 
+  expand_distance_matrix(.)
+
+ibD.long.prov <- ibD %>% 
+  dplyr::select(c("adm1name.x", "adm1name.y", "malecotf")) %>% 
+  expand_distance_matrix(.)
+```
 
 
 ###### Sample
 ```{r, results='asis'}
-ibS.exp.hv001 %>% # selfs already excluded
+ibD.long.smpl %>% # selfs already excluded
   summ_var(df = ., x = "malecotf", groupingvar = "smpl1") %>% 
   pretty_DT_tab(.)
-  
+
 ```
 
 
 ##### Cluster
 ```{r, results='asis'}
-ibD.exp.hv001 %>% # selfs already excluded
+ibD.long.clst %>% # selfs already excluded
   summ_var(df = ., x = "malecotf", groupingvar = "hv001.x") %>% 
   pretty_DT_tab(.)
 
@@ -164,7 +213,134 @@ ibD.exp.hv001 %>% # selfs already excluded
 
 ##### Prov
 ```{r, results='asis'}
-ibD.exp.hv001 %>% # selfs already excluded
+ibD.long.prov %>% # selfs already excluded
   summ_var(df = ., x = "malecotf", groupingvar = "adm1name.x") %>% 
   pretty_DT_tab(.)
+```
+
+```{r, results='asis', fig.width = 11, fig.height = 8, fig.align = 'center'}
+#...................... 
+# plot this
+#......................
+# smpl
+smpl_plot <- ibD.long.smpl %>%
+  dplyr::mutate(smpl1 = factor(smpl1),
+                smpl2 = factor(smpl2)) %>%
+  ggplot() +
+  geom_tile(aes(x=smpl1, y=smpl2, fill = malecotf)) +
+  xlab("Samples") + ylab("Samples") + 
+  scale_fill_viridis_c("Mean IBD") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text = element_blank(),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+# cluster -- white spaces are those 93 clusters with only one sample, no w/in comparison
+clst_plot <- ibD.long.clst %>%
+  dplyr::group_by_at(c("hv001.x", "hv001.y"), .drop = F) %>% 
+  dplyr::summarise(
+    meanIBD = mean(malecotf)
+  ) %>% 
+  dplyr::mutate(hv001.x = factor(hv001.x),
+                hv001.y = factor(hv001.y)) %>%
+  ggplot() +
+  geom_tile(aes(x=hv001.x, y=hv001.y, fill = meanIBD)) +
+  xlab("Clusters") + ylab("Clusters") + 
+  scale_fill_viridis_c("Mean IBD") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text = element_blank(),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+# prov
+prov_plot <- ibD.long.prov %>%
+  dplyr::group_by_at(c("adm1name.x", "adm1name.y")) %>% 
+  dplyr::summarise(
+    meanIBD = mean(malecotf)
+  ) %>% 
+  dplyr::mutate(adm1name.x = factor(adm1name.x),
+                adm1name.y = factor(adm1name.y)) %>%
+  ggplot() +
+  geom_tile(aes(x=adm1name.x, y=adm1name.y, fill = meanIBD)) +
+  xlab("Provinces") + ylab("Provinces") + 
+  scale_fill_viridis_c("Mean IBD") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text = element_blank(),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+
+legend <- get_legend(
+  clst_plot +  
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.title = element_text(vjust = 0.5, hjust = 0.5, size = 14, face = "bold"),
+          legend.text = element_text(vjust = 0.5, hjust = 0.5, size = 12, face = "bold")
+    )
+)
+firstrow <- cowplot::plot_grid(smpl_plot, clst_plot, prov_plot, 
+                               labels = c("(A)", "(B)", "(C)"),
+                               align = "h")
+
+cowplot::plot_grid(firstrow, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+
+
+```
+
+
+
+### Distribution of Relatedness
+When considering pairwise IBD as the outcome, we can use a log-base-2 tranformation to normalize the IBD measure. Log-base-2 represents the number of generations ago to samples were IBD (or coalesced) under an assumption of outcrossing. _N.B. larger numbers mean more generations (less related)._
+
+#### All Samples
+```{r, results='asis'}
+ibD.exp.hv001 %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens) %>% 
+  dplyr::filter(malecotf_gens != Inf) %>% 
+  ggplot() + 
+  geom_histogram(aes(x = malecotf_gens, y = ..count.. )) + 
+  plot_theme +
+  xlab("Generations") + ylab("")
+
+```
+
+#### Prov
+```{r, results='asis'}
+
+p1 <- mtdt %>% 
+  dplyr::select(c("name", "adm1name")) %>% 
+  dplyr::rename(smpl1 = name)
+
+p2 <- mtdt %>% 
+  dplyr::select(c("name", "adm1name")) %>% 
+  dplyr::rename(smpl2 = name)
+
+ibD.exp.hv001 %>% 
+  dplyr::left_join(., y = p1, by = "smpl1") %>% 
+  dplyr::left_join(., y = p2, by = "smpl2") %>% 
+  expand_distance_matrix() %>% 
+  dplyr::filter(malecotf_gens != Inf) %>% 
+  ggplot() + 
+  ggridges::stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = T,
+    quantiles = 4, quantile_lines = T, 
+    aes(x = malecotf_gens, y = adm1name.x, fill = factor(..quantile..))
+  ) +
+  scale_fill_viridis_d("Quantiles") +
+  ylab("Province") + xlab("Distribution of Generations") +
+  plot_theme 
+
 ```
