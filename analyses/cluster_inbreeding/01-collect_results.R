@@ -27,7 +27,7 @@ mastermap <- mastermap.lg %>%
 #..............................................................
 # read in data from slurm scr
 #..............................................................
-filepaths <- list.files("results/clust_inbd_results/",
+filepaths <- list.files("results/clust_inbd_results/Find_grad_descent_results",
                         pattern = ".RDS", full.names = T)
 
 read_cost_results <- function(path, clstnames){
@@ -87,9 +87,9 @@ clust_inb$inbreed_ests <- purrr::map(clust_inb$param_set, function(prmst) {
 #..............................................................
 #out
 #..............................................................
-dir.create("results/min_cost_inbreedingresults/", recursive = TRUE)
+dir.create("results/clust_inbd_results/min_cost_inbreedingresults/", recursive = TRUE)
 write_rds(x = clust_inb,
-          path = "results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
+          path = "results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
 
 
 

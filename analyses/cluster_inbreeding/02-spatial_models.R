@@ -9,11 +9,35 @@ source("R/basics.R")
 source("R/gauss_proc_simple_functions.R")
 library(tidyverse)
 library(PrevMap)
+load("data/map_bases/space_mips_maps_bases.rda")
 
 #............................................................
-# function for spatial model
+# functions for spatial model
 #...........................................................
-make_spat_mod <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5) {
+#' @title Raw Map Point Process
+make_spat_raw_map <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5) {
+  #......................
+  # process
+  #......................
+  clst_inbdset <- clst_inbdset %>%
+    dplyr::filter(param != "m") %>%
+    dplyr::rename(hv001 = param,
+                  Finbd = est)
+  clst_inbdset <- dplyr::left_join(clst_inbdset, clsts, by = "hv001")
+
+  Fclst_point_plot_obj <- clst_inbdset %>%
+    ggplot() +
+    geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+    geom_point(aes(x = longnum, y = latnum, color = Finbd)) +
+    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1) +
+    smpl_bckgrnd
+
+  return(Fclst_point_plot_obj)
+}
+
+
+#' @title PrevMap Kriging
+make_spat_prevmap_mod <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5) {
   #......................
   # process
   #......................
@@ -54,14 +78,20 @@ make_spat_mod <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5
 #..............................................................
 # read in data
 #..............................................................
+# cluster names
+clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
+  dplyr::select(c("hv001", "longnum", "latnum")) %>%
+  dplyr::filter(!duplicated(.)) %>%
+  tibble::as_tibble(.) %>%
+  dplyr::mutate(hv001 = as.character(hv001))
+
+# inbreeding data
 clst_inbd <- readRDS("results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
   dplyr::select(c("spacetype", "inbreed_ests")) %>%
   tidyr::unnest(cols = inbreed_ests)
 clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
 
-#......................
-# geo
-#......................
+# add cities for context
 DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::select(c("hv001", "latnum", "longnum")) %>%
@@ -76,16 +106,19 @@ drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
 #..............................................................
 # run functions
 #..............................................................
-clst_inbd.plots <- lapply(clst_inbd.list, make_spat_mod, clsts = clsts, DRCprov = DRCprov)
+#......................
+# raw
+#......................
+clst_inbd_point.plots <- lapply(clst_inbd.list, make_spat_raw_map, clsts = clsts, DRCprov = DRCprov)
 
-jpeg("~/Desktop/inbred_fig.jpg", width = 11, height = 8, units = 'in', res = 600)
-cowplot::plot_grid(clst_inbd.plots[[1]], clst_inbd.plots[[2]],
-                   clst_inbd.plots[[3]], clst_inbd.plots[[4]],
-                   nrow = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
-graphics.off()
-
-
-
+#......................
+# prevmap
+#......................
+clst_inbd_rstr.plots <- lapply(clst_inbd.list, make_spat_prevmap_mod, clsts = clsts, DRCprov = DRCprov)
+# out
+dir.create("results/clust_inbd_results/final_clstb_maps/", recursive = T)
+saveRDS(clst_inbd_point.plots, file = "results/clust_inbd_results/final_clstb_maps/point_clst_inbd_plots.RDS")
+saveRDS(clst_inbd_rstr.plots, file = "results/clust_inbd_results/final_clstb_maps/raster_clst_inbd_plots.RDS")
 
 
 
