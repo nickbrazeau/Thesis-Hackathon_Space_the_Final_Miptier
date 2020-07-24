@@ -10,7 +10,9 @@ In this analysis, we will look at pairs that have more  relatedness than would b
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
                       fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
 ```
+
 ```{r}
 library(tidyverse)
 library(raster)
@@ -20,12 +22,9 @@ library(cowplot)
 source("R/themes.R")
 source("R/basics.R")
 source("R/pairwise_helpers.R")
-```
-
-```{r}
 # load pretty map aesthetics 
-DRCprov <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/gadm/gadm36_COD_1_sp.rds"))
-load("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/space_mips_maps_bases.rda")
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+load("data/map_bases/space_mips_maps_bases.rda")
 
 # load data
 mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
@@ -207,7 +206,7 @@ edge_dens_plot <- EdgeDens %>%
   prettybasemap_nodrc_nonorth_dark +
   geom_point(aes(x = longnum, y = latnum, 
                  fill = node_edge_density_disc), 
-             alpha = 0.5, size = 2, shape = 21, color = "#d9d9d9") +
+             alpha = 0.5, size = 2, shape = 21, stroke = 0.3, color = "#d9d9d9") +
   ggrepel::geom_text_repel(data = nodelabels,
                            aes(x = longnum, y = latnum, label = hv001), 
                            size = 3, fontface = "bold", color = "#bdbdbd") +
@@ -217,6 +216,8 @@ edge_dens_plot <- EdgeDens %>%
 
 
 ```
+
+
 ```{r, results='asis'}
 cowplot::plot_grid(edge_dens_plot, meiotic_sib_networkplot, 
                    ncol = 2, rel_widths = c(1, 0.75),
@@ -230,7 +231,7 @@ cowplot::plot_grid(edge_dens_plot, meiotic_sib_networkplot,
 graphics.off()
 
 ```
-Overall, there are `r nrow(meiotic.edges)` highly-related pairs. Among these highly related pairs, `r sum(meiotic.edges$hv001.x == meiotic.edges$hv001.y)` were from the same cluster. There are `r nrow(meiotic_clst.uni.edgesdf)` pairs with only a single connection. Of these pairs, `r sum(meiotic_clst.uni.edgesdf$hv001.x == meiotic_clst.uni.edgesdf$hv001.y)` are from the same cluster. 
+Overall, there are `r nrow(meiotic.edges)` highly-related pairs. Among these highly related pairs, `r sum(meiotic.edges$hv001.x == meiotic.edges$hv001.y)` were from the same cluster. There are `r sum(EdgeDens$node_edge_density == 1)` pairs with only a single connection. 
 
 
 ### Quadrad
@@ -332,7 +333,7 @@ plot(DRCtransmap)
 #...................... 
 distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 
-ibDdist <- long_distance_matrix_join(x=ibD, y=distancematrix.cluster,
+ibDdist <- long_distance_matrix_join(x = ibD.meiotic, y = distancematrix.cluster,
                                      by = c("hv001.x", "hv001.y")) %>%
   dplyr::mutate(gcdistance = gcdistance/1e3,
                 roaddistance = roaddistance/1e3,
@@ -356,7 +357,7 @@ notsameclst.edges <- ibD.meiotic.network %>%
 ibDdist <- ibDdist %>% 
   dplyr::select(c("barcode.x", "barcode.y", "gcdistance", "roaddistance", "riverdistance", "airportdistance"))
 
-  ```
+```
 ```{r, results='asis'}
 dplyr::left_join(notsameclst.edges,
                  ibDdist, by = c("barcode.x", "barcode.y")) %>% 
@@ -368,15 +369,12 @@ dplyr::left_join(notsameclst.edges,
 ```
 
 
-
-
-
-### IBD Meiotic Siblings and Urbanicity
+## Meiotic Siblings and Urbanicity
 ```{r}
 #...................... 
 # lift over cities for plotting
 #......................
-drccities <- readr::read_csv("~/Documents/GitHub/Space_the_Final_Miptier/data/map_bases/DRC_city_coordinates.csv") %>% 
+drccities <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>% 
   dplyr::filter(population >= 5e4)
 # liftover for drc cities
 drccities <- drccities %>% 
@@ -387,7 +385,7 @@ drccities <- drccities %>%
 #...................... 
 # get dhs points again (no jitter)
 #......................
-ge <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>% 
+ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>% 
   magrittr::set_colnames(tolower(colnames(.))) %>% 
   dplyr::rename(hv001 = dhsclust) %>% 
   dplyr::select(c("hv001", "urban_rura"))
@@ -396,7 +394,7 @@ sf::st_geometry(ge) <- NULL
 # extract out coordinate information and join in urban rural data
 urban.pts <- mtdt %>% 
   dplyr::select(c("hv001", "name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% c(ibdmeioticsmpls))
+  dplyr::filter(name %in% unique(c(ibD.meiotic$smpl1, ibD.meiotic$smpl2)))
 
 urban.pts <- urban.pts %>% 
   dplyr::filter(!duplicated(hv001)) %>% 
@@ -426,338 +424,234 @@ for (i in 1:nrow(urban.pts)) {
   )
 }
 
+# final urban obj
 urban.pts <- urban.pts %>% 
   dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
                 latnum = sf::st_coordinates(geometry)[,2],
                 urbanmean = urbanmean)
 sf::st_geometry(urban.pts) <- NULL
 
-```
-
-```{r}
+# make plot
 ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth +
-  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") +
+  prettybasemap_nodrc_nonorth_dark +
   geom_curve(alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf)) +
   geom_point(data = urban.pts, aes(x = longnum, y = latnum), 
-             size = 2, shape = 21, stroke = 0.5, fill = NA) +
+             size = 2, shape = 21, stroke = 0.3, fill = NA) +
   scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) 
 
-
-# potential manuscript gigure
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_meiotic_urbanicity_raster.jpg",
-     height = 8, width = 8, units = "in", res = 500)
-plot(ibD.meiotic_plot_urbanrstr)
-graphics.off()
-
-
 ```
 
 ```{r, results='asis'}
 plot(ibD.meiotic_plot_urbanrstr)
 ```
 
-```{r, results='asis'}
-ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>% 
-  tidygraph::activate(., "edges") %>% 
-  tibble::as_tibble(.) %>% 
-  ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_dark +
-  geom_curve(alpha = 0.5, size = 1.1,
-             aes(x = long_jitter.x, y = lat_jitter.x, 
-                 xend = long_jitter.y, yend = lat_jitter.y, 
-                 color = malecotf)) +
-  geom_point(data = urban.pts, aes(x = longnum, y = latnum, 
-                                   fill = urbanmean, shape = factor(urban_rura)), 
-             size = 2) +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), color = "#f0f0f0") + 
-  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
-                           hjust = 0.5, vjust = 0.5, nudge_y = 0.3, fontface = "bold", color = "#f0f0f0") +
-  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) +
-  scale_fill_distiller("Mean Urbanicity", type = "div", palette = "RdYlBu") +
-  scale_shape_manual("Urban-Rural", values = c(21, 24))
-
-
-```
-
-```{r, results='asis'}
-plot(ibD.meiotic_plot)
-```
-
-```{r, results='asis'}
+```{r}
 urban.cities <- ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_nonorth_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA) +
-  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu") 
-
-jpgsnapshot(outpath = "~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_cities_citylights_raster.jpg",
+  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, stroke = 0.3, fill = NA) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) 
+jpgsnapshot(outpath = "results/figures/DRC_cities_citylights_raster.jpg",
             plot = urban.cities)
+```
+
+```{r, results='asis'}
+plot(urban.cities)
 ```
 
 
 
 
 
-
-
-
-
-### Meiotic Siblings and Prevalence
-#### Visualization of IBD & Prevalence
+## Meiotic Siblings and Incidence
 
 ```{r, results='asis'}
-
 #.............
-# Pf Prevalence
+# Pf Incidence
 #.............
-parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/parasiterate.grd")
+parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/pfincidence.grd")
 
-ge <- sf::st_as_sf(readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>% 
-  magrittr::set_colnames(tolower(colnames(.))) %>% 
-  dplyr::rename(hv001 = dhsclust) %>% 
-  dplyr::select(c("hv001", "urban_rura"))
-
-# extract out coordinate information and join in prevdata
-prev.pts.meiotic <- mtdt %>% 
+#...................... 
+# extract incidence data per cluster
+#......................
+# extract out coordinate information and join in incidence data
+incid.pts.meiotic <- mtdt %>% 
   dplyr::select(c("hv001", "name", "longnum", "latnum")) %>% 
-  dplyr::filter(name %in% c(ibdmeioticsmpls))
+  dplyr::filter(name %in% unique(c(ibD.meiotic$smpl1, ibD.meiotic$smpl2)))
 
-prev.pts.meiotic <- prev.pts.meiotic %>% 
+incid.pts.meiotic <- incid.pts.meiotic %>% 
   dplyr::left_join(., ge, by = "hv001") %>% 
   dplyr::mutate(urban_rura_ext = ifelse(urban_rura == "R", 10000, 2000))
 
-
-
 # cluster 54 has missing when just 2km -- extend to 6km 
-prev.pts.meiotic$urban_rura_ext[prev.pts.meiotic$hv001 == 54] <- 6000
+incid.pts.meiotic$urban_rura_ext[incid.pts.meiotic$hv001 == 54] <- 6000
+# convert to geom
+incid.pts.meiotic <- sf::st_as_sf(incid.pts.meiotic, coords = c("longnum", "latnum"), crs = 4326)
 
-prevmean <- rep(NA, nrow(prev.pts.meiotic)) 
-for (i in 1:nrow(prev.pts.meiotic)) {
-  prevmean[i] <-  raster::extract(x = parasiterate,
-                                  y = sf::as_Spatial(prev.pts.meiotic$geometry[i]),
-                                  buffer = prev.pts.meiotic$urban_rura_ext[i],
+incidmean <- rep(NA, nrow(incid.pts.meiotic)) 
+for (i in 1:nrow(incid.pts.meiotic)) {
+  incidmean[i] <-  raster::extract(x = parasiterate,
+                                  y = sf::as_Spatial(incid.pts.meiotic$geometry[i]),
+                                  buffer = incid.pts.meiotic$urban_rura_ext[i],
                                   fun = mean, na.rm = T
   )
 }
 
-prev.pts.meiotic <- prev.pts.meiotic %>% 
-  dplyr::mutate(long = sf::st_coordinates(geometry)[,1],
-                lat = sf::st_coordinates(geometry)[,2],
-                prevmean = prevmean) 
-
-prev.pts <- prev.pts.meiotic %>% 
-  dplyr::select(c("hv001", "long", "lat", "prevmean")) %>% 
+incid.pts.meiotic <- incid.pts.meiotic %>% 
+  dplyr::mutate(longnum = sf::st_coordinates(geometry)[,1],
+                latnum = sf::st_coordinates(geometry)[,2],
+                incidmean = incidmean) 
+# subset to final object
+incid.pts <- incid.pts.meiotic %>% 
+  dplyr::select(c("hv001", "longnum", "latnum", "incidmean")) %>% 
   dplyr::filter(!duplicated(.))
 
-```
-
-```{r, results='asis'}
-ibD.meiotic_plot <- ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+ibD.meiotic_plot_prev <- ibD.meiotic.network %>% 
+  tidygraph::activate(., "edges") %>% 
+  tibble::as_tibble(.) %>% 
+  ggplot() +
   ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
-  scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
-  prettybasemap_nodrc_dark + 
-  geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
+  scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+  geom_curve(alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf)) +
-  geom_point(data = prev.pts, aes(x = longnum, y = latnum), 
-             size = 2, shape = 21, stroke = 0.1, fill = NA) +
+  geom_point(data = incid.pts, aes(x = longnum, y = latnum), 
+             size = 2, shape = 21, stroke = 0.3, fill = NA) +
   scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) 
 
 
-plot(ibD.meiotic_plot)
 ```
-```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic_prevalence_raster.jpg",
-     height = 8, width = 8, units = "in", res = 500)
-plot(ibD.meiotic_plot)
-graphics.off()
+```{r, results='asis'}
+plot(ibD.meiotic_plot_prev)
 ```
 
-```{r}
 
-ibD.meiotic_plot <- ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_dark +
-  geom_curve(data = ibD.meiotic.network.edges, alpha = 0.5, size = 1.1,
+```{r}
+# potential mauscript figure
+# want to move legend around so rewriting this
+# urban
+ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>% 
+  tidygraph::activate(., "edges") %>% 
+  tibble::as_tibble(.) %>% 
+  ggplot() +
+  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+  geom_curve(alpha = 0.5, size = 1, show.legend = F,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf)) +
-  geom_point(data = prev.pts, aes(x = longnum, y = latnum, 
-                                  fill = prevmean), 
-             size = 2, shape = 21, stroke = 0) +
-  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) +
-  scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") 
+  geom_point(data = urban.pts, aes(x = longnum, y = latnum), 
+             size = 2, shape = 21, stroke = 0.3, fill = NA)  +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1)
 
-plot(ibD.meiotic_plot)
-```
+# incidence 
+ibD.meiotic_plot_incidence <- ibD.meiotic.network %>% 
+  tidygraph::activate(., "edges") %>% 
+  tibble::as_tibble(.) %>% 
+  ggplot() +
+  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
+  scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+  geom_curve(alpha = 0.5, size = 1, show.legend = F,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf)) +
+  geom_point(data = incid.pts, aes(x = longnum, y = latnum), 
+             size = 2, shape = 21, stroke = 0.3, fill = NA)  +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1)
 
-```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/DRC_network_abovemeitic_prevalence_points.jpg",
-     height = 8, width = 8, units = "in", res = 500)
-plot(ibD.meiotic_plot)
+
+
+
+# legend dummy plot obj
+legend_dummy <- ibD.meiotic.network %>% 
+  tidygraph::activate(., "edges") %>% 
+  tibble::as_tibble(.) %>% 
+  ggplot() +
+  geom_curve(alpha = 0.5, size = 1,
+             aes(x = long_jitter.x, y = lat_jitter.x, 
+                 xend = long_jitter.y, yend = lat_jitter.y, 
+                 color = malecotf)) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) 
+
+legend <- cowplot::get_legend(legend_dummy +  
+                                theme(legend.position = "bottom",
+                                      legend.text = element_text(family = "Helvetica", size = 11, face = "bold", angle = 45)))
+
+#...................... 
+# bring together
+#......................
+firstrow <- cowplot::plot_grid(ibD.meiotic_plot_urbanrstr, ibD.meiotic_plot_incidence,
+                               nrow = 1, labels = c("(A)", "(B)"), align = "h")
+meiotic_sib_covarplot <- cowplot::plot_grid(firstrow, legend, ncol = 1, rel_heights = c(1, 0.1))
+
+
+# figure out
+jpeg("results/figures/meiotic_sib_covars.jpg", width = 11, height = 8, units = "in", res = 800)
+plot(meiotic_sib_covarplot)
 graphics.off()
 
-
-```
-
-#### Edge Density and Prevalence
-```{r}
-#..............................................................
-# meiotics between
-#..............................................................
-ibD.long.meioticbtwn <- ibD %>%
-  dplyr::filter(malecotf >= 0.5) %>%
-  dplyr::filter(hv001.x != hv001.y) %>%
-  expand_distance_matrix(.) %>%
-  dplyr::select(c("smpl1", "smpl2", "malecotf", "hv001.x", "hv001.y"))
-
-node.edge.dens.weighted.meioticbtwn <- ibD.long.meioticbtwn %>%
-  dplyr::group_by(smpl1) %>%
-  dplyr::summarise(
-    n = n(),
-    F_wi = mean(malecotf)) %>% # \sum edge * malecotf (NB each edge is 1)
-  dplyr::rename(name = smpl1)
-
-
-node.edge.dens.weighted.meioticbtwn.prev <-
-  dplyr::left_join(node.edge.dens.weighted.meioticbtwn,
-                   prev.pts.meiotic,
-                   by = "name")
-
-
-
-plotObj.meioticbtwn <- node.edge.dens.weighted.meioticbtwn.prev %>%
-  ggplot() +
-  geom_point(aes(x = prevmean, y = F_wi)) +
-  plot_theme +
-  xlab("Parasite Rate") +
-  ylab("Weighted Edge Density")
-
-```
-```{r, results='asis'}
-plot(plotObj.meioticbtwn)
-```
-
-##### Edge Dens. Prev. Urb
-```{r}
-node.edge.dens.weighted.meioticbtwn.prev.urb <- 
-  dplyr::left_join(node.edge.dens.weighted.meioticbtwn.prev,
-                   urban.bi.coords.pts, by = "name")
-
-plotObj.meioticbtwn.urb.prev <- node.edge.dens.weighted.meioticbtwn.prev.urb %>%
-  dplyr::mutate(urban_fct = factor(urban, levels = c(0, 1), labels = c("Rural", "Urban"))) %>% 
-  ggplot() +
-  geom_point(aes(x = prevmean, y = F_wi)) +
-  facet_wrap(. ~ urban_fct) +
-  plot_theme +
-  xlab("Parasite Rate") +
-  ylab("Weighted Edge Density")
-
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/Prev_Urban_Edge_dens_meiotics_plot.jpg",
-     height = 8, width = 11, units = "in", res = 500)
-plot(plotObj.meioticbtwn.urb.prev)
+svglite::svglite("results/figures/meiotic_sib_covars.jpg", width = 11, height = 8)
+plot(meiotic_sib_covarplot)
 graphics.off()
 
 ```
 ```{r, results='asis'}
-plot(plotObj.meioticbtwn.urb.prev)
+plot(meiotic_sib_covarplot)
 ```
 
-
+## Covar Correlation
+Correlation between urbanicity and incidence.
 ```{r}
-urb.edge.dcortest.all <-
-  energy::dcor.test(node.edge.dens.weighted.meioticbtwn.prev.urb$F_wi,
-                    node.edge.dens.weighted.meioticbtwn.prev.urb$prevmean,
-                    R = 1e4)
-urb.edge.dcortest.all
+covar.rasterstack.derived <- readRDS("data/derived_data/covar_rasterstack_derived.RDS")
+combraster <- covar.rasterstack.derived$incidence + covar.rasterstack.derived$urban 
+
+combraster_plotObj <- ggplot() +
+  ggspatial::layer_spatial(data = combraster, aes(fill = stat(band1))) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  smpl_bckgrnd +
+  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
+  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, stroke = 0.3, fill = NA) +
+  scale_fill_distiller("Combined Raster of \n Incidence & Urbanicity", type = "div", palette = "RdYlBu", na.value = NA)
+
+# out
+jpgsnapshot(outpath = "results/figures/DRC_incidence_urban_raster_combined.jpg",
+            plot = combraster_plotObj)
+```
+```{r, results='asis'}
+plot(combraster_plotObj)
 ```
 
 
 ```{r, results='asis'}
-urb.edge.dcortest.urban <-
-  energy::dcor.test(node.edge.dens.weighted.meioticbtwn.prev.urb$F_wi[node.edge.dens.weighted.meioticbtwn.prev.urb$urban == 1],
-                    node.edge.dens.weighted.meioticbtwn.prev.urb$prevmean[node.edge.dens.weighted.meioticbtwn.prev.urb$urban == 1],
-                    R = 1e4)
-urb.edge.dcortest.urban
-```
-
-```{r, results='asis'}
-urb.edge.dcortest.rural <-
-  energy::dcor.test(node.edge.dens.weighted.meioticbtwn.prev.urb$F_wi[node.edge.dens.weighted.meioticbtwn.prev.urb$urban == 0],
-                    node.edge.dens.weighted.meioticbtwn.prev.urb$prevmean[node.edge.dens.weighted.meioticbtwn.prev.urb$urban == 0],
-                    R = 1e4)
-urb.edge.dcortest.rural
-```
-
-
-
-
-```{r, results='asis'}
-node.edge.dens.weighted.meioticbtwn.prev.urb %>% 
-  dplyr::select(c("name", "n", "F_wi", "hv001", "prevmean", "urban")) %>% 
-  DT::datatable(.,
-                rownames = F,
-                options = list(
-                  searching = F,
-                  pageLength = 15,
-                  dom = 'Bfrtip',
-                  buttons = c('csv')))
-
-```
-
-
-
-##### Local Transmission and Prevalence
-```{r, results='asis'}
-
-ibD.meiotic_plot <- ggplot() +
+ggplot() +
   ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#525252", fill = NA, size = 0.05) +
-  scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
+  scale_fill_distiller("MAP Pf Incidence \n and Cities", type = "div", palette = "RdYlBu", na.value = NA) +
   prettybasemap_nodrc_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum)) 
-
-plot(ibD.meiotic_plot)
+  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA, stroke = 0.3) 
 
 ```
 
-
-```{r}
-
-local.trnsm.events <- ibD.meiotic.network %>% 
-  tidygraph::activate(., "edges") %>% 
-  dplyr::filter(hv001.x == hv001.y)
-
-ibD.meiotic_plot <- ggplot() +
-  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
-  geom_sf(data = DRCprov, color = "#525252", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_dark +
-  scale_fill_distiller("MAP Pf PR", type = "div", palette = "RdYlBu") +
-  geom_point(data = local.trnsm.events, 
-             aes(x = longnum.x, y = latnum.x),
-             color = "#54278f", alpha = 0.5) +
-  ggtitle("Local Transmission and Prev") 
-
-
-```
-```{r, results='asis'}
-plot(ibD.meiotic_plot)
-```
 
