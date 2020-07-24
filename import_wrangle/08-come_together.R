@@ -37,11 +37,11 @@ rstrscovars <- list(
 
 #..........................................................
 # Let's make same resolution and extent
-# want 0.05 which is precip, so will use that one
+# want 0.05 which is urban, so will use that one
 #..........................................................
 rstrscovars.res <- lapply(rstrscovars, function(x){
   ret <- raster::projectRaster(x,
-                               precip)
+                               urban)
   return(ret)
 })
 
@@ -58,7 +58,7 @@ names(covar.rasterstack.raw) <- c("incidence", "urban")
 #..........................................................
 covar.rasterstack.derived <- covar.rasterstack.raw
 # proportion back to real line
-values(covar.rasterstack.derived$incidence) <-  logit(values(covar.rasterstack.derived$incidence), tol = 1e-3)
+values(covar.rasterstack.derived$incidence)[!is.na(values(covar.rasterstack.derived$incidence))] <-  logit(values(covar.rasterstack.derived$incidence)[!is.na(values(covar.rasterstack.derived$incidence))], tol = 1e-3)
 # note urbanicity from PCA so already scaled
 
 #..........................

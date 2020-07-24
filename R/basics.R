@@ -23,7 +23,7 @@ pretty_DT_tab <- function(df) {
 summ_var <- function(df, x, groupingvar) {
   p1 <- df %>%
     dplyr::group_by_at(groupingvar) %>%
-    summarise_at(x, .funs = c(min = min, mean = mean, median = median, max = max))
+    summarise_at(x, .funs = c(n = length, min = min, mean = mean, median = median, max = max))
   p2 <- df %>%
     dplyr::group_by_at(groupingvar) %>%
     summarise_at(x, .funs = c(LQ95 = quantile), probs = c(0.025))
