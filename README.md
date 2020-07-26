@@ -1,6 +1,6 @@
 # Spatial patterns of Genetic Relatedness in the Democratic Republic of the Congo Driven by Human Movement
 
-The structure of this research compendium loosely follows the framework of an R-package for reproducing our analysis in line with the framework described by the [ROpenSci Team](https://github.com/ropensci/rrrpkg).  
+The structure of this research compendium loosely follows the framework of an "R-project" described by the [ROpenSci Team](https://github.com/ropensci/rrrpkg) for reproducibility.
 
 An overview of the compendium is below: 
 ```
