@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 """
-Master script for running MVN RF
+Master script for running Malecot's Spatial Gradient Descent
 """
 
 from __future__ import print_function
@@ -45,6 +45,9 @@ rule params_out:
 		Rscript --max-ppsize=500000 --vanilla \
 			R/clst_inb_coeff_run.R \
 			--mastermap {input} \
+			--seed 48 \
+			--mlowerbound 1e-25 \
+			--mupperbound 5e-4 \
 			-O {output} \
 			>& {log}
 		"""

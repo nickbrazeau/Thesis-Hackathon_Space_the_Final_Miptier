@@ -1,0 +1,82 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Supplement: Province IBD Overview
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+```{r}
+source("R/pairwise_helpers.R")
+library(tidyverse)
+```
+```{r}
+# load pretty map aesthetics 
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds")) 
+load("data/map_bases/space_mips_maps_bases.rda")
+source("R/themes")
+#...................... 
+# metadata
+#......................
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
+  magrittr::set_colnames(tolower(colnames(.))) %>%
+  dplyr::select(c("name", "country", "hv001", "adm1name", "longnum", "latnum"))
+
+#...................... 
+# import and quick manip of genetic data
+#......................
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+
+
+ibD.long.prov <- ibD %>% 
+  dplyr::select(c("adm1name.x", "adm1name.y", "malecotf")) %>% 
+  expand_distance_matrix(.)
+```
+
+
+## Between-Prov IBD Comparisons
+```{r, results='asis'}
+
+prov_plot <- ibD.long.prov %>%
+  dplyr::group_by_at(c("adm1name.x", "adm1name.y")) %>% 
+  dplyr::summarise(
+    meanIBD = mean(malecotf)
+  ) %>% 
+  dplyr::mutate(adm1name.x = factor(adm1name.x),
+                adm1name.y = factor(adm1name.y)) %>%
+  ggplot() +
+  geom_tile(aes(x=adm1name.x, y=adm1name.y, fill = meanIBD)) +
+  scale_fill_viridis_c("IBD") +
+  theme_minimal() +
+  theme(
+    axis.title = element_blank(),
+    axis.text.y = element_text(vjust = 0.5, hjust = 1, size = 11, face = "bold"),
+    axis.text.x = element_text(vjust = 0.5, hjust = 1, size = 11, face = "bold", angle = 90),
+    legend.position = "none",
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+```
+
+## Within-Prov IBD Comparisons
+```{r, results='asis'}
+# make map
+ibD.long.prov %>%
+  dplyr::group_by(adm1name.x) %>% 
+  dplyr::summarise(
+    meanwthnIBD = mean(malecotf)
+  ) %>% 
+  dplyr::mutate(adm1name = factor(adm1name.x)) %>%
+  dplyr::left_join(DRCprov, ., by = "adm1name") %>% 
+  ggplot() +
+  geom_sf(aes(fill = meanwthnIBD), 
+          color = "#525252", size = 0.05) +
+  scale_fill_viridis_c("Within IBD") +
+  prettybasemap_nodrc_dark 
+
+```

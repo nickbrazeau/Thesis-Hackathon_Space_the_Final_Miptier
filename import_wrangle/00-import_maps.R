@@ -53,11 +53,6 @@ brdrcnt <- lapply(c("UGA", "SSD", "CAF", "COG", "AGO", "ZMB", "TZA", "RWA", "BDI
 
 drcadm0 <- raster::getData(name = "GADM", country = "COD", level = 0, path = "data/map_bases/gadm/")
 
-#..............................
-# Pull down ocean
-#..............................
-# https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_ocean.zip
-oceans <- sf::st_read("data/map_bases/ne_10m_ocean/ne_10m_ocean.shp")
 
 #---------------------------------------------------------------------------------
 # write out lists of map bases for later plotting
@@ -76,7 +71,6 @@ prettybasemap_nodrc <- list(
   geom_sf(data = brdrcnt[[10]], fill = "#f0f0f0", lwd = 0.5),
   geom_sf(data = brdrcnt[[11]], fill = "#f0f0f0", lwd = 0.5),
   geom_sf(data = brdrcnt[[12]], fill = "#f0f0f0", lwd = 0.5),
-  geom_sf(data = oceans, fill = "#9ecae1"),
   # geom_sf(data = DRCprov, fill = "NA"),
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
            ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
@@ -86,7 +80,7 @@ prettybasemap_nodrc <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 
@@ -104,7 +98,6 @@ prettybasemap_nodrc_nonorth <- list(
   geom_sf(data = brdrcnt[[10]], fill = "#f0f0f0", lwd = 0.5),
   geom_sf(data = brdrcnt[[11]], fill = "#f0f0f0", lwd = 0.5),
   geom_sf(data = brdrcnt[[12]], fill = "#f0f0f0", lwd = 0.5),
-  geom_sf(data = oceans, fill = "#9ecae1"),
   # geom_sf(data = DRCprov, fill = "NA"),
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
            ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
@@ -113,7 +106,7 @@ prettybasemap_nodrc_nonorth <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 prettybasemap_nodrc_dark <- list(
@@ -129,7 +122,6 @@ prettybasemap_nodrc_dark <- list(
   geom_sf(data = brdrcnt[[10]], fill = "#525252", color = "#737373", lwd = 0.5),
   geom_sf(data = brdrcnt[[11]], fill = "#525252", color = "#737373", lwd = 0.5),
   geom_sf(data = brdrcnt[[12]], fill = "#525252", color = "#737373", lwd = 0.5),
-  geom_sf(data = oceans, fill = "#9ecae1"),
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
            ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
            datum = NA),
@@ -138,7 +130,7 @@ prettybasemap_nodrc_dark <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite  theme
 )
 
 prettybasemap_nodrc_nonorth_dark <- list(
@@ -154,7 +146,6 @@ prettybasemap_nodrc_nonorth_dark <- list(
   geom_sf(data = brdrcnt[[10]], fill = "#525252", color = "#737373", lwd = 0.5),
   geom_sf(data = brdrcnt[[11]], fill = "#525252", color = "#737373", lwd = 0.5),
   geom_sf(data = brdrcnt[[12]], fill = "#525252", color = "#737373", lwd = 0.5),
-  geom_sf(data = oceans, fill = "#9ecae1"),
   coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
            ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
            datum = NA),
@@ -171,7 +162,8 @@ prettybasemap_nodrc_nonorth_dark <- list(
 #----------------------------------------------------------------------------------------------------
 # Save Objects & Write out
 #----------------------------------------------------------------------------------------------------
-save(prettybasemap_nodrc,
+save(smpl_bckgrnd,
+     prettybasemap_nodrc,
      prettybasemap_nodrc_nonorth,
      prettybasemap_nodrc_dark,
      prettybasemap_nodrc_nonorth_dark,

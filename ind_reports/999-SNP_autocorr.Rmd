@@ -4,26 +4,23 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Autocorrelation among Markers
+# Supplement: Autocorrelation among Markers
 In this analysis, we will look at the autocorrelation (as a proxy of linkage disequilibrium) among our SNPs. 
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
                       fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
 ```
 ```{r}
 library(tidyverse)
 library(vcfR)
-remotes::install_github("IDEELResearch/vcfRmanip")
 library(vcfRmanip)
-library(grid)
 ```
 
 ```{r}
-vcf.DRC <- vcfR::read.vcfR("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
+vcf.DRC <- vcfR::read.vcfR("data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
 LDcalc_vcf_DRC <- vcfRmanip::genautocorr(vcfR = vcf.DRC, biallelicsnps = T)
-
-
 ```
 
 ```{r}
@@ -52,8 +49,6 @@ colnames(CHROMPOS)[3] <- "item1"
 LDcorrmatdf <- dplyr::left_join(LDcorrmatdf, CHROMPOS, by = c("CHROM", "item1"))
 colnames(CHROMPOS)[3] <- "item2" 
 LDcorrmatdf <- dplyr::left_join(LDcorrmatdf, CHROMPOS, by = c("CHROM", "item2"))
-
-
 
 ```
 
@@ -107,10 +102,8 @@ LDcorrmatdf.plotObj <- LDcorrmatdf %>%
     panel.grid = element_blank()
     )
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/LD_snp_correlationplot.jpg",
-     height = 8, width = 11, units = "in", res = 500)
-plot(LDcorrmatdf.plotObj)
-graphics.off()
+jpgsnapshot(outpath = "~/Documents/GitHub/Space_the_Final_Miptier/results/figures/LD_snp_correlationplot.jpg",
+            plot = LDcorrmatdf.plotObj)
 
 ```
 ```{r, results='asis'}
@@ -137,6 +130,4 @@ LDcorrmatdf %>%
 ```
 
 
-
-<!-- words -->
 

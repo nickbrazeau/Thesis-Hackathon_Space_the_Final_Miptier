@@ -1,0 +1,120 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Within Household Comparisons
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+```{r}
+library(tidyverse)
+library(ggridges)
+library(cowplot)
+source("R/themes.R")
+source("R/basics.R")
+source("R/pairwise_helpers.R")
+# load pretty map aesthetics 
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+load("data/map_bases/space_mips_maps_bases.rda")
+
+# load data
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
+  dplyr::select(c("name", "barcode", "hv001", "longnum", "latnum"))
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+# dhs in data -- hv002, households
+dhsind <- readRDS("data/derived_data/DHS_qPCR_DRCsmpls_geo.rds") %>% 
+  dplyr::mutate(barcode = toupper(barcode)) %>% 
+  dplyr::filter(barcode %in% mtdt$barcode)
+
+```
+
+
+```{r}
+#...................... 
+# pull in household ID information
+#......................
+house.x <- dhsind %>% 
+  dplyr::rename(barcode.x = barcode) %>% 
+  dplyr::select(c("barcode.x", "hv002", "U5_O5"))
+house.y <- dhsind %>% 
+  dplyr::rename(barcode.y = barcode) %>% 
+  dplyr::select(c("barcode.y", "hv002", "U5_O5"))
+
+ibD.house <- ibD %>% 
+  dplyr::select(c("barcode.x", "barcode.y", "malecotf")) %>% 
+  dplyr::left_join(., house.x, by = "barcode.x") %>% 
+  dplyr::left_join(., house.y, by = "barcode.y") %>% 
+  dplyr::mutate(hv002.x = factor(hv002.x),
+                hv002.y = factor(hv002.y))
+
+#...................... 
+# manipulate for a plotting figure
+#......................
+allhouses <- ibD.house %>% 
+  dplyr::mutate(lvl = "All")
+betweenhouses <- ibD.house %>% 
+  dplyr::filter(hv002.x != hv002.y) %>% 
+  dplyr::mutate(lvl = "Between")
+withinhouses <- ibD.house %>% 
+  dplyr::filter(hv002.x == hv002.y) %>% 
+  dplyr::mutate(lvl = "Within")
+
+# combine
+combhouses <- dplyr::bind_rows(allhouses, betweenhouses, withinhouses)
+# drop missing from O5s
+combhouses <- combhouses %>% 
+   dplyr::filter(!is.na(hv002.x)) %>%
+  dplyr::filter(!is.na(hv002.y)) %>% 
+  dplyr::mutate(lvl = factor(lvl, levels = c("Within", "Between", "All")))
+
+```
+
+## Caveats
+**_N.B._, children over the age of 5-years do not have household data.**  
+Subsetting to pairs with relatedness. 
+
+```{r}
+plotA <- combhouses %>% 
+  dplyr::filter(malecotf > 0) %>% 
+  ggplot() + 
+  ggridges::geom_density_ridges(aes(x = malecotf, y = lvl, fill = lvl), color = "transparent") +
+  scale_fill_manual(values = c("#FEC907", "#30ADE5", "#7CBB15")) +
+  plot_theme + 
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        axis.text = element_text(family = "Helvetica", face = "bold", size = 12))
+
+plotB <- combhouses %>% 
+  dplyr::filter(malecotf > 0) %>% 
+  ggplot() + 
+  ggridges::geom_density_ridges(aes(x = malecotf, y = lvl, fill = lvl), color = "transparent") +
+  scale_fill_manual(values = c("#FEC907", "#30ADE5", "#7CBB15")) +
+  xlim(c(0,0.1)) + 
+  plot_theme + 
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        axis.text = element_text(family = "Helvetica", face = "bold", size = 12))
+
+# out
+combplot <- cowplot::plot_grid(plotA, plotB, 
+                               align = "h", nrow = 1, labels = c("(A)", "(B)"))
+
+jpgsnapshot(outpath = "results/figures/household_IBD.jpg", plot = comblot)
+
+```
+``````{r, results='asis'}
+plot(combplot)
+```
+```{r, results='asis'}
+
+combhouses %>% 
+  dplyr::filter(malecotf > 0) %>% 
+  summ_var(., x = "malecotf", groupingvar = "lvl") %>% 
+  pretty_DT_tab(.)
+
+```

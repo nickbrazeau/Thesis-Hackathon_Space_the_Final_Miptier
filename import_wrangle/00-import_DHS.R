@@ -39,6 +39,7 @@ pr <- readRDS(file = "data/raw_data/dhsdata/datasets/CDPR61FL.rds")
 
 # fix kids barcode
 pr <- pr %>%
+  tibble::as_tibble(.) %>%
   mutate(hmid = paste(hv001, hv002, hvidx, sep = "_"),
          barcode = gsub(" ", "", sh312),
          barcode = tolower(barcode),
@@ -95,6 +96,7 @@ pfpcr <- readr::read_csv(file="/Volumes/share/1. Data/2. Data Set Processing/CD2
   dplyr::rename(pfctmean = fcq_mean)
 
 ar <- readRDS(file = "data/raw_data/dhsdata/datasets/CDAR61FL.rds") %>%
+  tibble::as_tibble(.) %>%
   dplyr::rename(hv001 = hivclust,
                 hv002 = hivnumb,
                 hvidx = hivline,

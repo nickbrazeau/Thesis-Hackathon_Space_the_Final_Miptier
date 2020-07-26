@@ -1,12 +1,14 @@
 #########################################################################
-# Purpose: Make data that will go into the cluster inbreeding map
-#
-# Author: Nicholas F. Brazeau
+# Purpose: Wrangle data for cluster inbreeding grad descent function
 #
 # Date: April 02 2020
 #########################################################################
 source("R/pairwise_helpers.R")
 library(tidyverse)
+
+#......................
+# wrangle and take to long, diagonals to 0
+#......................
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 distancematrix.cluster <- expand_distance_matrix(distancematrix.cluster)
@@ -39,11 +41,9 @@ airplanedist_gens <- ibD %>%
   dplyr::mutate(airport_distance = ifelse(hv001.x == hv001.y, 0, airport_distance),) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
-
-
-#..............................................................
+#......................
 # save out
-#..............................................................
+#......................
 dir.create("data/derived_data/clst_inbreeding_dat")
 saveRDS(as.data.frame(gcdist_gens),
         file = "data/derived_data/clst_inbreeding_dat/gcdist_gens.RDS")

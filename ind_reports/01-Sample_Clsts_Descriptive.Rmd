@@ -1,0 +1,153 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Sample and Study Site Overview 
+Basic descriptive data for samples and study location. 
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+```{r}
+library(tidyverse)
+library(sf)
+source("R/basics.R")
+```
+
+## Sample Characteristics
+Samples are combination of adults, children with a full DHS line, and children that were "accidentally" sampled (i.e. not a full DHS line -- occurred when child was slightly older than 5 yrs but a DBS was still taken). 
+```{r}
+# read base data
+drcsmpls <- readRDS("data/derived_data/sample_metadata.rds") %>% 
+  dplyr::select(c("barcode", "hv001"))
+# bring in DHS
+
+
+```
+
+## Sampling Locations
+```{r}
+#..............................................................
+# import for plotting
+#..............................................................
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+ge <- readRDS("data/derived_data/spacemips_GE.rds")
+load("data/map_bases/space_mips_maps_bases.rda")
+
+#..............................................................
+# wrangle for plot
+#..............................................................
+drcsmpls.ge <- dplyr::left_join(drcsmpls, ge, by = "hv001")
+drcsmpls.ge <- drcsmpls.ge %>% 
+  dplyr::group_by(hv001) %>% 
+  dplyr::summarise(n = n(),
+                   longnum = mean(longnum),
+                   latnum = mean(latnum)) # geocoords same w/in clust
+
+drcsmpls.ge$smpls <- "Y"
+ge.notsmpl <- ge %>% 
+  dplyr::select(c("hv001", "longnum", "latnum")) %>% 
+  dplyr::filter(!hv001 %in% drcsmpls.ge$hv001) %>% 
+  dplyr::mutate(
+    n = 1, 
+    smpls = "N"
+  )
+# bring together for plot
+ge.plotpts <- rbind.data.frame(drcsmpls.ge, ge.notsmpl)
+
+#..............................................................
+# plot
+#..............................................................
+smplocations <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts, 
+             aes(x = longnum, y = latnum, size = n, color = factor(smpls), shape = factor(smpls)), 
+             alpha = 0.8) +
+  scale_color_manual(name = "DHS Cluster", 
+                     labels = c("Not Sampled", "Sampled"),
+                     values = c("#a6bddb", "#ef3b2c")) +
+  scale_shape_manual(name = "DHS Cluster", 
+                     labels = c("Not Sampled", "Sampled"),
+                     values = c(4, 20)) +
+  scale_size("Cluster Size", range = c(1, 4)) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+jpgsnapshot(outpath = "results/figures/smplocations_clster.jpg",
+            plot = smplocations)
+```
+```{r, results='asis'}
+plot(smplocations)
+```
+```{r, results='asis'}
+roadnetworkplotObj <- readRDS("data/distance_data/roadnetworkplotObj.RDS")
+rivernetworkplotObj <- readRDS("data/distance_data/rivernetworkplotObj.RDS")
+
+
+cowplot::plot_grid(smplocations, roadnetworkplotObj, rivernetworkplotObj,
+                   nrow = 1, align = "h")
+```
+
+```{r}
+
+smplocations.nolegend <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts, 
+             aes(x = longnum, y = latnum, size = n, color = factor(smpls), shape = factor(smpls)), 
+             alpha = 0.8) +
+  scale_color_manual("DHS \n Cluster", values = c("#a6bddb", "#ef3b2c")) +
+  scale_size("Cluster \n Size", range = c(1, 4)) +
+  theme(
+    legend.position = "none",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+
+distnetplot <- cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, rivernetworkplotObj,
+                                  nrow = 1, align = "h", labels = c("(A)", "(B)", "(C)"))
+
+jpgsnapshot(outpath  = "results/figures/smplocationsroad_river_clster.jpg",
+            plot = distnetplot)
+
+```
+
+## Clusters with Single Sample
+```{r}
+
+# bring together for plot
+ge.plotpts.onesample <- rbind.data.frame(drcsmpls.ge, ge.notsmpl) %>% 
+  dplyr::filter(n == 1) %>% 
+  dplyr::filter(smpls == "Y")
+
+#..............................................................
+# plot
+#..............................................................
+smplocations.onesample <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_dark +
+  geom_point(data = ge.plotpts.onesample, 
+             aes(x = longnum, y = latnum, 
+                 alpha = 0.8), color = "#ef3b2c", shape = 8) +
+  theme(
+    legend.position = "none",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11)
+  ) 
+
+jpgsnapshot(outpath  = "results/figures/smplocations_one_sample.jpg",
+            plot = smplocations.onesample)
+
+```
+```{r, results='asis'}
+plot(smplocations.onesample)
+```
+**Overall, there are `r nrow(ge.plotpts.onesample)` clusters that only have a single sample within the cluster.
+
+
