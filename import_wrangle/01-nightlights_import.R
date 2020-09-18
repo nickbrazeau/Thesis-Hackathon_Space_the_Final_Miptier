@@ -1,5 +1,5 @@
 #----------------------------------------------------------------------------------------------------
-# Purpose of this script is to wrangle
+# Purpose of this script is to import
 # the night light composite data from VIIRS
 #----------------------------------------------------------------------------------------------------
 # libraries and imports
@@ -7,9 +7,11 @@ library(tidyverse)
 library(raster)
 library(sp)
 library(sf)
-source("~/Documents/GitHub/VivID_Epi/R/00-functions_basic.R")
-# need this for bounding box
-DRC <- readRDS("data/map_bases/gadm/gadm36_COD_0_sp.rds")
+source("R/basics.R")
+# create bounding box of Central Africa for space
+caf <- as(raster::extent(10, 40,-18, 8), "SpatialPolygons")
+sp::proj4string(caf) <- "+proj=longlat +datum=WGS84 +no_defs"
+
 
 #..............................................................................
 # Night Light Raster Merge
@@ -26,13 +28,11 @@ nightlights.rstrs <- list(N0E60, N0W60, N0W180,
                           N75E60, N75W60, N75W180)
 
 nightlights.merge <- Reduce(function(...) merge(...), nightlights.rstrs)
-nightlights.drc <- raster::crop(x = nightlights.merge, y = DRC)
-#nightlights.drc <- raster::projectRaster(from = nightlights.drc, to = nightlights.drc,
-#                                         crs = sf::st_crs("+proj=utm +zone=34 +datum=WGS84 +units=m")) # want units to be m
-
+# crop for size
+nightlights.drc <- raster::crop(x = nightlights.merge, y = caf)
 
 # check values
-sum(values(nightlights.drc) < 0) # there are 2237 values less than 0 out of 44920800
+sum(values(nightlights.drc) < 0)
 # apparently these <0 values can result from too much correction https://oceancolor.gsfc.nasa.gov/forum/oceancolor/topic_show.pl?tid=5888
 # given that there are so few, I am going to set them to NA
 values(nightlights.drc)[values(nightlights.drc) < 0] <- NA
@@ -41,11 +41,5 @@ values(nightlights.drc)[values(nightlights.drc) < 0] <- NA
 dir.create("data/derived_data/nightlights/", recursive = T)
 raster::writeRaster(nightlights.drc,  filename = "data/derived_data/nightlights/drc_nightlights_raw.grd",
                     overwrite=T)
-
-
-# look at data for clusters
-summary(values(nightlights.drc))
-hist( values(nightlights.drc) )
-hist( values(nightlights.drc)[values(nightlights.drc) > 0] )
 
 

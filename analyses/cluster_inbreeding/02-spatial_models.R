@@ -9,7 +9,18 @@ source("R/basics.R")
 source("R/gauss_proc_simple_functions.R")
 library(tidyverse)
 library(PrevMap)
+
+# load pretty map aesthetics
 load("data/map_bases/space_mips_maps_bases.rda")
+# add cities for context
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
+  dplyr::select(c("hv001", "latnum", "longnum")) %>%
+  dplyr::mutate(hv001 = as.character(hv001)) %>%
+  dplyr::filter(!duplicated(.))
+drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
+  dplyr::filter(population > 350000)
+
 
 #............................................................
 # functions for spatial model
@@ -67,8 +78,8 @@ make_spat_prevmap_mod <- function(clst_inbdset, DRCprov, clsts, covar = "1", kap
     scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
     prettybasemap_nodrc_nonorth_dark +
     geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-    geom_text(data = drccites, aes(label = city, x = longnum, y=latnum),
-              hjust = 0.5, vjust = 0.5, nudge_y = 0.25, fontface = "bold",
+    ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum),
+              fontface = "bold",
               size = 3,
               alpha = 0.8)
 
@@ -90,16 +101,6 @@ clst_inbd <- readRDS("results/min_cost_inbreedingresults/min_cost_inbreedingresu
   dplyr::select(c("spacetype", "inbreed_ests")) %>%
   tidyr::unnest(cols = inbreed_ests)
 clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
-
-# add cities for context
-DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
-clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  dplyr::select(c("hv001", "latnum", "longnum")) %>%
-  dplyr::mutate(hv001 = as.character(hv001)) %>%
-  dplyr::filter(!duplicated(.))
-load("data/map_bases/space_mips_maps_bases.rda")
-drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
-  dplyr::filter(population > 350000)
 
 
 

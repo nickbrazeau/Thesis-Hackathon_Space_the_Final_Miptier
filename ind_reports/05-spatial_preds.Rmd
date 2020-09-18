@@ -1,0 +1,27 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Inbreeding Gradient Descent
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r}
+library(tidyverse)
+library(raster)
+library(cowplot)
+library(PrevMap)
+source("R/themes.R")
+source("R/basics.R")
+# load pretty map aesthetics 
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+load("data/map_bases/space_mips_maps_bases.rda")
+drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
+  dplyr::filter(population > 350000)
+
+```
