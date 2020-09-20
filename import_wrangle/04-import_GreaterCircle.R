@@ -18,5 +18,6 @@ colnames(gc) <- rownames(gc) <- ge$dhsclust
 gc.long <- broom::tidy(as.dist( gc )) %>%
   dplyr::rename(gcdistance = distance)
 
+dir.create("data/distance_data/", recursive = TRUE)
 saveRDS(gc.long, file = "data/distance_data/greater_circle_distance_forclusters.rds")
 

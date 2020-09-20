@@ -7,11 +7,13 @@ source("R/pairwise_helpers.R")
 library(tidyverse)
 
 #......................
-# wrangle and take to long, diagonals to 0
+# wrangle and take to long, diagonals to 0 for distances
 #......................
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
 distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
-distancematrix.cluster <- expand_distance_matrix(distancematrix.cluster)
+distancematrix.cluster <- expand_distance_matrix(distancematrix.cluster) %>%
+  dplyr::mutate(hv001.x = as.numeric(as.character(hv001.x)),
+                hv001.y = as.numeric(as.character(hv001.y))) # factor liftover
 
 gcdist_gens <- ibD %>%
   dplyr::left_join(., distancematrix.cluster, by = c("hv001.x", "hv001.y")) %>%
@@ -26,20 +28,18 @@ roaddist_gens <- ibD %>%
   dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, roaddistance)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
+#......................
+# wrangle migration provinces demes
+#......................
+node_pairs <- readRDS(file = "data/distance_data/vr_nodepairs_migrate_disance.rds")
 
-riverdist_gens <- ibD %>%
-  dplyr::left_join(., distancematrix.cluster, by = c("hv001.x", "hv001.y")) %>%
-  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "riverdistance")) %>%
-  dplyr::mutate(riverdistance = ifelse(hv001.x == hv001.y, 0, riverdistance)) %>%
+migrate_gens <- ibD %>%
+  dplyr::left_join(., node_pairs, by = c("hv001.x", "hv001.y")) %>%
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "PrdMIG")) %>%
+  dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, PrdMIG)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
 
-
-airplanedist_gens <- ibD %>%
-  dplyr::left_join(., distancematrix.cluster, by = c("hv001.x", "hv001.y")) %>%
-  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "airport_distance")) %>%
-  dplyr::mutate(airport_distance = ifelse(hv001.x == hv001.y, 0, airport_distance),) %>%
-  magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
 #......................
 # save out
@@ -49,10 +49,7 @@ saveRDS(as.data.frame(gcdist_gens),
         file = "data/derived_data/clst_inbreeding_dat/gcdist_gens.RDS")
 saveRDS(as.data.frame(roaddist_gens),
         file = "data/derived_data/clst_inbreeding_dat/roaddist_gens.RDS")
-saveRDS(as.data.frame(riverdist_gens),
-        file = "data/derived_data/clst_inbreeding_dat/riverdist_gens.RDS")
-saveRDS(as.data.frame(airplanedist_gens),
-        file = "data/derived_data/clst_inbreeding_dat/airplanedist_gens.RDS")
-
+saveRDS(as.data.frame(migrate_gens),
+        file = "data/derived_data/clst_inbreeding_dat/migrate_gens.RDS")
 
 

@@ -10,6 +10,22 @@
 library(tidyverse)
 library(sf)
 source("R/basics.R")
+# assume simple planar geo WGS84
+
+# create bounding box of Central Africa for envelop
+caf <- as(raster::extent(10, 40,-18, 8), "SpatialPolygons")
+caf <- sf::st_bbox(sf::st_as_sf(caf))
+caf <- matrix(
+  c(caf["xmin"], caf["ymin"],
+    caf["xmin"], caf["ymax"],
+    caf["xmax"], caf["ymax"],
+    caf["xmax"], caf["ymin"],
+    caf["xmin"], caf["ymin"]),
+  ncol = 2, byrow = T
+)
+caf <- sf::st_polygon(list(caf))
+
+# drc polygon for intersection
 DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 
 #............................................................
@@ -20,140 +36,176 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
 
 flows <- readr::read_csv("data/raw_data/worldpop/COD_5yrs_InternalMigFlows_2010/COD_5yrs_InternalMigFlows_2010.csv")
 centroids <- sf::read_sf("data/raw_data/worldpop/COD_5yrs_InternalMigFlows_2010/COD_AdminUnit_Centroids/COD_AdminUnit_Centroids.shp")
-centroids <- sf::st_transform(centroids, sf::st_crs("+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs"))
+# ggplot checek centroids
+ggplot() +
+  geom_sf(data = centroids, color = "red") +
+  ggrepel::geom_text_repel(data = centroids, aes(x = POINT_X, y = POINT_Y, label = IPUMSID))
+# some very closely overlapping points...
 
 #......................
 # voronoi tesselations from migration data
 #......................
-vr = sf::st_sfc(sf::st_voronoi(centroids, envelope = DRCprov))
+# https://stackoverflow.com/questions/45719790/create-voronoi-polygon-with-simple-feature-in-r
+vr <- sf::st_voronoi(sf::st_union(centroids), envelope = caf)
 
-
-#......................
-# cities for plotting/sanity check
-#......................
-drccities <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
-  dplyr::filter(population >= 5e4)
-# liftover for drc cities
-drccities <- drccities %>%
-  dplyr::mutate(pop_fact = cut(population, breaks = c(50e3, 100e3, 250e3, 500e3, 1e6, Inf), right = F),
-                pop_fact = factor(pop_fact, labels = c("50-100", "100-250", "250-500", "500-1,000", ">1,000")))
-
-
-airports <- readr::read_csv("data/raw_data/flight_data/hotosm_cd-airports.csv") %>%
-  dplyr::filter(type %in% c("large_airport", "medium_airport")) %>%
-  dplyr::select(c("name", "longitude_deg", "latitude_deg"))
-airports <- sf::st_as_sf(airports, coords = c("longitude_deg", "latitude_deg"), crs = 4326)
-
-
-drcadm <- raster::getData(name = "GADM", country = "COD", level = 1, path = tempdir())
-
-flows.sub <- flows %>%
-  dplyr::mutate(prdmigscaled = my.scale(PrdMIG)) %>%
-  dplyr::filter(prdmigscaled > 0)
+# quick sanity
 ggplot() +
-  geom_sf(data = sf::st_as_sf(drcadm)) +
-  #geom_point(data = mtdt, aes(x = longnum, y = latnum)) +
-  geom_curve(data = flows.sub, alpha = 0.5, size = 0.8,
-             aes(x = LONFR, y = LATFR,
-                 xend = LONTO, yend = LATTO,
-                 color = prdmigscaled)) +
-  geom_sf(data = centroids, color = "red", size = 3, alpha = 0.5) +
-  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum),
-                            hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, stroke = 0.3, fill = NA) +
-  scale_color_viridis_c()
+  geom_sf(data = vr) +
+  geom_sf(data = DRCprov, alpha = 0.25) +
+  geom_sf(data = centroids, color = "red")
 
-
+# clip to DRC polygons
+vr <- st_intersection(st_cast(vr), st_union(DRCprov))
+# sanity check
+plot(st_intersection(st_cast(vr), st_union(DRCprov)), col = 0)
+plot(centroids, add = TRUE)
 
 
 
 #............................................................
-#
+# bring together
 #...........................................................
-library(tidyverse)
-source("R/pairwise_helpers.R")
+# take back to dataframe
+vrdf <- sf::st_as_sf(vr) %>%
+  dplyr::mutate(ID = 1:nrow(.))
 
-flows <- readr::read_csv("data/raw_data/worldpop/COD_5yrs_InternalMigFlows_2010/COD_5yrs_InternalMigFlows_2010.csv") %>%
-  magrittr::set_colnames(tolower(colnames(.)))
+#......................
+# get nearest neighbor from original
+#......................
+newcentroids <- vrdf %>%
+  dplyr::mutate(centroid = sf::st_centroid(x))
 
-nodes <- unique(c(flows$NODEI, flows$NODEJ))
-lftovr <- data.frame(t(combn(nodes, 2))) %>%
-  magrittr::set_colnames(c("nodei", "nodej")) %>%
-  dplyr::mutate(id = 1:nrow(.))
-lftovr <- expand_distance_matrix(lftovr)
-
-# get diff
-flows.diff <- flows %>%
-  dplyr::left_join(., lftovr)
-flows.diff <- split(flows.diff, factor(flows.diff$id))
-flows.diff <- lapply(flows.diff, function(x) {
-  # ij - ji
-  x <- x %>%
-    dplyr::arrange(nodei)
-  ret <- x[1,] %>%
-    dplyr::select(-c("prdmig"))
-  ret$netmig <- x$prdmig[1] - x$prdmig[2]
-  return(ret) }) %>%
+ipusmid <- split(centroids, 1:nrow(centroids))
+ipusmid_match_list <- lapply(ipusmid, function(x){gcdist <- sf::st_distance(x, newcentroids$centroid)
+matchid <- newcentroids$ID[which(gcdist == min(gcdist))]
+ret <- tibble::tibble(IPUMSID = x$IPUMSID,
+                      ID = matchid)
+return(ret)
+}) %>%
   dplyr::bind_rows()
 
-# scale
-flows.diff$netmig <- flows.diff$netmig/sd(flows.diff$netmig)
+length(unique(ipusmid_match_list$IPUMSID))
+length(unique(ipusmid_match_list$ID))
+#......................
+# for three sites, where original points were close together (20, 21, 25) Knn not as clear
+#......................
+newcentroidsplotdf <- newcentroids %>%
+  dplyr::mutate(long = sf::st_coordinates(centroid)[,1],
+                lat = sf::st_coordinates(centroid)[,2]) %>%
+  dplyr::select(-c("x", "centroid"))
+st_geometry(newcentroidsplotdf) <- NULL
 
-# plotdf
-flows.diff_plotdf <- flows.diff %>%
-  # note, need to determine "correct end" for arrow
-  dplyr::mutate(long.start = ifelse(netmig > 0, lonfr, lonto),
-                lat.start = ifelse(netmig > 0, latfr, latto),
-                long.end = ifelse(netmig > 0, lonto, lonfr),
-                lat.end = ifelse(netmig > 0, latto, latfr),
-                from = ifelse(netmig > 0, nodei, nodej),
-                to = ifelse(netmig > 0, nodej, nodei))
+origcentroidsplotdf <- centroids  %>%
+  dplyr::mutate(POINT_X = sf::st_coordinates(geometry)[,1],
+                POINT_Y = sf::st_coordinates(geometry)[,2]) %>%
+  dplyr::select(-c("geometry"))
+st_geometry(origcentroidsplotdf) <- NULL
+
+
+plotdf <- dplyr::left_join(vrdf, ipusmid_match_list, by = "ID") %>%
+  dplyr::left_join(., newcentroidsplotdf, by = "ID") %>%
+  dplyr::left_join(., origcentroidsplotdf, by = "IPUMSID")
 
 ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_curve(data = flows.diff_plotdf,
-             aes(x = long.start, y = lat.start,
-                 xend = long.end, yend = lat.end,
-                 color = netmig),
+  geom_sf(data = vrdf) +
+  geom_point(data = plotdf, aes(x = long, y = lat), color = "red") +
+  geom_point(data = plotdf, aes(x = POINT_X, y = POINT_Y), color = "blue") +
+  ggrepel::geom_text_repel(data = plotdf, aes(x = long, y = lat, label = ID), color = "red") +
+  ggrepel::geom_text_repel(data = plotdf, aes(x = POINT_X, y = POINT_Y, label = IPUMSID), color = "blue")
+
+#......................
+# manually adjust some duplicates
+#......................
+dups <- ipusmid_match_list$ID[duplicated(ipusmid_match_list$ID)]
+goodmatches <- ipusmid_match_list %>%
+  dplyr::filter(! ID %in% dups)
+badmatches <- ipusmid_match_list %>%
+  dplyr::filter(ID %in% dups)
+badmatches$ID[badmatches$IPUMSID == 1] <- 21
+badmatches$ID[badmatches$IPUMSID == 38] <- 20
+badmatches$ID[badmatches$IPUMSID == 5] <- 25
+# bring together
+ipusmid_match_list <- dplyr::bind_rows(goodmatches, badmatches)
+
+
+#......................
+# bring it together
+#......................
+vrdf <- vrdf %>%
+  dplyr::left_join(., ipusmid_match_list, by = "ID") %>%
+  dplyr::select(-c("ID"))
+saveRDS(vrdf, "data/distance_data/voroni_base.RDS")
+
+
+#............................................................
+# Connect with Flows
+#...........................................................
+vrdf_from <- vrdf %>%
+  dplyr::rename(NODEI = IPUMSID,
+                poly_from = x)
+vrdf_to <- vrdf %>%
+  dplyr::rename(NODEJ = IPUMSID,
+                poly_to = x)
+
+flows <- flows %>%
+  dplyr::left_join(., vrdf_from, by = "NODEI")
+flows <- flows %>%
+  dplyr::left_join(., vrdf_to, by = "NODEJ")
+
+flows <- flows %>%
+  dplyr::mutate(PrdMIG_scaled = my.scale(PrdMIG))
+
+#......................
+# bring it together
+#......................
+saveRDS(flows, "data/distance_data/voroni_migration_flows_fromworldpop.RDS")
+
+#............................................................
+# Quick Visulatization of Flows
+#...........................................................
+source("data/map_bases/space_mips_maps_bases.rda")
+DRCprov_union <- sf::st_union(DRCprov)
+all_flows_plotObj <- flows %>%
+  dplyr:::mutate(poly_cent_from = sf::st_centroid(poly_from),
+                 poly_cent_to = sf::st_centroid(poly_to),
+                 longfr = sf::st_coordinates(poly_cent_from)[,1],
+                 latfr = sf::st_coordinates(poly_cent_from)[,2],
+                 longto = sf::st_coordinates(poly_cent_to)[,1],
+                 latto = sf::st_coordinates(poly_cent_to)[,2]) %>%
+  ggplot() +
+  geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
+  geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
+  geom_curve(aes(x = longfr, y = latfr,
+                 xend = longto, yend = latto,
+                 color = PrdMIG_scaled),
              arrow = arrow(length = unit(0.02, "npc")),
-             alpha = 0.5) +
-  geom_sf(data = centroids,
+             alpha = 0.2) +
+  geom_point(data = newcentroidsplotdf,
+             aes(x = long, y = lat),
              show.legend = F, shape = 21,
              fill = "#ffffff", color = "#000000" ) +
-  scale_color_viridis_c("Net Migration", option="plasma", direction = 1)
+  scale_color_viridis_c("Migration Rates", option="plasma", direction = 1)
 
-
-# gradient
-flows.diff.grad_plotdf <- flows.diff_plotdf %>%
-  dplyr::filter(netmig > 0.1 | netmig < -0.1)
-
-ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_curve(data = flows.diff.grad_plotdf,
-             aes(x = long.start, y = lat.start,
-                 xend = long.end, yend = lat.end,
-                 color = netmig),
+# downsize
+highflow <- quantile(flows$PrdMIG_scaled, 0.95)
+high_flows_plotObj <- flows %>%
+  dplyr::filter(PrdMIG_scaled > highflow[[1]]) %>%
+  dplyr:::mutate(poly_cent_from = sf::st_centroid(poly_from),
+                 poly_cent_to = sf::st_centroid(poly_to),
+                 longfr = sf::st_coordinates(poly_cent_from)[,1],
+                 latfr = sf::st_coordinates(poly_cent_from)[,2],
+                 longto = sf::st_coordinates(poly_cent_to)[,1],
+                 latto = sf::st_coordinates(poly_cent_to)[,2]) %>%
+  ggplot() +
+  geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
+  geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
+  geom_curve(aes(x = longfr, y = latfr,
+                 xend = longto, yend = latto,
+                 color = PrdMIG_scaled),
              arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
-  geom_sf(data = centroids,
-          show.legend = F, shape = 21,
-          fill = "#ffffff", color = "#000000" ) +
-  scale_color_viridis_c("Net Migration", option="plasma", direction = 1)
-
-
-centroids <- centroids %>%
-  dplyr::rename(nodei = IPUMSID)
-
-flows.diff.simple_plotdf <- flows.diff_plotdf %>%
-  dplyr::select(c("nodei", "nodej", "netmig")) %>%
-  expand_distance_matrix(.) %>%
-  dplyr::group_by(nodei) %>%
-  dplyr::summarise(meannetmig = mean(netmig),
-                   sdnetmig = sd(netmig)) %>%
-  dplyr::left_join(., centroids, by = "nodei")
-
-
-ggplot() +
-  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  geom_point(data = flows.diff.simple_plotdf, aes(x = POINT_X, y = POINT_Y, color = meannetmig, size = sdnetmig), alpha = 0.5) +
-  scale_color_viridis_c("Net Migration", option="plasma", direction = 1)
+  geom_point(data = newcentroidsplotdf,
+             aes(x = long, y = lat),
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) +
+  scale_color_viridis_c("Migration Rates", option="plasma", direction = 1)

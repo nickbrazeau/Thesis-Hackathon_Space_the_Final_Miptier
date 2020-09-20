@@ -10,12 +10,18 @@ library(tidyverse)
 library(sf)
 source("R/basics.R")
 set.seed(48)
-
+# create bounding box of Central Africa for space
+caf <- as(raster::extent(10, 40,-18, 8), "SpatialPolygons")
+sp::proj4string(caf) <- "+proj=longlat +datum=WGS84 +no_defs"
 #..............................................................
 # Read in Data
 #..............................................................
-travraw <- raster::raster("data/derived_data/MAPrasters/trav_acc.gri")
-fricraw <- raster::raster("data/derived_data/MAPrasters/frict.grd")
+travraw <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_accessibility_to_cities_v1.0_latest_10_.18_40_8_2020_09_18.tiff")
+fricraw <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_friction_surface_v1_Decompressed_latest_10_.18_40_8_2020_09_18.tiff")
+travraw <- raster::crop(travraw, caf)
+fricraw <- raster::crop(fricraw, caf)
+
+# nightlights cropped from earlier
 nightlightsraw <- raster::raster("data/derived_data/nightlights/drc_nightlights_raw.grd")
 # worldpop already cropped to DRC from worldpop site
 worldpopraw <- raster::raster("data/raw_data/worldpop/cod_ppp_2013.tif")
@@ -60,7 +66,6 @@ nightlights <- urbnrstr.res[[3]]
 worldpop <- urbnrstr.res[[4]]
 
 
-
 #..............................................................
 # Need to Scale Data for PCA
 #..............................................................
@@ -92,8 +97,6 @@ sd(values(nightlights), na.rm = T)
 # world pop
 summary(values(worldpop))
 hist(values(worldpop))
-# these less than zero values arose from tranformation, drop
-values(worldpop)[values(worldpop) < 0 ] <- NA
 
 # again a lot of zeroes
 worldpop <- raster::scale(worldpop, center = T, scale = T)
@@ -160,21 +163,26 @@ summary(values(urbanicity))
 #................
 # reproject
 #................
-urbanicity <- raster::projectRaster(urbanicity, crs = raster::crs("+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs"))
+urbanicity.reproj <- raster::projectRaster(urbanicity, crs = raster::crs("+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs"))
 
 
 #................
 # Out
 #................
-
 dir.create("data/derived_data/urbanicity_raster")
+# reproj
+raster::writeRaster(urbanicity.reproj,
+                    filename = "data/derived_data/urbanicity_raster/urbanicity_reproj.grd",
+                    overwrite = T)
+
+# basic
 raster::writeRaster(urbanicity,
                     filename = "data/derived_data/urbanicity_raster/urbanicity.grd",
                     overwrite = T)
 
-#..............................................................
+
+
 # Save out raw
-#..............................................................
 raster::writeRaster(urbanicity.raw,
                     filename = "data/derived_data/urbanicity_raster/urbanicity_raw_nottrunc.grd",
                     overwrite = T)

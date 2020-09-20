@@ -46,14 +46,12 @@ lrandparams <- cbind(lrandparams, learningrates)
 #..............................................................
 lrandparams.gc <- lrandparams
 lrandparams.road <- lrandparams
-lrandparams.river <- lrandparams
-lrandparams.airplane <- lrandparams
+lrandparams.migrate <- lrandparams
 lrandparams.gc$inputpath <- "data/derived_data/clst_inbreeding_dat/gcdist_gens.RDS"
 lrandparams.road$inputpath <- "data/derived_data/clst_inbreeding_dat/roaddist_gens.RDS"
-lrandparams.river$inputpath <- "data/derived_data/clst_inbreeding_dat/riverdist_gens.RDS"
-lrandparams.airplane$inputpath <- "data/derived_data/clst_inbreeding_dat/airplanedist_gens.RDS"
+lrandparams.migrate$inputpath <- "data/derived_data/clst_inbreeding_dat/migrate_gens.RDS"
 
-lrandparams <- rbind.data.frame(lrandparams.gc, lrandparams.road, lrandparams.river, lrandparams.airplane)
+lrandparams <- rbind.data.frame(lrandparams.gc, lrandparams.road,lrandparams.migrate)
 
 #..............................................................
 # split these and write them out

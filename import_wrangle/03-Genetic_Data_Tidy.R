@@ -6,16 +6,18 @@
 #-----------------------------------------------------------------------------------------------------------------------------------------
 library(tidyverse)
 library(vcfR)
+remotes::install_github("nickbrazeau/vcfRmanip")
 library(vcfRmanip)
-remotes::install_github("mrc-ide/MIPanalyzer")
+remotes::install_github("nickbrazeau/MIPanalyzer", ref = "cluster_inbreed")
 library(MIPanalyzer)
+remotes::install_github("andrewparkermorgan/rplasmodium")
 library(rplasmodium)
 
 #.................................................
 # Read in and force to monoclonal like Big Barcode MS did
 # Make compatible with pf3d7
 #.................................................
-mipbi.mip <-readRDS(file = "data/raw_data/bigbarcode_genetic_data/biallelic_processed.rds")
+mipbi.mip <- readRDS(file = "data/raw_data/bigbarcode_genetic_data/biallelic_processed.rds")
 liftover <- tibble(chrompf = rplasmodium::chromnames(genome = "pf3d7")[1:14],
                    CHROM = paste0("chr", seq(1:14)))
 mipbi.mip$loci <- dplyr::left_join(mipbi.mip$loci, liftover, by = "CHROM")
