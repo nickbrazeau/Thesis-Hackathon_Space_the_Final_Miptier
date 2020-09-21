@@ -164,7 +164,12 @@ vr_memberships <- lapply(ge, function(x){
 
 # get pairwise combos
 node_pairs <- distancesmatrix_cluster %>%
-  dplyr::select(c("hv001.x", "hv001.y")) %>%
+  dplyr::select(c("hv001.x", "hv001.y"))
+# need to expand here since moving forward we will have an asymetric distance matrix
+node_pairs.copy <- node_pairs
+colnames(node_pairs.copy) <- c("hv001.y", "hv001.x")
+node_pairs <- dplyr::bind_rows(node_pairs, node_pairs.copy) %>%
+  dplyr::filter(!duplicated(.)) %>%
   dplyr::mutate(hv001.x = as.numeric(as.character(hv001.x)),
                 hv001.y = as.numeric(as.character(hv001.y)))
 
@@ -180,16 +185,16 @@ node_pairs <- node_pairs %>%
   dplyr::rename(NODEI = IPUMSID.x,
                 NODEJ = IPUMSID.y) %>%
   dplyr::left_join(., flows, by = c("NODEI", "NODEJ")) %>%
-  dplyr::select(-c("poly_to", "poly_from"))
-
+  dplyr::select(-c("poly_to", "poly_from")) %>%
+  dplyr::mutate(PrdMIG = ifelse(NODEI == NODEJ, 0, PrdMIG))
 
 
 #................
 # Out
 #................
-vr_memberships <- vr_memberships %>%
-  dplyr::left_join(., )
-saveRDS(object = vr_memberships, file = "data/distance_data/vr_memberships.rds")
+vr_memberships_polys <- vr_memberships %>%
+  dplyr::left_join(., vrdf)
+saveRDS(object = vr_memberships_polys, file = "data/distance_data/vr_memberships.rds")
 
 saveRDS(object = node_pairs, file = "data/distance_data/vr_nodepairs_migrate_disance.rds")
 

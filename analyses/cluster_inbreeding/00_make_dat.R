@@ -31,14 +31,23 @@ roaddist_gens <- ibD %>%
 #......................
 # wrangle migration provinces demes
 #......................
+# note can't use expand_distance_matrix here bc assumes symmetrical distance matrix -- had to deal w/ upstream
 node_pairs <- readRDS(file = "data/distance_data/vr_nodepairs_migrate_disance.rds")
+# need to expand IBD here b/c of asymetry again
+ibD <- ibD %>%
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf"))
+ibD.copy <- ibD
+colnames(ibD.copy) <- c("smpl2", "smpl1", "hv001.y", "hv001.x", "malecotf")
 
-migrate_gens <- ibD %>%
+# NB, duplication filter in the Cpp inbreeding coeff calculator will
+# first allow this to be replicated (for usual symetric distances)
+# and then filter the duplicates
+ibD.long <- dplyr::bind_rows(ibD, ibD.copy)
+migrate_gens <- ibD.long %>%
   dplyr::left_join(., node_pairs, by = c("hv001.x", "hv001.y")) %>%
   dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "PrdMIG")) %>%
-  dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, PrdMIG)) %>%
+  dplyr::mutate(PrdMIG = ifelse(hv001.x == hv001.y, 0, PrdMIG)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
-
 
 
 #......................
