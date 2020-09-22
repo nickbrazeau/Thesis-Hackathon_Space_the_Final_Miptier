@@ -67,7 +67,7 @@ cafunion <- sf::st_simplify(cafunion, preserveTopology = TRUE)
 #............................................................
 
 prettybasemap_nodrc <- list(
-  geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 0.5),
+  geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
   coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
            ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
@@ -83,7 +83,7 @@ prettybasemap_nodrc <- list(
 
 
 prettybasemap_nodrc_nonorth <- list(
-  geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 0.5),
+  geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
   coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
            ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
@@ -96,7 +96,7 @@ prettybasemap_nodrc_nonorth <- list(
 )
 
 prettybasemap_nodrc_dark <- list(
-  geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
   coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
            ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
            datum = NA),
@@ -109,7 +109,7 @@ prettybasemap_nodrc_dark <- list(
 )
 
 prettybasemap_nodrc_nonorth_dark <- list(
-  geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 0.5),
+  geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
   coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
            ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
            datum = NA),
