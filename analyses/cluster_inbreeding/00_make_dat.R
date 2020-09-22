@@ -45,8 +45,8 @@ colnames(ibD.copy) <- c("smpl2", "smpl1", "hv001.y", "hv001.x", "malecotf")
 ibD.long <- dplyr::bind_rows(ibD, ibD.copy)
 migrate_gens <- ibD.long %>%
   dplyr::left_join(., node_pairs, by = c("hv001.x", "hv001.y")) %>%
-  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "PrdMIG")) %>%
-  dplyr::mutate(PrdMIG = ifelse(hv001.x == hv001.y, 0, PrdMIG)) %>%
+  dplyr::select(c("smpl1", "smpl2", "NODEI", "NODEJ", "malecotf", "PrdMIG")) %>%
+  dplyr::mutate(PrdMIG = ifelse(NODEI == NODEJ, 0, PrdMIG)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
 
