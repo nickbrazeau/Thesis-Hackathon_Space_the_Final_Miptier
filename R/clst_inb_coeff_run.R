@@ -4,10 +4,9 @@
 # Purpose of this script is to run the cluster inbreeding
 # coefficient gradient descent from MIPanalyzer
 #
-# Note, this funciton is not generalizable -- purpose is
-# project specfici
+# Note, this function is not generalizable -- purpose is
+# project specific
 #..............................................................
-#remotes::install_github("nickbrazeau/MIPanalyzer", ref = "238ccb6c47a6d9c8148122a46f0b3bfe3f2b24c3")
 library(MIPanalyzer)
 library(optparse)
 
@@ -32,6 +31,11 @@ option_list=list(
               default = NULL,
               help = paste("Upper bound for M"),
               metavar = "numeric"),
+  make_option(c("-f", "--fullmatrix"),
+              type = "logical",
+              default = NULL,
+              help = paste("Whether full matrix should be considered or not"),
+              metavar = "logical"),
   make_option(c("-O", "--output"),
               type = "character",
               default = NULL,
@@ -62,6 +66,11 @@ if(is.null(opt$mupperbound)){
   stop("Missing upper bound argument for m", call. = FALSE)
 }
 
+if(is.null(opt$fullmatrix)){
+  print_help(opt_parser)
+  stop("Missing fill matrix argument", call. = FALSE)
+}
+
 
 if(is.null(opt$output)){
   print_help(opt_parser)
@@ -75,13 +84,13 @@ set.seed(opt$seed)
 #..............................................................
 params <- readRDS(file = opt$mastermap)
 params <- unlist(params)
-snake_start_params <- as.numeric( params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath")] )
-names(snake_start_params) <- names(params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath")] )
+snake_start_params <- as.numeric( params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath", "full_matrix")] )
+names(snake_start_params) <- names(params[!names(params) %in% c("f_learningrate", "m_learningrate", "inputpath", "full_matrix")] )
 input <- params["inputpath"]
 input <- readRDS(input)
 f_learningrate <- as.numeric( params["f_learningrate"] )
 m_learningrate <- as.numeric( params["m_learningrate"] )
-
+fullmatrix <- as.logical( params["full_matrix"] )
 
 ret <- MIPanalyzer::deme_inbreeding_coef(K_gendist_geodist = input,
                                          start_params = snake_start_params,
@@ -89,6 +98,7 @@ ret <- MIPanalyzer::deme_inbreeding_coef(K_gendist_geodist = input,
                                          m_upperbound = 5e-4,
                                          f_learningrate = f_learningrate,
                                          m_learningrate = m_learningrate,
+                                         full_matrix = fullmatrix,
                                          steps = 1e4,
                                          report_progress = TRUE)
 

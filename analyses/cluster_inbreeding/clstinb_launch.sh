@@ -7,7 +7,7 @@ WAIT=30 # lag for system
 
 snakemake \
 	--snakefile $SNAKE/run_snake_spat_grad_descent.py \
-	--configfile $SNAKE/config.yaml \
+	--configfile $SNAKE/config_clust.yaml \
 	--directory $ROOT \
 	--printshellcmds \
 	--rerun-incomplete \
@@ -15,4 +15,19 @@ snakemake \
 	--latency-wait $WAIT \
 	--cluster $SNAKE/launch.py \
 	-j $NODES \
+	--nolock \
+#	--dryrun -p
+
+# voroni prov tesselations
+snakemake \
+	--snakefile $SNAKE/run_snake_spat_grad_descent.py \
+	--configfile $SNAKE/config_prov.yaml \
+	--directory $ROOT \
+	--printshellcmds \
+	--rerun-incomplete \
+	--keep-going \
+	--latency-wait $WAIT \
+	--cluster $SNAKE/launch.py \
+	-j $NODES \
+	--nolock \
 #	--dryrun -p

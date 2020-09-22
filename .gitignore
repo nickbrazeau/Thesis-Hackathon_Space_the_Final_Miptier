@@ -16,8 +16,10 @@ data/
 rdhs.json
 sandbox/
 ignore/
-results/
-sharepoint/
+results/figures/
+results/tables/
+results/clust_inbd_results/Find_grad_descent_results/
+
 
 # RStudio files
 .Rproj.user/
