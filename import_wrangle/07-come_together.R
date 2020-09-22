@@ -120,6 +120,48 @@ colnames(covar.scaled.extract) <- c("hv001", names(covar.rasterstack.derived))
 saveRDS(covar.scaled.extract, "data/derived_data/covar_rasterstack_samplinglocations_scaled.RDS")
 
 
+#..............................................................
+# Extract out for covariates at new worldpop migration voroni territories
+#..............................................................
+vrdf <- readRDS("data/distance_data/voroni_base.RDS") %>%
+  dplyr::rename(geometry = x)
+
+
+
+covar.raw.extract <- matrix(NA, nrow = nrow(vrdf),
+                            ncol = length(names(covar.rasterstack.raw)))
+for (i in 1:nrow(vrdf)){
+  covar.raw.extract[i, ] <- raster::extract(x = covar.rasterstack.raw,
+                                            y = sf::as_Spatial(vrdf$geometry[i]),
+                                            fun = mean,
+                                            na.rm = T)
+}
+
+covar.raw.extract <- cbind.data.frame(IPUMSID = vrdf$IPUMSID, covar.raw.extract)
+colnames(covar.raw.extract) <- c("IPUMSID", names(covar.rasterstack.raw))
+saveRDS(covar.raw.extract, "data/derived_data/covar_rasterstack_provterritories_raw.RDS")
+
+#.........................
+# Scaled Covariates
+#.........................
+covar.scaled.extract <- matrix(NA, nrow = nrow(vrdf),
+                               ncol = length(names(covar.rasterstack.derived)))
+for (i in 1:nrow(vrdf)){
+  covar.scaled.extract[i, ] <- raster::extract(x = covar.rasterstack.derived,
+                                               y = sf::as_Spatial(vrdf$geometry[i]),
+                                               fun = mean,
+                                               na.rm = T)
+}
+
+covar.scaled.extract <- cbind.data.frame(IPUMSID = vrdf$IPUMSID, covar.scaled.extract)
+colnames(covar.scaled.extract) <- c("IPUMSID", names(covar.rasterstack.derived))
+saveRDS(covar.scaled.extract, "data/derived_data/covar_rasterstack_provterritories_scaled.RDS")
+
+
+
+
+
+
 #................................................................................................................................
 ####### DISTANCES - Purpose of this section is to clean up distance measures and combine them #####
 #................................................................................................................................
