@@ -31,11 +31,6 @@ option_list=list(
               default = NULL,
               help = paste("Upper bound for M"),
               metavar = "numeric"),
-  make_option(c("-f", "--fullmatrix"),
-              type = "logical",
-              default = NULL,
-              help = paste("Whether full matrix should be considered or not"),
-              metavar = "logical"),
   make_option(c("-O", "--output"),
               type = "character",
               default = NULL,
@@ -65,12 +60,6 @@ if(is.null(opt$mupperbound)){
   print_help(opt_parser)
   stop("Missing upper bound argument for m", call. = FALSE)
 }
-
-if(is.null(opt$fullmatrix)){
-  print_help(opt_parser)
-  stop("Missing fill matrix argument", call. = FALSE)
-}
-
 
 if(is.null(opt$output)){
   print_help(opt_parser)

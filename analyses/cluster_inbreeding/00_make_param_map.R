@@ -59,10 +59,10 @@ lrandparams <- rbind.data.frame(lrandparams.gc, lrandparams.road)
 # split these and write them out
 #..............................................................
 lrandparams.list <- split(lrandparams, 1:nrow(lrandparams))
-paramsnames <- paste0("paramset_", 1:length(lrandparams.list))
+paramsnames <- paste0("paramset_", 1:length(lrandparams.list), "_clust")
 
 write_out_params <- function(paramset, outname, outdir){
-  saveRDS(object = paramset, file = paste0(outdir, outname, "_clust.RDS"))
+  saveRDS(object = paramset, file = paste0(outdir, outname, ".RDS"))
 }
 
 outdir <- "data/derived_data/clst_inbreeding_dat/paramset_clust/"
@@ -102,11 +102,6 @@ fparams <- lapply(1:length(ms), function(x){return(fparams)}) %>%
 fparams <- fparams[order(fparams$`1`), ]
 # all f and m params
 prov_params <- cbind(fparams, "m" = ms)
-# prov voroni tesselation start params
-prov_lrandparams <- lapply(1:nrow(learningrates), function(x){return(prov_params)}) %>%
-  do.call("rbind.data.frame", .)
-prov_lrandparams <- prov_lrandparams[order(prov_lrandparams$`1`), ]
-prov_lrandparams <- cbind(prov_lrandparams, learningrates)
 
 #..............................................................
 # Add in Learning Rate
@@ -125,18 +120,18 @@ prov_lrandparams <- cbind(prov_lrandparams, learningrates)
 #..............................................................
 # add in inputs
 #..............................................................
-lrandparams.migrate <- prov_params
+lrandparams.migrate <- prov_lrandparams
 lrandparams.migrate$inputpath <- "data/derived_data/clst_inbreeding_dat/migrate_gens.RDS"
 lrandparams.migrate$full_matrix <- TRUE
-
+lrandparams <- lrandparams.migrate
 #..............................................................
 # split these and write them out
 #..............................................................
 lrandparams.list <- split(lrandparams, 1:nrow(lrandparams))
-paramsnames <- paste0("paramset_", 1:length(lrandparams.list))
+paramsnames <- paste0("paramset_", 1:length(lrandparams.list), "_prov")
 
 write_out_params <- function(paramset, outname, outdir){
-  saveRDS(object = paramset, file = paste0(outdir, outname, "_prov.RDS"))
+  saveRDS(object = paramset, file = paste0(outdir, outname, ".RDS"))
 }
 
 outdir <- "data/derived_data/clst_inbreeding_dat/paramset_prov/"
