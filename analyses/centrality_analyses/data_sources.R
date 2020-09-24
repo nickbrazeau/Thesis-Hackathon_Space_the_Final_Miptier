@@ -20,18 +20,24 @@ migrateflows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.
 #............................................................
 # gradient descent results
 #...........................................................
-finbd <- readRDS("results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
-finbd <- finbd %>%
+finbd <- readRDS("results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
+finbd_clust <- finbd %>%
+  dplyr::filter(spacetype != "migrate") %>%
   dplyr::select(c("spacetype", "inbreed_ests")) %>%
   tidyr::unnest(cols = "inbreed_ests") %>%
   dplyr::filter(param != "m") %>%
   dplyr::rename(hv001 = param,
                 Finbd = est)
 
-finbd.wide <- finbd %>%
-  dplyr::select(c("hv001", "Finbd", "spacetype")) %>%
-  tidyr::spread(., key = "spacetype", value = "Finbd") %>%
-  magrittr::set_colnames(c("hv001", paste0("Finbd_", colnames(.)[2:ncol(.)])))
+finbd_prov <- finbd %>%
+  dplyr::filter(spacetype == "migrate") %>%
+  dplyr::select(c("spacetype", "inbreed_ests")) %>%
+  tidyr::unnest(cols = "inbreed_ests") %>%
+  dplyr::filter(param != "m") %>%
+  dplyr::rename(hv001 = param,
+                Finbd = est)
+
+
 
 #............................................................
 # cluster covars
