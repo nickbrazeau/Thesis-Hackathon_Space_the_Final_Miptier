@@ -27,7 +27,7 @@ mastermap <- mastermap.lg %>%
 #..............................................................
 # read in data from slurm scr
 #..............................................................
-filepaths <- list.files("results/clust_inbd_results/Find_grad_descent_results",
+filepaths <- list.files("results/clust_inbd_results/Find_grad_descent_results/",
                         pattern = ".RDS", full.names = T)
 
 read_cost_results <- function(path, clstnames){
@@ -46,7 +46,7 @@ read_cost_results <- function(path, clstnames){
 }
 
 
-mastermap <- purrr::map(filepaths, read_cost_results) %>%
+mastermap_rets <- purrr::map(filepaths, read_cost_results) %>%
   dplyr::bind_rows() %>%
   dplyr::left_join(mastermap, ., by = "param_set")
 
@@ -63,7 +63,7 @@ mastermap_mincost <- mastermap %>%
 #...........................................................
 clust_inb <- mastermap_mincost %>%
   dplyr::select(c("spacetype", "mincost", "param_set")) %>%
-  dplyr::mutate(param_set = paste0("results/clust_inbd_results/", param_set, ".RDS"),
+  dplyr::mutate(param_set = paste0("results/clust_inbd_results/Find_grad_descent_results/", param_set, ".RDS"),
                 param_set = purrr::map(param_set, readRDS),
                 cost = purrr::map(param_set, "cost"))
 #......................
@@ -72,8 +72,6 @@ clust_inb <- mastermap_mincost %>%
 plot(clust_inb$cost[[1]])
 plot(clust_inb$cost[[2]])
 plot(clust_inb$cost[[3]])
-plot(clust_inb$cost[[4]])
-
 
 #......................
 # process final Inbreeding coeffs
@@ -85,7 +83,7 @@ clust_inb$inbreed_ests <- purrr::map(clust_inb$param_set, function(prmst) {
 
 
 #..............................................................
-#out
+# out
 #..............................................................
 dir.create("results/clust_inbd_results/min_cost_inbreedingresults/", recursive = TRUE)
 write_rds(x = clust_inb,

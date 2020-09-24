@@ -1,5 +1,8 @@
 library(tidyverse)
 library(sf)
+# https://github.com/rCarto/osrm
+remotes::install_github("rCarto/osrm")
+library(osrm)
 #---------------------------------------------------------------------------------------------------------------------------------------
 # Purpose of this script is to  use OSRM to calculate road
 # network distances for clusters
@@ -18,9 +21,6 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 # SPIN up Docker and start server
 # then add these options
 #..................................
-# https://github.com/rCarto/osrm
-remotes::install_github("rCarto/osrm")
-library(osrm)
 options(osrm.server = "http://0.0.0.0:5000/", osrm.profile = "driving")
 
 ge.osrm <- ge %>%
@@ -128,7 +128,7 @@ clstr469 <- left_join(clstr469, clstr313, by = "newitem2")
 clstrtrvldists.long$distance[is.na(clstrtrvldists.long$distance)] <- clstr469$distance.y
 
 # finally, find 313 and 469 comparison and set to 2e4
-clstrtrvldists.long$distance[clstrtrvldists.long$item1 == 469 & clstrtrvldists.long$item2 == 313] <- 2e4
+clstrtrvldists.long$distance[clstrtrvldists.long$item2 == 469 & clstrtrvldists.long$item1 == 313] <- 2e4
 
 
 #..................
@@ -170,7 +170,7 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 
 # plot
 roadnetworkplotObj <- ggplot() +
-  prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_nonorth_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373", size = 0.05) +
   geom_sf(data = roads.filt, fill = "#f0f0f0", color = "#f0f0f0") +
   geom_sf(data = ge, color = "#ff2e2e") +

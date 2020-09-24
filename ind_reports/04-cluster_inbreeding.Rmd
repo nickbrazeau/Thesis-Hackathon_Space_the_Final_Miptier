@@ -29,18 +29,22 @@ drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
 #...................... 
 # point
 #......................
-clst_inbd_point_plots <- readRDS(file = "results/final_clstb_maps/point_clst_inbd_plots.RDS")
-jpeg("results/figures/clust_inbd_results_alldistances_point_plot.jpg", width = 8, height = 8, units = "in", res = 800)
+clst_inbd_point_plots <- readRDS(file = "results/clust_inbd_results/final_clstb_maps/point_clst_inbd_plots.RDS")
 clust_inbd_result_point_plotObj <- cowplot::plot_grid(clst_inbd_point_plots[[1]], clst_inbd_point_plots[[2]],
                                                       clst_inbd_point_plots[[3]], clst_inbd_point_plots[[4]],
                                                       nrow = 2,
                                                       labels = c("(A)", "(B)", "(C)", "(D)"))
+
+
+# potential supp figure
+jpeg("results/figures/clust_inbd_results_alldistances_point_plot.jpg", width = 8, height = 8, units = "in", res = 800)
+plot(clust_inbd_result_point_plotObj)
 graphics.off()
 
 #...................... 
 # raster
 #......................
-clst_inbd_plots_rstr <- readRDS(file = "results/final_clstb_maps/raster_clst_inbd_plots.RDS")
+clst_inbd_plots_rstr <- readRDS(file = "results/clust_inbd_results/final_clstb_maps/raster_clst_inbd_plots.RDS")
 clust_inbd_result_rstr_plotObj <- cowplot::plot_grid(clst_inbd_plots_rstr[[1]], clst_inbd_plots_rstr[[2]],
                                                      clst_inbd_plots_rstr[[3]], clst_inbd_plots_rstr[[4]],
                                                      nrow = 2,

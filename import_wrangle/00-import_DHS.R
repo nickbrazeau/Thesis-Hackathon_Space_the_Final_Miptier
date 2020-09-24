@@ -7,7 +7,7 @@
 # libraries
 library(tidyverse)
 # DHS munging
-devtools::install_github("OJWatson/rdhs", ref="master")
+remotes::install_github("OJWatson/rdhs", ref="master")
 library(rdhs)
 
 dir.create("data/raw_data/dhsdata", recursive = T)

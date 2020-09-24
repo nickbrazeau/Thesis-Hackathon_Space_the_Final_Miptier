@@ -455,8 +455,10 @@ plot(ibD.meiotic_plot_urbanrstr)
 ```
 
 ```{r}
+# reproject for aesthetics in figure but keep simpler planar (ESP4326) for geodist calcs
+urban_reproj <- raster::projectRaster(urban, "+proj=utm +zone=34 +datum=WGS84 +units=m")
 urban.cities <- ggplot() +
-  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = urban_reproj, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   prettybasemap_nodrc_nonorth_dark +
   ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
@@ -517,12 +519,19 @@ incid.pts.meiotic <- incid.pts.meiotic %>%
 incid.pts <- incid.pts.meiotic %>% 
   dplyr::select(c("hv001", "longnum", "latnum", "incidmean")) %>% 
   dplyr::filter(!duplicated(.))
+```
+
+```{r}
+
+# reproject for aesthetics in figure but keep simpler planar (ESP4326) for geodist calcs
+parasiterate_reproj <- raster::projectRaster(parasiterate, "+proj=utm +zone=34 +datum=WGS84 +units=m")
+
 
 ibD.meiotic_plot_prev <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = parasiterate_reproj, aes(fill = stat(band1))) +
   scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   prettybasemap_nodrc_nonorth_dark +
@@ -549,7 +558,7 @@ ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>%
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = urban_reproj, aes(fill = stat(band1))) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   prettybasemap_nodrc_nonorth_dark +
@@ -566,7 +575,7 @@ ibD.meiotic_plot_incidence <- ibD.meiotic.network %>%
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = parasiterate_reproj, aes(fill = stat(band1))) +
   scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   prettybasemap_nodrc_nonorth_dark +
@@ -617,41 +626,3 @@ graphics.off()
 ```{r, results='asis'}
 plot(meiotic_sib_covarplot)
 ```
-
-## Covar Correlation
-Correlation between urbanicity and incidence.
-```{r}
-covar.rasterstack.derived <- readRDS("data/derived_data/covar_rasterstack_derived.RDS")
-combraster <- covar.rasterstack.derived$incidence + covar.rasterstack.derived$urban 
-
-combraster_plotObj <- ggplot() +
-  ggspatial::layer_spatial(data = combraster, aes(fill = stat(band1))) +
-  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  smpl_bckgrnd +
-  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
-                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, stroke = 0.3, fill = NA) +
-  scale_fill_distiller("Combined Raster of \n Incidence & Urbanicity", type = "div", palette = "RdYlBu", na.value = NA)
-
-# out
-jpgsnapshot(outpath = "results/figures/DRC_incidence_urban_raster_combined.jpg",
-            plot = combraster_plotObj)
-```
-```{r, results='asis'}
-plot(combraster_plotObj)
-```
-
-
-```{r, results='asis'}
-ggplot() +
-  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
-  geom_sf(data = DRCprov, color = "#525252", fill = NA, size = 0.05) +
-  scale_fill_distiller("MAP Pf Incidence \n and Cities", type = "div", palette = "RdYlBu", na.value = NA) +
-  prettybasemap_nodrc_dark +
-  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
-                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, fill = NA, stroke = 0.3) 
-
-```
-
-
