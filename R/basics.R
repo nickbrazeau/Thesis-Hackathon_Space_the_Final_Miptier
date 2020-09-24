@@ -77,11 +77,11 @@ my.scale <- function(x, ...){
 jpgsnapshot <- function(outpath, plot, type = "wide") {
   assert_in(type, c("long", "wide"))
   if (type == "long") {
-    jpeg(outpath, width = 8, height = 11, units = "in", res = 500)
+    jpeg(outpath, width = 8, height = 11, units = "in", res = 200)
     plot(plot)
     graphics.off()
   } else if (type == "wide") {
-    jpeg(filename = outpath, width = 11, height = 8, units = "in", res = 500)
+    jpeg(filename = outpath, width = 11, height = 8, units = "in", res = 200)
     plot(plot)
     graphics.off()
   }
