@@ -170,7 +170,7 @@ ge <- sf::st_as_sf(readRDS("data/raw_data/dhsdata/datasets/CDGE61FL.rds")) %>%
 
 # plot
 roadnetworkplotObj <- ggplot() +
-  prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_nonorth_dark +
   geom_sf(data = DRCprov, fill = "#525252", color = "#737373", size = 0.05) +
   geom_sf(data = roads.filt, fill = "#f0f0f0", color = "#f0f0f0") +
   geom_sf(data = ge, color = "#ff2e2e") +
