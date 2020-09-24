@@ -116,7 +116,7 @@ prettybasemap_nodrc_nonorth_dark <- list(
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
-        axis.title = element_blank()) # overwrite vivid theme
+        axis.title = element_blank()) # overwrite theme
 )
 
 
