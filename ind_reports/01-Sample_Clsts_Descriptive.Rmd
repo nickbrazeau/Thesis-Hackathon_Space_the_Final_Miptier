@@ -76,7 +76,7 @@ smplocations <- ggplot() +
     legend.position = "right",
     legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
     legend.text = element_text(face = "bold", size = 11),
-    plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+    plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 
 jpgsnapshot(outpath = "results/figures/smplocations_clster.jpg",
             plot = smplocations)
@@ -91,7 +91,7 @@ Addding in the road netwrok and migration rates
 # road network
 #............................... 
 roadnetworkplotObj <- readRDS("data/distance_data/roadnetworkplotObj.RDS") +
-    theme(plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 #.............................. 
 #  Visulatization of migratin rate Flows
 #............................... 
@@ -122,40 +122,39 @@ DRCprov_union <- sf::st_union(DRCprov)
 all_flows_plotObj <- flowsPlotDat %>%
   ggplot() +
   geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
   geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+  geom_point(data = newcentroidsplotdf,
+             aes(x = long, y = lat),
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) +
   geom_curve(aes(x = longfr, y = latfr,
                  xend = longto, yend = latto,
                  color = PrdMIG_scaled),
              arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.2) +
-  geom_point(data = newcentroidsplotdf,
-             aes(x = long, y = lat),
-             show.legend = F, shape = 21,
-             fill = "#ffffff", color = "#000000" ) +
   scale_color_viridis_c("Migration Rates", option="plasma", direction = 1) +
-    theme(plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 
 # downsize
 highflow <- quantile(flows$PrdMIG_scaled, 0.95)
 high_flows_plotObj <- flowsPlotDat %>% 
   dplyr::filter(PrdMIG_scaled > highflow[[1]]) %>%
-  dplyr::filter()
   ggplot() +
   geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
   geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+  geom_point(data = newcentroidsplotdf,
+             aes(x = long, y = lat),
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) +
   geom_curve(aes(x = longfr, y = latfr,
                  xend = longto, yend = latto,
                  color = PrdMIG_scaled),
              arrow = arrow(length = unit(0.02, "npc")),
              alpha = 0.5) +
-  geom_point(data = newcentroidsplotdf,
-             aes(x = long, y = lat),
-             show.legend = F, shape = 21,
-             fill = "#ffffff", color = "#000000" ) +
   scale_color_viridis_c("Migration Rates", option="plasma", direction = 1) +
-    theme(plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 
 #.............................. 
 #  make sampling locations lighter
@@ -172,20 +171,32 @@ smplocations.nolegend <- ggplot() +
   theme(
     legend.position = "none",
     legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
-    legend.text = element_text(face = "bold", size = 11)
-  ) 
+    legend.text = element_text(face = "bold", size = 11),
+    plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 
 
-cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, all_flows_plotObj, high_flows_plotObj,
-                   nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
-```
 
-```{r, results='asis'}
-jpeg("~/Desktop/drc_dists.jpg", width = 11, height = 8, units = "in", res = 500)
-cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, all_flows_plotObj, high_flows_plotObj,
-                   nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
+all_flows_plotObj_noleg <- all_flows_plotObj + theme(legend.position = "none")
+high_flows_plotObj_noleg <- high_flows_plotObj + theme(legend.position = "none")
+toprow <- cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, 
+                             all_flows_plotObj_noleg, high_flows_plotObj_noleg,
+                             nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
+legend <- cowplot::get_legend(all_flows_plotObj +
+                                theme(legend.position = "bottom",
+                                      plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm")))
+# bring together
+MainFig <- cowplot::plot_grid(toprow, legend, rel_heights = c(0.95, 0.5), ncol = 1)
+
+jpeg("results/figures/drc_dists_combined_collated.jpg", width = 8, height = 11, units = "in", res = 500)
+plot(MainFig)
 graphics.off()
+
 ```
+```{r, results='asis'}
+cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, all_flows_plotObj, high_flows_plotObj,
+                   nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
+```
+
 
 
 ## Clusters with Single Sample
