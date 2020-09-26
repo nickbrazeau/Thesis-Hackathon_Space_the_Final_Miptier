@@ -1,5 +1,5 @@
 #########################################################################
-# Purpose: Spatial Modeling of Cluster Inbreeding Coeffs
+# Purpose: Base Spatial Modeling of Cluster Inbreeding Coeffs
 #
 # Author: Nicholas F. Brazeau
 #
@@ -17,9 +17,6 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::select(c("hv001", "latnum", "longnum")) %>%
   dplyr::mutate(hv001 = as.character(hv001)) %>%
   dplyr::filter(!duplicated(.))
-drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
-  dplyr::filter(population > 350000)
-
 
 #............................................................
 # functions for spatial model
@@ -39,15 +36,14 @@ make_spat_raw_map <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa =
     ggplot() +
     geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
     geom_point(aes(x = longnum, y = latnum, color = Finbd)) +
-    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1) +
-    smpl_bckgrnd
+    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1)
 
   return(Fclst_point_plot_obj)
 }
 
 
 #' @title Inverse Distance Weighting Kriging
-interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, drccites, covars = "1", idw = 2) {
+interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, idw = 2) {
   #......................
   # process
   #......................
@@ -67,22 +63,22 @@ interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, drccites, cov
   DRC <- sf::as_Spatial(osmdata::getbb("Democratic Republic of the Congo",
                                        featuretype = "country",
                                        format_out = 'sf_polygon'))
-  drcrstr <- raster::rasterFromXYZ(cbind(grid.pred.coords[,1],
-                                         grid.pred.coords[,2],
+  drcrstr <- raster::rasterFromXYZ(cbind(grid.pred[,1],
+                                         grid.pred[,2],
                                          NA),
                                    crs="+proj=longlat +datum=WGS84 +no_defs")
 
   #..............................................................
   # interpolate
   #..............................................................
-  colnames(clst_inbdset) <- c("long", "lat", "fitted.postmean")
-  idwmod <- gstat::gstat(id = "graddesc", formula = paste0("Finbd ~", covars),
+
+  idwmod <- gstat::gstat(formula = Finbd ~ 1,
                          locations = ~longnum + latnum,
                          data = clst_inbdset,
                          set=list(idp = idw))
 
-  ret <- raster::interpolate(drcrstr, idwmod)
-  ret <- raster::mask(drcrstr.postmenas.idw, DRC)
+  ret <- raster::interpolate(drcrstr, idwmod, xyNames = c("longnum", "latnum"))
+  ret <- raster::mask(ret, DRC)
 
   # plot object
   Fclst_raster_plot_obj <-  ggplot() +
@@ -91,17 +87,16 @@ interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, drccites, cov
                              alpha = alpha) +
     scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
     prettybasemap_nodrc_nonorth_dark +
-    geom_point(data = drccites, aes(x = longnum, y=latnum), alpha = 0.5) +
-    ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum),
-              fontface = "bold",
-              size = 3,
-              alpha = 0.8)
-
+    theme(
+      legend.position = "right",
+      legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
+      legend.text = element_text(face = "bold", size = 11),
+      plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
   return(Fclst_raster_plot_obj)
 }
 
 #..............................................................
-# read in data
+# read in data cluster
 #..............................................................
 # cluster names
 clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
@@ -111,7 +106,8 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::mutate(hv001 = as.character(hv001))
 
 # inbreeding data
-clst_inbd <- readRDS("results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
+clst_inbd <- readRDS("results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
+  dplyr::filter(spacetype != "migrate") %>%
   dplyr::select(c("spacetype", "inbreed_ests")) %>%
   tidyr::unnest(cols = inbreed_ests)
 clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
@@ -119,7 +115,7 @@ clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
 
 
 #..............................................................
-# run functions
+# run functions for clusters
 #..............................................................
 #......................
 # raw
@@ -127,13 +123,49 @@ clst_inbd.list <- split(clst_inbd, factor(clst_inbd$spacetype))
 clst_inbd_point.plots <- lapply(clst_inbd.list, make_spat_raw_map, clsts = clsts, DRCprov = DRCprov)
 
 #......................
-# prevmap
+# inverses distance weighting
 #......................
-clst_inbd_rstr.plots <- lapply(clst_inbd.list, make_spat_prevmap_mod, clsts = clsts, DRCprov = DRCprov)
+clst_inbd_rstr.plots <- lapply(clst_inbd.list, interpolate_spat_idw_mod, clsts = clsts, DRCprov = DRCprov)
+
 # out
-dir.create("results/clust_inbd_results/final_clstb_maps/", recursive = T)
+dir.create("results/clust_inbd_results/final_maps/", recursive = T)
 saveRDS(clst_inbd_point.plots, file = "results/clust_inbd_results/final_clstb_maps/point_clst_inbd_plots.RDS")
 saveRDS(clst_inbd_rstr.plots, file = "results/clust_inbd_results/final_clstb_maps/raster_clst_inbd_plots.RDS")
+
+
+
+
+#..............................................................
+# read in data for voroni tesselated territories
+#..............................................................
+vrdf <- readRDS("data/distance_data/voroni_base.RDS") %>%
+  dplyr::rename(param = IPUMSID) %>%
+  dplyr::mutate(param = as.character(param)) %>%
+  rename(geometry = x)
+sf::st_crs(vrdf) <-  "+proj=longlat +datum=WGS84 +no_defs"
+
+# inbreeding data
+prov_inbd <- readRDS("results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
+  dplyr::filter(spacetype == "migrate") %>%
+  dplyr::select(c("spacetype", "inbreed_ests")) %>%
+  tidyr::unnest(cols = inbreed_ests) %>%
+  dplyr::ungroup(.)
+#......................
+# plot out
+#......................
+prov_inbd_vrdf <- dplyr::left_join(vrdf, prov_inbd)
+prov_inbd_vrdf_plotObj <- ggplot() +
+  geom_sf(data = prov_inbd_vrdf, aes(fill = est)) +
+  scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
+  prettybasemap_nodrc_nonorth_dark +
+  theme(
+    legend.position = "left",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
+    legend.text = element_text(face = "bold", size = 11),
+    plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+
+# save
+saveRDS(prov_inbd_vrdf, file = "results/clust_inbd_results/final_maps/prov_inbd_vrdf_terrmap.RDS")
 
 
 

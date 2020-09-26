@@ -20,6 +20,10 @@ results/figures/
 results/tables/
 results/clust_inbd_results/Find_grad_descent_results/
 
+# old stuff I am looking at
+analyses/bayes_hierarch_spatial_mods/vivid_and_legacy-spatial_prediction/
+
+
 
 # RStudio files
 .Rproj.user/
