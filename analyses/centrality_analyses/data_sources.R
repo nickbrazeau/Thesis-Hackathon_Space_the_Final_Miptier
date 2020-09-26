@@ -3,6 +3,7 @@
 ##
 ##
 ####################################################################################
+library(dplyr) 
 
 #............................................................
 # geodistances
@@ -13,7 +14,9 @@ geodists <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 
 # asymmetric matrix 38 x 38 for migration rate flows between
 # voroni tesselated "territories" or provinces --> long format
-migrateflows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS") %>%
+
+# migrateflows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS") %>%
+migrateflows <- readRDS("data/distance_data/vr_nodepairs_migrate_disance.rds") %>%
   dplyr::select(c("NODEI", "NODEJ", "PrdMIG", "PrdMIG_scaled")) %>%
   dplyr::filter(!duplicated(.))
 
@@ -67,6 +70,7 @@ ibD.meiotics <- ibD %>%
   dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf")) %>%
   dplyr::filter(malecotf >= 0.5)
 
+# output csv files for importing into python 
 
 
 # sanity
