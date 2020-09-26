@@ -13,8 +13,9 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
 #..............................................................
 # bring in param master list
 #.............................................................
-mastermap.lg <- readRDS("data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS")
-mastermap <- mastermap.lg %>%
+mastermap.lg_clust <- readRDS("data/derived_data/clst_inbreeding_dat/paramset_clust/mastermap.RDS")
+mastermap.lg_prov <- readRDS("data/derived_data/clst_inbreeding_dat/paramset_prov/mastermap.RDS")
+mastermap <- dplyr::bind_rows(mastermap.lg_clust, mastermap.lg_prov) %>%
   dplyr::select(c("1", "m", "m_learningrate", "f_learningrate", "inputpath", "parampath")) %>% # note, fstart are same across other params
   dplyr::rename(param_set = parampath,
                 fstart = 1,
@@ -32,7 +33,7 @@ filepaths <- list.files("results/clust_inbd_results/Find_grad_descent_results/",
 
 read_cost_results <- function(path, clstnames){
   dat <- readRDS(path)
-  # just pull out costs and see if cost was at end (or if learning rate was too large) -- monotonic dec
+  # just pull out costs and see if cost was at end (or if learning rate was potentially too large) -- monotonic dec
   mincost <- min(dat$cost)
   monoton_cost_dec <- !any(diff(dat$cost) > 0)
 
@@ -54,7 +55,7 @@ mastermap_rets <- purrr::map(filepaths, read_cost_results) %>%
 #............................................................
 # Process Results to extract Min Cost
 #...........................................................
-mastermap_mincost <- mastermap %>%
+mastermap_mincost <- mastermap_rets %>%
   dplyr::group_by(spacetype) %>%
   dplyr::filter( mincost == min(mincost) )
 
@@ -96,4 +97,3 @@ write_rds(x = clust_inb,
 
 
 
-# sanity

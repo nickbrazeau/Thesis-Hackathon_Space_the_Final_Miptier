@@ -113,6 +113,7 @@ ggplot() +
   ggrepel::geom_text_repel(data = plotdf, aes(x = long, y = lat, label = ID), color = "red") +
   ggrepel::geom_text_repel(data = plotdf, aes(x = POINT_X, y = POINT_Y, label = IPUMSID), color = "blue")
 
+
 #......................
 # manually adjust some duplicates
 #......................
