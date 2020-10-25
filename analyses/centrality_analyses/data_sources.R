@@ -3,6 +3,7 @@
 ##
 ##
 ####################################################################################
+
 library(tidyverse)
 dir.create("data/python_import")
 
@@ -16,7 +17,9 @@ readr::write_csv(geodists, "data/python_import/distancematrix_bycluster.csv")
 
 # asymmetric matrix 38 x 38 for migration rate flows between
 # voroni tesselated "territories" or provinces --> long format
-migrateflows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS") %>%
+
+# migrateflows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS") %>%
+migrateflows <- readRDS("data/distance_data/vr_nodepairs_migrate_disance.rds") %>%
   dplyr::select(c("NODEI", "NODEJ", "PrdMIG", "PrdMIG_scaled")) %>%
   dplyr::filter(!duplicated(.))
 readr::write_csv(migrateflows, "data/python_import/voroni_migration_flows_fromworldpop.csv")
@@ -81,5 +84,12 @@ readr::write_csv(prov.covars, "data/python_import/voroniterritories_covariates_3
 # highly related pairs
 #...........................................................
 ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibD.meiotics <- ibD %>%
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf")) %>%
+  dplyr::filter(malecotf >= 0.5)
+
+# output csv files for importing into python 
+
+
 readr::write_csv(ibD, "data/python_import/raw_pairwise_ibD_long_mtdt.csv")
 
