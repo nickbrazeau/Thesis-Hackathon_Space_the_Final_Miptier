@@ -1,0 +1,207 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Diffusion Assumption of Meiotic Siblings
+In this analysis, we will look at pairs that have more  relatedness than would be expected for a recombining pathogen (e.g. greater than or equal to 0.5 relatedness, so at least meiotic siblings).
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r}
+library(tidyverse)
+library(raster)
+library(cowplot)
+source("R/themes.R")
+source("R/basics.R")
+source("R/pairwise_helpers.R")
+# load pretty map aesthetics 
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+load("data/map_bases/space_mips_maps_bases.rda")
+
+# load cluster spatial data
+mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
+  dplyr::select(c("name", "barcode", "hv001", "longnum", "latnum"))
+
+# load migration data
+vrdf <- readRDS("data/distance_data/voroni_base.RDS") %>%
+  dplyr::rename(param = IPUMSID) %>%
+  dplyr::mutate(param = as.character(param)) %>%
+  rename(geometry = x)
+flows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS")
+
+
+# genetic data
+meiotics <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds") %>% 
+  dplyr::filter(malecotf >= 0.5)
+
+```
+
+```{r}
+#......................
+# tidyup and subset data
+#......................
+meiotics <- meiotics %>% 
+  dplyr::select(c("smpl1", "smpl2", "malecotf", 
+                  "hv001.x", "hv001.y",
+                  "longnum.x", "latnum.x",  
+                   "longnum.y", "latnum.y",
+                  "IPUMSID.x", "IPUMSID.y"))
+# get net flows
+flows <- flows %>% 
+  dplyr::mutate(grouping = ifelse(NODEI < NODEJ, paste0(NODEI, "-", NODEJ),
+                                  paste0(NODEJ, "-", NODEI))) 
+
+# original 
+netflows.x <- flows %>% 
+  dplyr::select(c("NODEI", "NODEJ", "grouping", "PrdMIG")) %>% 
+  dplyr::mutate(ij = ifelse(NODEI < NODEJ, "ij", "ji")) %>% 
+  tidyr::pivot_wider(., id_cols = "grouping",
+                     names_from = "ij", values_from = "PrdMIG") %>% 
+  dplyr::mutate(netflow_ij = ij - ji) %>% 
+  dplyr::select(c("grouping", "netflow_ij")) %>% 
+  dplyr::mutate(IPUMSID.x = stringr::str_split_fixed(grouping, "-", n=2)[,1],
+                IPUMSID.y = stringr::str_split_fixed(grouping, "-", n=2)[,2])
+
+# need to expand out asymmetry
+netflows.y <- netflows.x %>% 
+  dplyr::mutate(IPUMSID.x = stringr::str_split_fixed(grouping, "-", n=2)[,2],
+                IPUMSID.y = stringr::str_split_fixed(grouping, "-", n=2)[,1],
+                netflow_ij = netflow_ij * -1) 
+
+# bring together
+netflows <- dplyr::bind_rows(netflows.x, netflows.y) %>% 
+  dplyr::select(-c("grouping"))
+
+# bring together 
+meiotics_humandirection <- meiotics %>% 
+  dplyr::mutate(IPUMSID.x = as.character(IPUMSID.x),
+                IPUMSID.y = as.character(IPUMSID.y)) %>% 
+  dplyr::left_join(., netflows, by = c("IPUMSID.x", "IPUMSID.y")) 
+
+```
+
+```{r}
+#......................
+# need to determine "correct end" for arrow
+#......................
+meiotics_humandirection_plotdat <- meiotics_humandirection %>% 
+  dplyr::filter(IPUMSID.x != IPUMSID.y) %>% 
+  dplyr::mutate(long.start = ifelse(netflow_ij > 0, longnum.x, longnum.y), # high to low
+                lat.start = ifelse(netflow_ij > 0, latnum.x, latnum.y),
+                long.end = ifelse(netflow_ij > 0, longnum.y, longnum.x),
+                lat.end = ifelse(netflow_ij > 0, latnum.y, latnum.x)) %>% 
+  dplyr::mutate(netflow_ij_pos = abs(netflow_ij))
+# eliminator
+eliminator <- meiotics_humandirection_plotdat %>% 
+  dplyr::select(c("smpl1", "smpl2"))
+
+
+meiotics_point_plotdat <- meiotics %>% 
+  dplyr::inner_join(., eliminator)
+meiotics_point_plotdat <- mtdt %>% 
+  dplyr::filter(name %in% unlist(c(meiotics_point_plotdat$smpl1, meiotics_point_plotdat$smpl2)))
+
+#......................
+# plotout
+#......................
+meiotics_humandirection_plotObj <- ggplot() +
+  geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.5) +
+  prettybasemap_nodrc_nonorth_dark +
+   geom_point(data = meiotics_point_plotdat,
+             aes(x = longnum, y = latnum), 
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) + 
+  geom_curve(data = meiotics_humandirection_plotdat,
+             aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf),
+             arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.7) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) + 
+  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
+
+```
+```{r, results='asis'}
+plot(meiotics_humandirection_plotObj)
+```
+```{r}
+#......................
+# genetic direction
+#......................
+clst_inbd <- readRDS("results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>%
+  dplyr::filter(spacetype == "roaddist") %>%
+  dplyr::select("inbreed_ests") %>%
+  tidyr::unnest(cols = inbreed_ests) %>% 
+  dplyr::ungroup(.) %>%
+  dplyr::rename(hv001 = param)
+
+
+#......................
+# need to determine "correct end" for arrow
+#......................
+clst_inbd.x <- clst_inbd %>% 
+  dplyr::rename(hv001.x = hv001)
+clst_inbd.y <- clst_inbd %>% 
+  dplyr::rename(hv001.y = hv001)
+meiotics_geneticdirection_plotdat <- meiotics %>% 
+  dplyr::mutate(hv001.x = as.character(hv001.x),
+                hv001.y = as.character(hv001.y)) %>% 
+  dplyr::left_join(., clst_inbd.x, by = "hv001.x") %>% 
+  dplyr::left_join(., clst_inbd.y, by = "hv001.y") %>% 
+  dplyr::filter(hv001.x != hv001.y) %>% 
+  dplyr::mutate(long.start = ifelse(est.x < est.y, longnum.x, longnum.y), # high diverity (low inbreeding) to low diversity
+                lat.start = ifelse(est.x < est.y, latnum.x, latnum.y),
+                long.end = ifelse(est.x < est.y, longnum.y, longnum.x),
+                lat.end = ifelse(est.x < est.y, latnum.y, latnum.x)) 
+# eliminator
+eliminator <- meiotics_geneticdirection_plotdat %>% 
+  dplyr::select(c("smpl1", "smpl2"))
+# meiotic points
+meiotics_point_plotdat <- meiotics %>% 
+  dplyr::inner_join(., eliminator)
+meiotics_point_plotdat <- mtdt %>% 
+  dplyr::filter(name %in% unlist(c(meiotics_point_plotdat$smpl1, meiotics_point_plotdat$smpl2)))
+
+#......................
+# plotout
+#......................
+meiotics_geneticdirection_plotObj <- ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  prettybasemap_nodrc_nonorth_dark +
+   geom_point(data = meiotics_point_plotdat,
+             aes(x = longnum, y = latnum), 
+             show.legend = F, shape = 21,
+             fill = "#ffffff", color = "#000000" ) + 
+  geom_curve(data = meiotics_geneticdirection_plotdat,
+             aes(x = long.start, y = lat.start, 
+                 xend = long.end, yend = lat.end, 
+                 color = malecotf),
+             arrow = arrow(length = unit(0.02, "npc")),
+             alpha = 0.7) +
+  scale_color_viridis_c("Pairwise IBD", option="plasma", direction = 1) + 
+  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
+
+```
+```{r, results='asis'}
+plot(meiotics_geneticdirection_plotObj)
+```
+```{r}
+panelA <- meiotics_geneticdirection_plotObj + theme(legend.position = "none")
+panelB <- meiotics_humandirection_plotObj + theme(legend.position = "none")
+legend <- cowplot::get_legend(meiotics_geneticdirection_plotObj +
+                                theme(legend.position = "bottom",
+                                      plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm")))
+mainfig <- cowplot::plot_grid(panelA, panelB, labels = c("(A)", "(B)", nrow = 1))
+mainfig <- cowplot::plot_grid(mainfig, legend, rel_heights = c(1, 0.1), ncol = 1)
+
+
+jpeg("results/figures/diffusion_assumption_meiotic_directions.jpg", width = 11, height = 8, units = "in", res = 600)
+plot(mainfig)
+graphics.off()
+```

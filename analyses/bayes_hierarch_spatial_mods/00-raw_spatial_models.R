@@ -84,14 +84,15 @@ interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, idw = 2) {
   Fclst_raster_plot_obj <-  ggplot() +
     ggspatial::layer_spatial(data = ret,
                              aes(fill = stat(band1)),
-                             alpha = alpha) +
+                             alpha = 0.9,
+                             na.rm = T) +
     scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
     prettybasemap_nodrc_nonorth_dark +
     theme(
       legend.position = "right",
       legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
       legend.text = element_text(face = "bold", size = 11),
-      plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+      plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm"))
   return(Fclst_raster_plot_obj)
 }
 
@@ -128,9 +129,11 @@ clst_inbd_point.plots <- lapply(clst_inbd.list, make_spat_raw_map, clsts = clsts
 clst_inbd_rstr.plots <- lapply(clst_inbd.list, interpolate_spat_idw_mod, clsts = clsts, DRCprov = DRCprov)
 
 # out
-dir.create("results/clust_inbd_results/final_maps/", recursive = T)
+dir.create("results/clust_inbd_results/final_clstb_maps/", recursive = T)
 saveRDS(clst_inbd_point.plots, file = "results/clust_inbd_results/final_clstb_maps/point_clst_inbd_plots.RDS")
-saveRDS(clst_inbd_rstr.plots, file = "results/clust_inbd_results/final_clstb_maps/raster_clst_inbd_plots.RDS")
+saveRDS(clst_inbd_rstr.plots$gcdist, file = "results/clust_inbd_results/final_clstb_maps/gc_raw_raster_clst_inbd_plots.RDS")
+saveRDS(clst_inbd_rstr.plots$roaddist, file = "results/clust_inbd_results/final_clstb_maps/road_raw_raster_clst_inbd_plots.RDS")
+
 
 
 
@@ -162,13 +165,11 @@ prov_inbd_vrdf_plotObj <- ggplot() +
     legend.position = "left",
     legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
     legend.text = element_text(face = "bold", size = 11),
-    plot.margin = unit(c(0.05, 0.05, 0.05, 1),"cm"))
+    plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm"))
 
 # save
-saveRDS(prov_inbd_vrdf, file = "results/clust_inbd_results/final_maps/prov_inbd_vrdf_terrmap.RDS")
+saveRDS(prov_inbd_vrdf_plotObj, file = "results/clust_inbd_results/final_prov_maps/prov_raw_inbd_vrdf_terrmap.RDS")
 
 
 
 
-
-# sanity
