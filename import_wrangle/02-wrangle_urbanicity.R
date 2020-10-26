@@ -21,8 +21,14 @@ fricraw <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_friction_surf
 travraw <- raster::crop(travraw, caf)
 fricraw <- raster::crop(fricraw, caf)
 
+# remove obvious "missing or bad values"
+values(travraw)[values(travraw) == -9999.0] <- NA
+values(fricraw)[values(fricraw) == -9999.0] <- NA
+
+
 # nightlights cropped from earlier
 nightlightsraw <- raster::raster("data/derived_data/nightlights/drc_nightlights_raw.grd")
+
 # worldpop already cropped to DRC from worldpop site
 worldpopraw <- raster::raster("data/raw_data/worldpop/cod_ppp_2013.tif")
 
@@ -36,8 +42,6 @@ raster::crs(worldpopraw)
 #......................
 # misc
 #......................
-# take care of missing values
-values(travraw)[values(travraw) == -9999] <- NA
 # need to apply masking early on for nightlights due to extreme values (for not land, and corrections, etc)
 DRC <- readRDS("data/map_bases/gadm/gadm36_COD_0_sp.rds")
 raster::crs(DRC)
@@ -79,23 +83,22 @@ sd(values(trav), na.rm = T)
 # fric
 summary(values(fric))
 hist(values(fric))
-# log distributed
 # transformation does not result in normal but will have to do
-values(fric)[!is.na(values(fric))] <- my.scale(logit(values(fric)[!is.na(values(fric))], tol = 0.1))
+values(fric)[!is.na(values(fric))] <- my.scale(log(values(fric)[!is.na(values(fric))] + 0.1))
 sd(values(fric), na.rm = T)
+hist(values(fric))
 
 # nightlights
 summary(values(nightlights))
-hist(values(nightlights))
-# these less than zero values arose from tranformation, drop
-values(nightlights)[values(nightlights) < 0 ] <- NA
-
-# transformation does not result because of extreme number of zeros. Variacnce should be ok
-nightlights <- raster::scale(nightlights, center = T, scale = T)
+# transformation does not result in normal but will have to do
+values(nightlights)[!is.na(values(nightlights))] <- my.scale(log(values(nightlights)[!is.na(values(nightlights))] + 0.1))
 sd(values(nightlights), na.rm = T)
+hist(values(nightlights))
 
 # world pop
 summary(values(worldpop))
+values(worldpop)[!is.na(values(worldpop))] <- my.scale(log(values(worldpop)[!is.na(values(worldpop))] + 0.1))
+sd(values(worldpop), na.rm = T)
 hist(values(worldpop))
 
 # again a lot of zeroes

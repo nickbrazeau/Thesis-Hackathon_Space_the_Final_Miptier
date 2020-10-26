@@ -51,9 +51,10 @@ clst_spatdat <- dplyr::left_join(clst_inbd, clst_covars, by = "hv001") %>%
 # Modelling
 #...........................................................
 #......................
-# find appropriate kappa and get a sense of start parameters for tau, sigma, phi
+# going to assume that kappa is 0.5 and follows and exponential model -- based
+# on the isolation by distance framework
+# find appropriate start parameters for tau, sigma, phi
 #......................
-# explore values of kappa, phi, tau, sigma
 find_spat_covars <- clst_spatdat %>%
   dplyr::mutate(geoRobj = purrr::map(data, geoR::as.geodata, # make GeoR Object
                                      coords.col = c("longnum", "latnum"),
@@ -61,22 +62,24 @@ find_spat_covars <- clst_spatdat %>%
                                      covar.col = c("incidence", "urban")),
                 # exponential variogram and fit
                 variog_exp = purrr::map(geoRobj, geoR::variog,
-                                        uvec =  c(seq(0, 1, by = 0.2), seq(1, 10))),
+                                        uvec =  c(seq(0, 2, by = 0.1))),
                 variofit_exp = purrr::map(variog_exp, geoR::variofit,
-                                          ini = c(1, 0.5),
                                           cov.model = "exp",
-                                          fix.nugget = F,
+                                          ini = c(2, 0.1),
                                           nugget = 0,
-                                          fix.kappa = F),
+                                          fix.nugget = F,
+                                          fix.kappa = T,
+                                          kappa = 0.5),
                 # matern variogram and fit
                 variog_matern = purrr::map(geoRobj, geoR::variog,
-                                           uvec =  c(seq(0, 1, by = 0.2), seq(1, 10))),
+                                           uvec =  c(seq(0, 2, by = 0.1))),
                 variofit_matern = purrr::map(variog_matern, geoR::variofit,
-                                             ini = c(1, 0.5),
                                              cov.model = "matern",
-                                             fix.nugget = F,
+                                             ini = c(2, 0.1),
                                              nugget = 0,
-                                             fix.kappa = F))
+                                             fix.nugget = F,
+                                             fix.kappa = T,
+                                             kappa  = 0.5))
 
 
 find_spat_covars$variofit_exp[[1]]
@@ -116,9 +119,9 @@ clst_mod_framework <- clst_mod_framework %>%
     }
     mypriors <- PrevMap::control.prior(beta.mean = betamean,
                                        beta.covar = covarsmat,
-                                       uniform.nugget = c(0,5), # this is tau2
-                                       uniform.phi = c(0,50),
-                                       log.normal.sigma = c(0,5))
+                                       uniform.nugget = c(0,1), # this is tau2
+                                       uniform.phi = c(6,18),
+                                       log.normal.sigma = c(-1.3, 1))
     return(mypriors)
   }))
 
@@ -129,15 +132,15 @@ clst_mod_framework <- clst_mod_framework %>%
     betacount <- stringr::str_count(formvec, "\\+") + 2 # need intercept and betas
     betacount <- ifelse(grepl("1", formvec), 1, betacount) # corner case of just intercept
 
-    mydirections <- PrevMap::control.mcmc.Bayes(burnin = 1e4,
-                                                n.sim = 1e4+1e4,
+    mydirections <- PrevMap::control.mcmc.Bayes(burnin = 1e3,
+                                                n.sim = 1e3+1e3,
                                                 thin = 10,
                                                 L.S.lim = c(5,50),
                                                 epsilon.S.lim = c(0.01, 0.1),
                                                 start.nugget = 0.05,
                                                 start.sigma2 = 1,
                                                 start.beta = rep(0, betacount),
-                                                start.phi = 17,
+                                                start.phi = 13,
                                                 start.S = predict(y),
                                                 linear.model = TRUE)
     return(mydirections)
@@ -182,7 +185,8 @@ clst_mod_framework$PrevMapFit <- purrr::pmap(clst_mod_framework[, c("formula",
                                                                     "data",
                                                                     "mypriors",
                                                                     "mydirections")],
-                                             fit_bayesmap_wrapper, kappa = 0.5,
+                                             fit_bayesmap_wrapper,
+                                             kappa = 0.5, # exponential model
                                              knots = knotsbb)
 
 # save out
