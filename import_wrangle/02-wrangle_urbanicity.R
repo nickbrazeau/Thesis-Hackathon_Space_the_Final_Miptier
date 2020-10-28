@@ -157,8 +157,8 @@ ggplot2::autoplot(pca,
 urbanicity.raw <- urbanicity <- raster::predict(rasters,
                                                 pca,
                                                 index=1) # just use PC1
-# cap it at the 99.9% for outliers
-val <- quantile(values(urbanicity), c(0.999), na.rm = T)
+# cap it at the 99% for outliers
+val <- quantile(values(urbanicity), c(0.99), na.rm = T)
 values(urbanicity)[values(urbanicity) >= val] <- val
 plot(urbanicity)
 summary(values(urbanicity))

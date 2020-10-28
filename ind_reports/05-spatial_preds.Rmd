@@ -31,8 +31,25 @@ ggplot() +
   ggspatial::layer_spatial(data = urbanrstr, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
   #prettybasemap_nodrc_dark +
+  # scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", 
+  #                      na.value = NA, limits = c(-5, 6)) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu",
-                       na.value = NA, limits = c(-5, 6)) +
+                       na.value = NA) +
+  geom_point(data = drccites, 
+             aes(x = longnum, y=latnum)) +
+  ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.3, 
+                           fontface = "bold", color = "#bdbdbd") 
+
+```
+```{r}
+pfincidence <- raster::raster("data/raw_data/MAPrasters/getRaster/2019_Global_Pf_Incidence.201310_.18_40_8_2020_09_18.tiff")
+pfincidence <- raster::mask(pfincidence, DRCprov)
+ggplot() +
+  ggspatial::layer_spatial(data = pfincidence, aes(fill = stat(band1))) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  #prettybasemap_nodrc_dark +
+  scale_fill_distiller("Pf Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_point(data = drccites, 
              aes(x = longnum, y=latnum)) +
   ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum), 
