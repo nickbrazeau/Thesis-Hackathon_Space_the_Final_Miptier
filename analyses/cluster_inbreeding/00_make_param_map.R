@@ -74,7 +74,7 @@ write_out_params <- function(paramset, outname, outdir){
   saveRDS(object = paramset, file = paste0(outdir, outname, ".RDS"))
 }
 
-outdir <- "data/derived_data/clst_inbreeding_dat/paramset_clust/"
+outdir <- "data/derived_data/clst_inbreeding_dat/paramset/"
 dir.create(outdir, recursive = T)
 mapply(write_out_params, paramset = lrandparams.list, outname = paramsnames, outdir = outdir)
 
@@ -83,9 +83,9 @@ mapply(write_out_params, paramset = lrandparams.list, outname = paramsnames, out
 #..............................................................
 snakemap <- data.frame(parampath = paramsnames)
 mastermap <- cbind.data.frame(lrandparams, snakemap)
-saveRDS(mastermap, "data/derived_data/clst_inbreeding_dat/paramset_clust/mastermap.RDS")
+saveRDS(mastermap, "data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS")
 colnames(snakemap) <- c("#parampath")
 write.table(x = snakemap,
-            file = "data/derived_data/clst_inbreeding_dat/paramset_clust/snake_map.txt",
+            file = "data/derived_data/clst_inbreeding_dat/paramset/snake_map.txt",
             quote = F, sep = "\t", col.names = T, row.names = F)
 
