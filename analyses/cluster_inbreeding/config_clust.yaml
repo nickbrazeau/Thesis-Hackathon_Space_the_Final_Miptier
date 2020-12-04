@@ -1,4 +1,4 @@
 # configuration for alignment pipeline
-manifest: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/data/derived_data/clst_inbreeding_dat/paramset_clust/snake_map.txt
-outdir: /pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/clust_inbd_results/
-paramdir: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/data/derived_data/clst_inbreeding_dat/paramset_clust/
+manifest: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/data/derived_data/clst_inbreeding_dat/paramset/snake_map.txt
+outdir: /pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/COIone_clust_inbd_results/
+paramdir: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/data/derived_data/clst_inbreeding_dat/paramset/

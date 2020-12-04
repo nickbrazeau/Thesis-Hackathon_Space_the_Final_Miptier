@@ -1,12 +1,13 @@
-#########################################################################
+## .................................................................................
 # Purpose:
 #
-# Author: Nicholas F. Brazeau
-#
-# Data Source: World Pop Internal Flows https://www.worldpop.org/geodata/summary?id=1281
+# Data Source 1: World Pop Internal Flows https://www.worldpop.org/geodata/summary?id=1281
 #       Methods: https://www.nature.com/articles/sdata201666
 #                https://academic.oup.com/migration/article/3/1/89/2413406
-#########################################################################
+#
+# Data Source 2: Anq123 from Cory Keeler
+#
+## .................................................................................
 library(tidyverse)
 library(sf)
 source("R/basics.R")
@@ -28,8 +29,11 @@ caf <- sf::st_polygon(list(caf))
 # drc polygon for intersection
 DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 
+
+
+
 #............................................................
-# read in data
+##### World Pop Migration Data ####
 #...........................................................
 mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>%
   dplyr::select(c("name", "barcode", "hv001", "longnum", "latnum"))
@@ -160,4 +164,56 @@ flows <- flows %>%
 # bring it together
 #......................
 saveRDS(flows, "data/distance_data/voroni_migration_flows_fromworldpop.RDS")
+
+
+
+
+#............................................................
+##### Anq123 Data ####
+#...........................................................
+#......................
+# get migration data
+#......................
+anq <- readr::read_csv("data/raw_data/mobility_model_data/anq123/migration_matrix.csv")
+# drop column that could be used for denom
+# and add in kinshasha prov column
+anq <- anq %>%
+  dplyr::select(-c("no_migration")) %>%
+  dplyr::mutate(Kinshasa = NA)
+
+# tidy out
+anq_tidy <- anq %>%
+  tidyr::pivot_longer(., cols = -c("current_prov"), names_to = "org",
+                      values_to = "mgrtn") %>%
+  dplyr::rename(dest = current_prov)
+
+
+
+#......................
+# get province data
+#......................
+# sanity check
+sum(unique(c(as.character(anq_tidy$dest), as.character(anq_tidy$org))) %in% DRCprov$adm1name)
+
+drcprov_centroids <- DRCprov %>%
+  dplyr::mutate(centroid = sf::st_centroid(geometry)) %>%
+  dplyr::select(c("adm1name", "centroid"))
+
+# for left join
+anq_tidy <- drcprov_centroids %>%
+  dplyr::mutate(org = adm1name) %>%
+  dplyr::select(-c("adm1name")) %>%
+  dplyr::left_join(anq_tidy, ., by = "org")
+
+# for left join
+anq_tidy <- drcprov_centroids %>%
+  dplyr::mutate(dest = adm1name) %>%
+  dplyr::select(-c("adm1name")) %>%
+  dplyr::left_join(anq_tidy, ., by = "dest")
+
+
+#......................
+# send it out
+#......................
+saveRDS(anq_tidy, "data/distance_data/anq123_migration_flows.RDS")
 

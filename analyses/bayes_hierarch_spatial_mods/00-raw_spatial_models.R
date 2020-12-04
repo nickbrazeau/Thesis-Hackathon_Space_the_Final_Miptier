@@ -6,8 +6,9 @@
 # Date: April 08 2020
 #########################################################################
 source("R/basics.R")
+source("R/gauss_proc_simple_functions.R")
 library(tidyverse)
-library(gstat)
+library(PrevMap)
 
 # load pretty map aesthetics
 load("data/map_bases/space_mips_maps_bases.rda")
@@ -42,8 +43,8 @@ make_spat_raw_map <- function(clst_inbdset, DRCprov, clsts, covar = "1", kappa =
 }
 
 
-#' @title Inverse Distance Weighting Kriging
-interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, idw = 2) {
+#' @title Prevamp Kriging
+interpolate_spat_prevmap_mod <-function(clst_inbdset, DRCprov, clsts, covar = "1", kappa = 0.5) {
   #......................
   # process
   #......................
@@ -51,48 +52,28 @@ interpolate_spat_idw_mod <- function(clst_inbdset, DRCprov, clsts, idw = 2) {
     dplyr::filter(param != "m") %>%
     dplyr::rename(hv001 = param,
                   Finbd = est)
-  clst_inbdset <- dplyr::left_join(clst_inbdset, clsts, by = "hv001")
+  clst_inbdset <- dplyr::left_join(clst_inbdset, clsts, by = "hv001") %>%
+    dplyr::mutate(Finbd_logit = logit(as.numeric(Finbd)))
   #......................
-  # get internal pieces needed for interpolation
+  # run internal prevmap functions
   #......................
   poly <- cbind(c(17,32,32,12,12), c(-14,-14,6,6,-14))
   grid.pred <- splancs::gridpts(poly, xs=0.1, ys=0.1)
-  colnames(grid.pred) <- c("longnum","latnum")
+  colnames(grid.pred) <- c("long","lat")
 
-  # need this for bounding box
-  DRC <- sf::as_Spatial(osmdata::getbb("Democratic Republic of the Congo",
-                                       featuretype = "country",
-                                       format_out = 'sf_polygon'))
-  drcrstr <- raster::rasterFromXYZ(cbind(grid.pred[,1],
-                                         grid.pred[,2],
-                                         NA),
-                                   crs="+proj=longlat +datum=WGS84 +no_defs")
+  Fclst_raster <- fit_pred_spMLE(data = clst_inbdset,
+                                 outcome = "Finbd_logit", covar = covar,
+                                 long_var = "longnum", lat_var = "latnum",
+                                 grid.pred = grid.pred, kappa = kappa,
+                                 pred.reps = 1e3)
 
-  #..............................................................
-  # interpolate
-  #..............................................................
+  Fclst_raster_plot <- prevmaprasterplotter(Fclst_raster$pred,
+                                            alpha = 1, smoothfct = 8)
 
-  idwmod <- gstat::gstat(formula = Finbd ~ 1,
-                         locations = ~longnum + latnum,
-                         data = clst_inbdset,
-                         set=list(idp = idw))
+  Fclst_raster_plot_obj <- Fclst_raster_plot +
+    scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1)
 
-  ret <- raster::interpolate(drcrstr, idwmod, xyNames = c("longnum", "latnum"))
-  ret <- raster::mask(ret, DRC)
 
-  # plot object
-  Fclst_raster_plot_obj <-  ggplot() +
-    ggspatial::layer_spatial(data = ret,
-                             aes(fill = stat(band1)),
-                             alpha = 0.9,
-                             na.rm = T) +
-    scale_fill_viridis_c("Inbreeding", option="plasma", direction = 1) +
-    prettybasemap_nodrc_nonorth_dark +
-    theme(
-      legend.position = "right",
-      legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0),
-      legend.text = element_text(face = "bold", size = 11),
-      plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm"))
   return(Fclst_raster_plot_obj)
 }
 
@@ -126,7 +107,7 @@ clst_inbd_point.plots <- lapply(clst_inbd.list, make_spat_raw_map, clsts = clsts
 #......................
 # inverses distance weighting
 #......................
-clst_inbd_rstr.plots <- lapply(clst_inbd.list, interpolate_spat_idw_mod, clsts = clsts, DRCprov = DRCprov)
+clst_inbd_rstr.plots <- lapply(clst_inbd.list, interpolate_spat_prevmap_mod, clsts = clsts, DRCprov = DRCprov)
 
 # out
 dir.create("results/clust_inbd_results/final_clstb_maps/", recursive = T)
