@@ -13,9 +13,7 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
 #..............................................................
 # bring in param master list
 #.............................................................
-mastermap.lg_clust <- readRDS("data/derived_data/clst_inbreeding_dat/paramset_clust/mastermap.RDS")
-mastermap.lg_prov <- readRDS("data/derived_data/clst_inbreeding_dat/paramset_prov/mastermap.RDS")
-mastermap <- dplyr::bind_rows(mastermap.lg_clust, mastermap.lg_prov) %>%
+mastermap <- readRDS("data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS") %>%
   dplyr::select(c("1", "m", "m_learningrate", "f_learningrate", "inputpath", "parampath")) %>% # note, fstart are same across other params
   dplyr::rename(param_set = parampath,
                 fstart = 1,
@@ -72,7 +70,6 @@ clust_inb <- mastermap_mincost %>%
 #......................
 plot(clust_inb$cost[[1]])
 plot(clust_inb$cost[[2]])
-plot(clust_inb$cost[[3]])
 
 #......................
 # process final Inbreeding coeffs
