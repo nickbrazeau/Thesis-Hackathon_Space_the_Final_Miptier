@@ -17,10 +17,8 @@ sp::proj4string(caf) <- "+proj=longlat +datum=WGS84 +no_defs"
 # Download Rasters
 #................................
 available_rasters <- malariaAtlas::listRaster()
-rasterlist <- c("2015_friction_surface_v1_Decompressed",
-                "2015_accessibility_to_cities_v1.0")
 raster.titles <- available_rasters %>%
-  dplyr::filter(raster_code %in% rasterlist) %>%
+  dplyr::filter(raster_code %in% "2015_accessibility_to_cities_v1.0") %>%
   dplyr::select("title") %>%
   unlist(.)
 

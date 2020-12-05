@@ -18,10 +18,6 @@ sandbox/
 ignore/
 results/
 
-# old stuff I am looking at
-analyses/bayes_hierarch_spatial_mods/vivid_and_legacy-spatial_prediction/
-
-
 
 # RStudio files
 .Rproj.user/

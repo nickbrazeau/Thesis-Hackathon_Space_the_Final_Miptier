@@ -8,7 +8,7 @@ library(tidyverse)
 library(vcfR)
 remotes::install_github("nickbrazeau/vcfRmanip")
 library(vcfRmanip)
-remotes::install_github("nickbrazeau/MIPanalyzer", ref = "cluster_inbreed")
+remotes::install_github("mrc-ide/MIPanalyzer", ref = "master")
 library(MIPanalyzer)
 remotes::install_github("andrewparkermorgan/rplasmodium")
 library(rplasmodium)
@@ -66,14 +66,4 @@ DRCmp.ibS.long <- broom::tidy(as.dist(t(DRCmp.ibS))) %>%  # note, Bob returns up
   magrittr::set_colnames(c("smpl1", "smpl2", "hammings"))
 
 saveRDS(DRCmp.ibS.long, "data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.rds")
-
-
-#............................................................
-# write out a vcf for potential downstream
-#............................................................
-mipbi.vcfR.DRC <- MIPanalyzer::MIPanalyzerbi2vcfR(mipbi.mip.DRC, cutoff = 0.5)
-# write out this vcf
-dir.create("data/derived_data/bigbarcode_genetic_data/", recursive = T)
-vcfR::write.vcf(x = mipbi.vcfR.DRC,
-                file = "data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf")
 
