@@ -13,7 +13,7 @@ clsts <- readRDS("data/derived_data/sample_metadata.rds") %>%
 #..............................................................
 # bring in param master list
 #.............................................................
-mastermap <- readRDS("data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS") %>%
+mastermap <- readRDS("analyses/cluster_inbreeding/smpls_coione/paramset/mastermap.RDS") %>%
   dplyr::select(c("1", "m", "m_learningrate", "f_learningrate", "inputpath", "parampath")) %>% # note, fstart are same across other params
   dplyr::rename(param_set = parampath,
                 fstart = 1,
@@ -26,7 +26,7 @@ mastermap <- readRDS("data/derived_data/clst_inbreeding_dat/paramset/mastermap.R
 #..............................................................
 # read in data from slurm scr
 #..............................................................
-filepaths <- list.files("results/clust_inbd_results/Find_grad_descent_results/",
+filepaths <- list.files("results/clust_inbd_results/smpls_coione/Find_grad_descent_results/",
                         pattern = ".RDS", full.names = T)
 
 read_cost_results <- function(path, clstnames){
@@ -62,7 +62,7 @@ mastermap_mincost <- mastermap_rets %>%
 #...........................................................
 clust_inb <- mastermap_mincost %>%
   dplyr::select(c("spacetype", "mincost", "param_set")) %>%
-  dplyr::mutate(param_set = paste0("results/clust_inbd_results/Find_grad_descent_results/", param_set, ".RDS"),
+  dplyr::mutate(param_set = paste0("results/clust_inbd_results/smpls_coione/Find_grad_descent_results/", param_set, ".RDS"),
                 param_set = purrr::map(param_set, readRDS),
                 cost = purrr::map(param_set, "cost"))
 #......................
@@ -83,9 +83,9 @@ clust_inb$inbreed_ests <- purrr::map(clust_inb$param_set, function(prmst) {
 #..............................................................
 # out
 #..............................................................
-dir.create("results/clust_inbd_results/min_cost_inbreedingresults/", recursive = TRUE)
+dir.create("results/clust_inbd_results/smpls_coione/min_cost_inbreedingresults/", recursive = TRUE)
 write_rds(x = clust_inb,
-          path = "results/clust_inbd_results/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
+          path = "results/clust_inbd_results/smpls_coione/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
 
 
 

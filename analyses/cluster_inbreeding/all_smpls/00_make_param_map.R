@@ -17,11 +17,6 @@ mtdt <- readRDS("data/derived_data/sample_metadata.rds")
 clsts <- sort(unique(c(mtdt$hv001)))
 
 #......................
-# subset to monocloanl clusters
-#......................
-monoclonals <- readRDS("data/derived_data/RMCL_results/monoclonals.rds")
-clsts <- clsts[clsts %in% monoclonals$hv001]
-#......................
 # f and ms
 #......................
 fs <- seq(0.1, 0.9, by = 0.1)
@@ -58,11 +53,15 @@ clust_lrandparams <- cbind(clust_lrandparams, learningrates)
 #..............................................................
 lrandparams.gc <- clust_lrandparams
 lrandparams.road <- clust_lrandparams
-lrandparams.gc$inputpath <- "data/derived_data/clst_inbreeding_dat/gcdist_gens.RDS"
-lrandparams.road$inputpath <- "data/derived_data/clst_inbreeding_dat/roaddist_gens.RDS"
+lrandparams.airport <- clust_lrandparams
+lrandparams.gc$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/gcdist_gens.RDS"
+lrandparams.road$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/roaddist_gens.RDS"
+lrandparams.airport$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/airdist_gens.RDS"
 lrandparams.gc$full_matrix <- FALSE
 lrandparams.road$full_matrix <- FALSE
-lrandparams <- rbind.data.frame(lrandparams.gc, lrandparams.road)
+lrandparams.airport$full_matrix <- FALSE
+lrandparams <- rbind.data.frame(lrandparams.gc, lrandparams.road) %>%
+  rbind.data.frame(., lrandparams.airport)
 
 #..............................................................
 # split these and write them out
@@ -74,7 +73,7 @@ write_out_params <- function(paramset, outname, outdir){
   saveRDS(object = paramset, file = paste0(outdir, outname, ".RDS"))
 }
 
-outdir <- "data/derived_data/clst_inbreeding_dat/paramset/"
+outdir <- "analyses/cluster_inbreeding/all_smpls/paramset/"
 dir.create(outdir, recursive = T)
 mapply(write_out_params, paramset = lrandparams.list, outname = paramsnames, outdir = outdir)
 
@@ -83,9 +82,9 @@ mapply(write_out_params, paramset = lrandparams.list, outname = paramsnames, out
 #..............................................................
 snakemap <- data.frame(parampath = paramsnames)
 mastermap <- cbind.data.frame(lrandparams, snakemap)
-saveRDS(mastermap, "data/derived_data/clst_inbreeding_dat/paramset/mastermap.RDS")
+saveRDS(mastermap, "analyses/cluster_inbreeding/all_smpls/paramset/mastermap.RDS")
 colnames(snakemap) <- c("#parampath")
 write.table(x = snakemap,
-            file = "data/derived_data/clst_inbreeding_dat/paramset/snake_map.txt",
+            file = "analyses/cluster_inbreeding/all_smpls/paramset/snake_map.txt",
             quote = F, sep = "\t", col.names = T, row.names = F)
 

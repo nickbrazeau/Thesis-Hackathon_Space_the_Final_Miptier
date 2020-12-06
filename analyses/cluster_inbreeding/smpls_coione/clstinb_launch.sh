@@ -1,7 +1,7 @@
 #! /bin/bash
 
 ROOT=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/ # root directory for project (non-scratch)
-SNAKE=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analyses/cluster_inbreeding
+SNAKE=/proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analyses/cluster_inbreeding/smpls_coione
 NODES=1028 # max number of cluster nodes
 WAIT=30 # lag for system
 

@@ -57,13 +57,23 @@ roaddist_gens <- ibD.monoclonals %>%
   dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, roaddistance)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
+airdist_gens <- ibD.monoclonals %>%
+  dplyr::left_join(., distancematrix.cluster, by = c("hv001.x", "hv001.y")) %>%
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "airportdistance")) %>%
+  dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, airportdistance)) %>%
+  magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
+
+
+
 
 #......................
 # save out
 #......................
-dir.create("data/derived_data/clst_inbreeding_dat")
+dir.create("data/derived_data/coione_clst_inbreeding_dat")
 saveRDS(as.data.frame(gcdist_gens),
-        file = "data/derived_data/clst_inbreeding_dat/gcdist_gens.RDS")
+        file = "data/derived_data/coione_clst_inbreeding_dat/gcdist_gens.RDS")
 saveRDS(as.data.frame(roaddist_gens),
-        file = "data/derived_data/clst_inbreeding_dat/roaddist_gens.RDS")
+        file = "data/derived_data/coione_clst_inbreeding_dat/roaddist_gens.RDS")
+saveRDS(as.data.frame(airdist_gens),
+        file = "data/derived_data/coione_clst_inbreeding_dat/airdist_gens.RDS")
 
