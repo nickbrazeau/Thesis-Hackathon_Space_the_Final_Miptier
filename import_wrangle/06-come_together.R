@@ -27,9 +27,18 @@ summary(values(pfincidence))
 #................................
 urban <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_accessibility_to_cities_v1.0_latest_10_.18_40_8_2020_12_04.tiff")
 urban <- raster::mask(urban, DRC)
-values(urban)[values(urban) < -9998] <- NA
+summary(values(urban))
+# tidy up
+head(table(values(urban)))
+values(urban)[values(urban) < 0] <- NA
+summary(values(urban))
+hist( values(urban) )
 urban <- raster::aggregate(urban, fact = 6, fun = mean)
 summary(values(urban))
+
+
+
+
 
 #..........................................................
 # Join

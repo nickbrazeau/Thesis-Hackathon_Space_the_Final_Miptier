@@ -15,15 +15,15 @@ knitr::opts_knit$set(root.dir = here::here())
 # Purpose of this script is to look
 # at decay of IBD with distance
 #----------------------------------------------------------------------------
-source("~/Documents/GitHub/Space_the_Final_Miptier/R/pairwise_helpers.R")
-source("~/Documents/GitHub/Space_the_Final_Miptier/R/themes.R")
+source("R/pairwise_helpers.R")
+source("R/themes.R")
 library(tidyverse)
 
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
-ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
 
 ```
 
@@ -31,7 +31,7 @@ ibS <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/big
 #.......................................................................
 # Import Distance matrix
 #....................................................................... 
-distancematrix.cluster <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/distance_data/distancematrix_bycluster.rds")
+distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 
 
 #.......................................................................
@@ -101,61 +101,6 @@ cowplot::ggdraw() +
 
 
 ```
-
-
-## IBS/D Mantel Tests
-The mantel test assess the correlation between a genetic distance and a geographical distance. In this case, we will use IBS and IBD as the measures of genetic distance (although $F_{st}$, Nei's $\pi$, etc. could be used). Similarly, geographical distance is measured with either greater circle, road, or river distance. Another thank you to  Emmanuel Pardis for making this analyses easy with ape. We will use 10,000 permutations. _Note, we will use two-sided p-values_.  
-
-
-
-#### IBS Mantel Results 
-```{r}
-mantel_ret <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/results/simresults/mantel_testsdf.RDS")
-```
-
-```{r, results='asis'}
-mantel_ret_ibS <- mantel_ret %>% 
-  dplyr::mutate(zstat = purrr::map(manteltest_ibS, "z.stat"),
-                pval = purrr::map(manteltest_ibS, "p")) %>% 
-  dplyr::select(-c("manteltest_ibS", "manteltest_ibD")) %>% 
-  tidyr::unnest(cols = c("zstat", "pval"))
-
-
-
-mantel_ret_ibS %>% 
-  dplyr::mutate_if(is.numeric, round, 2) %>% 
-  DT::datatable(., extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 20,
-              dom = 'Bfrtip', 
-              buttons = c('csv')))
-  
-```
-
-#### IBD Mantel Results 
-
-```{r, results='asis'}
-
-mantel_ret_ibD <- mantel_ret %>% 
-  dplyr::mutate(zstat = purrr::map(manteltest_ibD, "z.stat"),
-                pval = purrr::map(manteltest_ibD, "p")) %>% 
-  dplyr::select(-c("manteltest_ibS", "manteltest_ibD")) %>% 
-  tidyr::unnest(cols = c("zstat", "pval"))
-
-
-
-mantel_ret_ibD %>% 
-  dplyr::mutate_if(is.numeric, round, 2) %>% 
-  DT::datatable(., extensions='Buttons',
-               options = list(
-              searching = T,
-              pageLength = 20,
-              dom = 'Bfrtip', 
-              buttons = c('csv')))
-  
-```
-
 
 
 
@@ -322,7 +267,7 @@ IBSdecay.plot <- IBSdecay.df %>%
   theme(axis.text.x = element_text(angle = 90))
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_continuous.jpg",
+jpeg("results/figures/IBS_decay_plot_continuous.jpg",
      unit = "in", height = 8, width = 11, res = 500)
 plot(IBSdecay.plot)
 graphics.off()
@@ -384,7 +329,7 @@ IBSdecay.plot <- IBSdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_meanIBS.jpg",
+jpeg("results/figures/IBS_decay_plot_meanIBS.jpg",
      unit = "in", height = 8, width = 11, res = 500)
 plot(IBSdecay.plot)
 graphics.off()
@@ -428,7 +373,7 @@ IBSdecay.plot <- IBSdecay.df %>%
   theme(axis.text.x = element_text(angle = 90))
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_continuous_adm1facet.jpg",
+jpeg("results/figures/IBS_decay_plot_continuous_adm1facet.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBSdecay.plot)
 graphics.off()
@@ -497,7 +442,7 @@ IBSdecay.plot <- IBSdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBS_decay_plot_meanIBS_adm1.jpg",
+jpeg("results/figures/IBS_decay_plot_meanIBS_adm1.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBSdecay.plot)
 graphics.off()
@@ -674,7 +619,7 @@ IBDdecay.plot <- IBDdecay.df %>%
   theme(axis.text.x = element_text(angle = 90))
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot.jpg",
+jpeg("results/figures/IBD_decay_plot.jpg",
      unit = "in", height = 8, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -738,7 +683,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD.jpg",
      unit = "in", height = 8, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -789,7 +734,7 @@ IBDdecay.plot <- IBDdecay.df %>%
 plot(IBDdecay.plot)
 ```
 ```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet.jpg",
+jpeg("results/figures/IBD_decay_plot_continuous_adm1facet.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -811,7 +756,7 @@ plot(IBDdecay.plot)
 ```
 
 ```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_gcdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_continuous_adm1facet_gcdistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -833,7 +778,7 @@ plot(IBDdecay.plot)
 ```
 
 ```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_roaddistance.jpg",
+jpeg("results/figures/IBD_decay_plot_continuous_adm1facet_roaddistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -857,7 +802,7 @@ plot(IBDdecay.plot)
 ```
 
 ```{r}
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_continuous_adm1facet_riverdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_continuous_adm1facet_riverdistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -928,7 +873,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD_adm1.jpg",
      unit = "in", height = 25, width = 11, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -964,7 +909,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_gcdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD_adm1_gcdistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -1001,7 +946,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_roaddistance.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD_adm1_roaddistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -1038,7 +983,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("~/Documents/GitHub/Space_the_Final_Miptier/results/figures/IBD_decay_plot_meanIBD_adm1_riverdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD_adm1_riverdistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
