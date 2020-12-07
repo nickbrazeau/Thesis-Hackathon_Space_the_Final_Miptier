@@ -42,7 +42,7 @@ rule params_out:
 	log: clst_inb_outDIR + "{params}_log.Rout",
 	shell:
 		r"""
-		Rscript --max-ppsize=500000 --vanilla \
+		Rscript \
 			R/clst_inb_coeff_run.R \
 			--mastermap {input} \
 			--seed 48 \

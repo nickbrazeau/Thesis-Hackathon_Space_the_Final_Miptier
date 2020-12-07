@@ -60,7 +60,7 @@ roaddist_gens <- ibD.monoclonals %>%
 airdist_gens <- ibD.monoclonals %>%
   dplyr::left_join(., distancematrix.cluster, by = c("hv001.x", "hv001.y")) %>%
   dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf", "airportdistance")) %>%
-  dplyr::mutate(roaddistance = ifelse(hv001.x == hv001.y, 0, airportdistance)) %>%
+  dplyr::mutate(airportdistance = ifelse(hv001.x == hv001.y, 0, airportdistance)) %>%
   magrittr::set_colnames(c("smpl1", "smpl2", "locat1", "locat2", "gendist", "geodist"))
 
 
