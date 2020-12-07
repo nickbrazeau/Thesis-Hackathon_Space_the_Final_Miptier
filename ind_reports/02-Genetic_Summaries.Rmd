@@ -15,6 +15,7 @@ knitr::opts_knit$set(root.dir = here::here())
 ```{r}
 source("R/basics.R")
 source("R/pairwise_helpers.R")
+source("R/themes.R")
 library(tidyverse)
 library(cowplot)
 #...................... 
@@ -171,8 +172,6 @@ firstrow <- cowplot::plot_grid(smpl_plot, clst_plot, prov_plot,
 
 cowplot::plot_grid(firstrow, legend, ncol = 1, rel_heights = c(1, 0.1))
 
-
-
 ```
 
 
@@ -306,7 +305,7 @@ When considering pairwise IBD as the outcome, we can use a log-base-2 tranformat
 
 #### All Samples
 ```{r, results='asis'}
-ibD.exp.hv001 %>% 
+ibD.long.clst %>% 
   dplyr::mutate(malecotf_gens = -log2(malecotf),
                 malecotf_gens_inv = 1/malecotf_gens) %>% 
   dplyr::filter(malecotf_gens != Inf) %>% 
@@ -320,18 +319,10 @@ ibD.exp.hv001 %>%
 #### Prov
 ```{r, results='asis'}
 
-p1 <- mtdt %>% 
-  dplyr::select(c("name", "adm1name")) %>% 
-  dplyr::rename(smpl1 = name)
 
-p2 <- mtdt %>% 
-  dplyr::select(c("name", "adm1name")) %>% 
-  dplyr::rename(smpl2 = name)
-
-ibD.exp.hv001 %>% 
-  dplyr::left_join(., y = p1, by = "smpl1") %>% 
-  dplyr::left_join(., y = p2, by = "smpl2") %>% 
-  expand_distance_matrix() %>% 
+ibD.long.prov %>% 
+  dplyr::mutate(malecotf_gens = -log2(malecotf),
+                malecotf_gens_inv = 1/malecotf_gens) %>% 
   dplyr::filter(malecotf_gens != Inf) %>% 
   ggplot() + 
   ggridges::stat_density_ridges(
