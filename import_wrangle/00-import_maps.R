@@ -31,8 +31,8 @@ unwanted_array = list(   'Š'='S', 'š'='s', 'Ž'='Z', 'ž'='z', 'À'='A', 'Á'=
                          'ö'='o', 'ø'='o', 'ù'='u', 'ú'='u', 'û'='u', 'ý'='y', 'ý'='y', 'þ'='b', 'ÿ'='y' )
 
 DRCprovgad1$adm1name <- chartr(paste(names(unwanted_array), collapse=''),
-                           paste(unwanted_array, collapse=''),
-                           DRCprovgad1$adm1name)
+                               paste(unwanted_array, collapse=''),
+                               DRCprovgad1$adm1name)
 
 # match dhs and gadm
 DRCprovgad1$adm1name[DRCprovgad1$adm1name == "Kongo-Central"] <- "Kongo Central"
@@ -120,13 +120,32 @@ prettybasemap_nodrc_nonorth_dark <- list(
 )
 
 
-
+#..............................................................
+# simple background
+#..............................................................
+smpl_base_map <- list(
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'], st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'], st_bbox(DRCprov)['ymax']),
+           datum = NA),
+  vivid_theme,
+  theme(plot.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, size = 14),
+        legend.position = "bottom",
+        legend.title = element_text(family = "Helvetica", face = "bold", vjust = 0.85, size = 12),
+        legend.text = element_text(family = "Helvetica", hjust = 0.5, vjust = 0.5, angle = 90, size = 10),
+        plot.background = element_rect(fill = "transparent"),
+        panel.border = element_blank(),
+        panel.background = element_rect(colour="#ffffff"),
+        panel.grid = element_line(colour="transparent"),
+        axis.text = element_blank(),
+        axis.title = element_blank()) # overwrite vivid theme
+)
 
 
 #............................................................-------------------
 # Save Objects & Write out
 #............................................................-------------------
-save(prettybasemap_nodrc,
+save(smpl_base_map,
+     prettybasemap_nodrc,
      prettybasemap_nodrc_nonorth,
      prettybasemap_nodrc_dark,
      prettybasemap_nodrc_nonorth_dark,
