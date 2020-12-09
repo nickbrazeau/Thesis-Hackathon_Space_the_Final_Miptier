@@ -22,8 +22,12 @@ library(tidyverse)
 #....................................................................................
 # Import Genetic Data
 #....................................................................................
-ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
-ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds")
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds") %>% 
+  dplyr::mutate(hv001.x = as.character(hv001.x),
+                hv001.y = as.character(hv001.y))
+ibS <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.mtdt.rds") %>% 
+  dplyr::mutate(hv001.x = as.character(hv001.x),
+                hv001.y = as.character(hv001.y))
 
 ```
 
@@ -43,26 +47,26 @@ ibSdist <- long_distance_matrix_join(x=ibS, y=distancematrix.cluster,
                                      by = c("hv001.x", "hv001.y")) %>%
   dplyr::mutate(gcdistance = gcdistance/1e3,
                 roaddistance = roaddistance/1e3,
-                riverdist = riverdist/1e3,
-                riverdist = as.numeric(riverdist)) # remove units
+                airportdistance = airportdistance/1e3,
+                airportdistance = as.numeric(airportdistance)) # remove units
 # take care of cluster diagnonals
 ibSdist$gcdistance[ibSdist$hv001.x == ibSdist$hv001.y] <- 0
 ibSdist$roaddistance[ibSdist$hv001.x == ibSdist$hv001.y] <- 0
-ibSdist$riverdist[ibSdist$hv001.x == ibSdist$hv001.y] <- 0
+ibSdist$airportdistance[ibSdist$hv001.x == ibSdist$hv001.y] <- 0
 
 
 ibDdist <- long_distance_matrix_join(x=ibD, y=distancematrix.cluster,
                                      by = c("hv001.x", "hv001.y")) %>%
   dplyr::mutate(gcdistance = gcdistance/1e3,
                 roaddistance = roaddistance/1e3,
-                riverdist = riverdist/1e3,
-                riverdist = as.numeric(riverdist)) # remove units
+                airportdistance = airportdistance/1e3,
+                airportdistance = as.numeric(airportdistance)) # remove units
 
 
 # take care of cluster diagnonals
 ibDdist$gcdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 ibDdist$roaddistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
-ibDdist$riverdist[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
+ibDdist$airportdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 
 
 
@@ -200,9 +204,9 @@ ibSdist.road.summary %>%
 
 
 
-### IBS - River Distance
+### IBS - Airport Distance
 ```{r}
-ibSdist$riverdist_cat <- cut(x = c(ibSdist$riverdist),
+ibSdist$airportdistance_cat <- cut(x = c(ibSdist$airportdistance),
                                 breaks = c(0, 1e-26,
                                            seq(100, 2000, by = 100),
                                            Inf),
@@ -219,8 +223,8 @@ ibSdist$riverdist_cat <- cut(x = c(ibSdist$riverdist),
 
 ```{r, results='asis'}
 
-ibSdist.river.summary <- ibSdist %>%
-  dplyr::group_by(riverdist_cat) %>%
+ibSdist.airport.summary <- ibSdist %>%
+  dplyr::group_by(airportdistance_cat) %>%
   dplyr::summarise(
     n = n(),
     IBSmin = min(hammings),
@@ -233,7 +237,7 @@ ibSdist.river.summary <- ibSdist %>%
   )
 
 
-ibSdist.river.summary %>% 
+ibSdist.airport.summary %>% 
   dplyr::mutate_if(is.numeric, round, 2) %>% 
   DT::datatable(., extensions='Buttons',
                options = list(
@@ -251,7 +255,7 @@ IBSdecay.df <- ibSdist %>%
   dplyr::select(c("smpl1", "smpl2", "hammings", dplyr::ends_with("_cat"))) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
-                                                     "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
+                                                     "airportdistance_cat"), labels = c("GC Dist.", "Road Dist.", "Airport Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
                                            "200km", "300km", "400km", "500km", "600km",
                                            "700km", "800km", "900km", "1000km", "1100km",
@@ -284,7 +288,7 @@ plot(IBSdecay.plot)
 ```{r}
 
 IBSdecay.df <- ibSdist %>%
-  dplyr::select(c("smpl1", "smpl2", "hammings", dplyr::ends_with("distance"), "riverdist")) %>%
+  dplyr::select(c("smpl1", "smpl2", "hammings", dplyr::ends_with("distance"), "airportdistance")) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
                                                             seq(100, 2000, by = 100),
@@ -297,8 +301,8 @@ IBSdecay.df <- ibSdist %>%
                                             "1700km", "1800km", "1900km", "2000km", ">2000km")
                                  ),
                 distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
-                                                    "riverdist"), 
-                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
+                                                    "airportdistance"), 
+                                 labels = c("GC Dist.", "Road Dist.", "Airport Dist."))
                 ) %>% 
   dplyr::group_by(distcat, distmetcat) %>% 
   dplyr::summarise(
@@ -314,7 +318,7 @@ IBSdecay.df <- ibSdist %>%
   
 IBSdecay.plot <- IBSdecay.df %>%
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBS") +
   facet_wrap(distcat~.) +
@@ -357,7 +361,7 @@ IBSdecay.df <- ibSdist.long %>%
   dplyr::select(c("smpl1", "smpl2", "adm1name", "hammings", dplyr::ends_with("_cat"))) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
-                                                     "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
+                                                     "airportdistance_cat"), labels = c("GC Dist.", "Road Dist.", "Airport Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
                                            "200km", "300km", "400km", "500km", "600km",
                                            "700km", "800km", "900km", "1000km", "1100km",
@@ -392,7 +396,7 @@ plot(IBSdecay.plot)
 
 
 IBSdecay.df <- ibSdist.long %>%
-    dplyr::select(c("smpl1", "smpl2", "adm1name", "hammings", dplyr::ends_with("distance"), "riverdist")) %>%
+    dplyr::select(c("smpl1", "smpl2", "adm1name", "hammings", dplyr::ends_with("distance"), "airportdistance")) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
                                                             seq(100, 2000, by = 100),
@@ -405,8 +409,8 @@ IBSdecay.df <- ibSdist.long %>%
                                             "1700km", "1800km", "1900km", "2000km", ">2000km")
                                  ),
                 distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
-                                                    "riverdist"), 
-                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
+                                                    "airportdistance"), 
+                                 labels = c("GC Dist.", "Road Dist.", "Airport Dist."))
                 ) %>% 
   dplyr::group_by(adm1name, distcat, distmetcat) %>% 
   dplyr::summarise(
@@ -423,7 +427,7 @@ IBSdecay.df <- ibSdist.long %>%
 
 IBSdecay.plot <- IBSdecay.df %>%
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBS, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   # geom_smooth(aes(x = distmetcat, y = meanIBS), 
   #             method="glm",
@@ -550,9 +554,9 @@ ibDdist.road.summary %>%
 ```
 
 
-### IBD - River Distance
+### IBD - Airport Distance
 ```{r}
-ibDdist$riverdist_cat <- cut(x = c(ibDdist$riverdist),
+ibDdist$airportdistance_cat <- cut(x = c(ibDdist$airportdistance),
                              breaks = c(0, 1e-26,
                                            seq(100, 2000, by = 100),
                                            Inf),
@@ -570,8 +574,8 @@ ibDdist$riverdist_cat <- cut(x = c(ibDdist$riverdist),
 
 ```{r, results='asis'}
 
-ibDdist.river.summary <- ibDdist %>%
-  dplyr::group_by(riverdist_cat) %>%
+ibDdist.airport.summary <- ibDdist %>%
+  dplyr::group_by(airportdistance_cat) %>%
   dplyr::summarise(
     n = n(),
     IBDmin = min(malecotf),
@@ -584,7 +588,7 @@ ibDdist.river.summary <- ibDdist %>%
   )
 
 
-ibDdist.river.summary %>% 
+ibDdist.airport.summary %>% 
   dplyr::mutate_if(is.numeric, round, 2) %>% 
   DT::datatable(., extensions='Buttons',
                 options = list(
@@ -603,7 +607,7 @@ IBDdecay.df <- ibDdist %>%
   dplyr::select(c("smpl1", "smpl2", "malecotf", dplyr::ends_with("_cat"))) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
-                                                     "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
+                                                     "airportdistance_cat"), labels = c("GC Dist.", "Road Dist.", "Airport Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
                                            "200km", "300km", "400km", "500km", "600km",
                                            "700km", "800km", "900km", "1000km", "1100km",
@@ -637,7 +641,7 @@ plot(IBDdecay.plot)
 ```{r}
 
 IBDdecay.df <- ibDdist %>%
-  dplyr::select(c("smpl1", "smpl2", "malecotf", dplyr::ends_with("distance"), "riverdist")) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", dplyr::ends_with("distance"), "airportdistance")) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 4:6) %>%
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26, 
                                                             seq(100, 2000, by = 100),
@@ -650,8 +654,8 @@ IBDdecay.df <- ibDdist %>%
                                             "1700km", "1800km", "1900km", "2000km", ">2000km")
                                  ),
                 distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
-                                                    "riverdist"), 
-                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
+                                                    "airportdistance"), 
+                                 labels = c("GC Dist.", "Road Dist.", "Airport Dist."))
                 ) %>% 
   dplyr::group_by(distcat, distmetcat) %>% 
   dplyr::summarise(
@@ -668,7 +672,7 @@ IBDdecay.df <- ibDdist %>%
 
 IBDdecay.plot <- IBDdecay.df %>%
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI, size = n)) +
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) +
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBD") +
   facet_wrap(distcat~.) +
@@ -711,7 +715,7 @@ IBDdecay.df <- ibDdist.long %>%
   dplyr::select(c("smpl1", "smpl2", "malecotf", "adm1name", dplyr::ends_with("cat"))) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>%
   dplyr::mutate(distcat = factor(distcat, levels = c("gcdistance_cat", "roaddistance_cat",
-                                                     "riverdist_cat"), labels = c("GC Dist.", "Road Dist.", "River Dist.")),
+                                                     "airportdistance_cat"), labels = c("GC Dist.", "Road Dist.", "Airport Dist.")),
                 distmetric = factor(distmetric, levels = c("Within", "100km",
                                            "200km", "300km", "400km", "500km", "600km",
                                            "700km", "800km", "900km", "1000km", "1100km",
@@ -784,10 +788,10 @@ plot(IBDdecay.plot)
 graphics.off()
 ```
 
-#### River Distance
+#### Airport Distance
 ```{r}
 IBDdecay.plot <- IBDdecay.df %>%
-  dplyr::filter(distcat == "River Dist.") %>% 
+  dplyr::filter(distcat == "Airport Dist.") %>% 
   ggplot() +
   geom_boxplot(aes(x=distmetric, y = malecotf)) +
   facet_wrap(adm1name~., scales = "free") +
@@ -802,7 +806,7 @@ plot(IBDdecay.plot)
 ```
 
 ```{r}
-jpeg("results/figures/IBD_decay_plot_continuous_adm1facet_riverdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_continuous_adm1facet_airportdistanceance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
@@ -817,7 +821,7 @@ graphics.off()
 ```{r}
 
 IBDdecay.df <- ibDdist.long %>%
-  dplyr::select(c("smpl1", "smpl2", "malecotf", "adm1name", dplyr::ends_with("distance"), "riverdist")) %>%
+  dplyr::select(c("smpl1", "smpl2", "malecotf", "adm1name", dplyr::ends_with("distance"), "airportdistance")) %>%
   tidyr::gather(., key = "distcat", value = "distmetric", 5:7) %>% 
   dplyr::mutate(distmetcat = cut(x = distmetric, breaks = c(0, 1e-26,  
                                                             seq(100, 2000, by = 100),
@@ -830,8 +834,8 @@ IBDdecay.df <- ibDdist.long %>%
                                             "1700km", "1800km", "1900km", "2000km", ">2000km")
                                  ),
                 distcat = factor(distcat, levels = c("gcdistance", "roaddistance",
-                                                    "riverdist"), 
-                                 labels = c("GC Dist.", "Road Dist.", "River Dist."))
+                                                    "airportdistance"), 
+                                 labels = c("GC Dist.", "Road Dist.", "Airport Dist."))
                 ) %>% 
   dplyr::group_by(adm1name, distcat, distmetcat) %>% 
   dplyr::summarise(
@@ -857,7 +861,7 @@ IBDdecay.df <- ibDdist.long %>%
 
 IBDdecay.plot <- IBDdecay.df %>%
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBD") +
   facet_wrap(adm1name ~ distcat) +
@@ -893,7 +897,7 @@ plot(IBDdecay.plot)
 IBDdecay.plot <- IBDdecay.df %>%
   dplyr::filter(distcat == "GC Dist.") %>% 
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBD") +
   facet_wrap(adm1name ~ .) +
@@ -930,7 +934,7 @@ plot(IBDdecay.plot)
 IBDdecay.plot <- IBDdecay.df %>%
   dplyr::filter(distcat == "Road Dist.") %>% 
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBD") +
   facet_wrap(adm1name ~ .) +
@@ -957,7 +961,7 @@ plot(IBDdecay.plot)
 ```
 
 
-#### River Distance
+#### Airport Distance
 ```{r}
   # geom_smooth(aes(x = distmetcat, y = meanIBD), # this needs to be a continuous x -- lift over cat
   #             method="glm",
@@ -965,9 +969,9 @@ plot(IBDdecay.plot)
   #             method.args=list(family=gaussian(link="log")), color = "#9ecae1") +
 
 IBDdecay.plot <- IBDdecay.df %>%
-  dplyr::filter(distcat == "River Dist.") %>% 
+  dplyr::filter(distcat == "Airport Dist.") %>% 
   ggplot() +
-  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI, size = n)) + 
+  geom_pointrange(aes(x = distmetcat, y = meanIBD, ymin = L95CI, ymax = U95CI)) + 
   scale_size(range = c(0, 1)) +
   scale_y_continuous("Mean IBD") +
   facet_wrap(adm1name ~ .) +
@@ -983,7 +987,7 @@ IBDdecay.plot <- IBDdecay.df %>%
         )
 
 
-jpeg("results/figures/IBD_decay_plot_meanIBD_adm1_riverdistance.jpg",
+jpeg("results/figures/IBD_decay_plot_meanIBD_adm1_airportdistance.jpg",
      unit = "in", height = 11, width = 8, res = 500)
 plot(IBDdecay.plot)
 graphics.off()
