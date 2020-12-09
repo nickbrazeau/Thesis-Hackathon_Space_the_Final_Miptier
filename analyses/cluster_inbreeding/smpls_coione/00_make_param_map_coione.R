@@ -59,9 +59,9 @@ clust_lrandparams <- cbind(clust_lrandparams, learningrates)
 lrandparams.gc <- clust_lrandparams
 lrandparams.road <- clust_lrandparams
 lrandparams.airport <- clust_lrandparams
-lrandparams.gc$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/gcdist_gens.RDS"
-lrandparams.road$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/roaddist_gens.RDS"
-lrandparams.airport$inputpath <- "data/derived_data/allsmpls_clst_inbreeding_dat/airdist_gens.RDS"
+lrandparams.gc$inputpath <- "data/derived_data/coione_clst_inbreeding_dat/gcdist_gens.RDS"
+lrandparams.road$inputpath <- "data/derived_data/coione_clst_inbreeding_dat/roaddist_gens.RDS"
+lrandparams.airport$inputpath <- "data/derived_data/coione_clst_inbreeding_dat/airdist_gens.RDS"
 lrandparams.gc$full_matrix <- FALSE
 lrandparams.road$full_matrix <- FALSE
 lrandparams.airport$full_matrix <- FALSE

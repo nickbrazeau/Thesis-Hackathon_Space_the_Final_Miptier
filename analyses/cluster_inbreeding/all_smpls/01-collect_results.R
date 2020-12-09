@@ -19,7 +19,7 @@ mastermap <- readRDS("analyses/cluster_inbreeding/all_smpls/paramset/mastermap.R
                 fstart = 1,
                 mstart = m) %>%
   dplyr::mutate(
-    spacetype = sub("_gens.RDS", "", sub("data/derived_data/clst_inbreeding_dat/", "", inputpath))
+    spacetype = sub("_gens.RDS", "", sub("data/derived_data/allsmpls_clst_inbreeding_dat/", "", inputpath))
   ) %>%
   dplyr::select(-c("inputpath"))
 
@@ -61,7 +61,6 @@ mastermap_mincost <- mastermap_rets %>%
 # pull out min results
 #...........................................................
 clust_inb <- mastermap_mincost %>%
-  dplyr::select(c("spacetype", "mincost", "param_set")) %>%
   dplyr::mutate(param_set = paste0("results/clust_inbd_results/all_smpls/Find_grad_descent_results/", param_set, ".RDS"),
                 param_set = purrr::map(param_set, readRDS),
                 cost = purrr::map(param_set, "cost"))
@@ -70,6 +69,7 @@ clust_inb <- mastermap_mincost %>%
 #......................
 plot(clust_inb$cost[[1]])
 plot(clust_inb$cost[[2]])
+plot(clust_inb$cost[[3]])
 
 #......................
 # process final Inbreeding coeffs

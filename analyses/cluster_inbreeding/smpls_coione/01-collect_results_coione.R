@@ -19,7 +19,7 @@ mastermap <- readRDS("analyses/cluster_inbreeding/smpls_coione/paramset/masterma
                 fstart = 1,
                 mstart = m) %>%
   dplyr::mutate(
-    spacetype = sub("_gens.RDS", "", sub("data/derived_data/clst_inbreeding_dat/", "", inputpath))
+    spacetype = sub("_gens.RDS", "", sub("data/derived_data/coione_clst_inbreeding_dat/", "", inputpath))
   ) %>%
   dplyr::select(-c("inputpath"))
 
@@ -61,7 +61,6 @@ mastermap_mincost <- mastermap_rets %>%
 # pull out min results
 #...........................................................
 clust_inb <- mastermap_mincost %>%
-  dplyr::select(c("spacetype", "mincost", "param_set")) %>%
   dplyr::mutate(param_set = paste0("results/clust_inbd_results/smpls_coione/Find_grad_descent_results/", param_set, ".RDS"),
                 param_set = purrr::map(param_set, readRDS),
                 cost = purrr::map(param_set, "cost"))
