@@ -69,6 +69,7 @@ clust_inb <- mastermap_mincost %>%
 #......................
 plot(clust_inb$cost[[1]])
 plot(clust_inb$cost[[2]])
+plot(clust_inb$cost[[3]])
 
 #......................
 # process final Inbreeding coeffs
