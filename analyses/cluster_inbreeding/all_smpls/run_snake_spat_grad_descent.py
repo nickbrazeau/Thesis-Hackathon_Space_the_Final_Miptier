@@ -39,7 +39,6 @@ rule all:
 rule params_out:
 	input: clst_inb_paramDIR + "{params}.RDS"
 	output: clst_inb_outDIR + "{params}.RDS",
-	log: clst_inb_outDIR + "{params}_log.Rout",
 	shell:
 		r"""
 		Rscript \
@@ -48,6 +47,5 @@ rule params_out:
 			--seed 48 \
 			--mlowerbound 1e-25 \
 			--mupperbound 5e-4 \
-			-O {output} \
-			>& {log}
+			-O {output} 
 		"""

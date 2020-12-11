@@ -88,7 +88,7 @@ ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                        f_learningrate = f_learningrate,
                                        m_learningrate = m_learningrate,
                                        full_matrix = fullmatrix,
-                                       steps = 5e4,
+                                       steps = 1e4,
                                        report_progress = TRUE)
 
 #..............................................................
