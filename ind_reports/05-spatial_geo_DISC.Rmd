@@ -13,6 +13,7 @@ knitr::opts_knit$set(root.dir = here::here())
 
 ```{r}
 library(tidyverse)
+library(sf)
 library(raster)
 library(cowplot)
 library(PrevMap)
@@ -49,7 +50,7 @@ disc <- dplyr::bind_rows(all_disc, coi_1_disc)
 
 ## Parameter Estimates
 ### F Values
-```{r}
+```{r, results='asis'}
 disc %>% 
   dplyr::ungroup() %>% 
   dplyr::select(c("lvl", "spacetype", "inbreed_ests")) %>% 
@@ -71,7 +72,7 @@ disc %>%
 ```
 
 ### M Values
-```{r}
+```{r, results='asis'}
 disc %>% 
   dplyr::ungroup() %>% 
   dplyr::select(c("lvl", "spacetype", "inbreed_ests")) %>% 
@@ -92,7 +93,7 @@ disc %>%
 
 ```
 
-## Point Process Maps
+## Maps
 ```{r}
 #' @title Raw Map Point Process
 make_spat_raw_map <- function(clst_inbdset, ge, DRCprov) {
@@ -105,11 +106,14 @@ make_spat_raw_map <- function(clst_inbdset, ge, DRCprov) {
   # plot
   plotObj <- clst_inbdset %>%
     ggplot() +
-    prettybasemap_nodrc_nonorth_dark +
     geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
     geom_point(aes(x = longnum, y = latnum, color = Finbd), 
-               size = 1.1, alpha = 0.9) +
-    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1) 
+               size = 1.5, alpha = 0.9) +
+    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1) +  
+    map_theme +
+    theme(axis.title = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0),"cm")) +
+    coord_sf(datum = NA)
   
   return(plotObj)
 }
@@ -120,7 +124,6 @@ disc$pointmaps <- purrr::map(disc$inbreed_ests, make_spat_raw_map,
 
 ```
 
-## Krigged Maps
 ```{r}
 #' @title Wrapper for Prevmap MLE-Linear Model 
 prevmap_elogit_lin_wrap <- function(clst_inbdset, ge, empirical_logit_tol = 1e-3) {
@@ -164,8 +167,10 @@ smooth_preds_prevmap_mlelin <- function(prevmapfit,
     ggspatial::layer_spatial(data = ret.rstr, 
                              aes(fill = stat(band1)),
                              alpha = alpha) + 
-      scale_fill_viridis_b("DISC", na.value = NA) +
-    prettybasemap_nodrc_nonorth_dark
+    scale_fill_viridis_b("DISC", na.value = NA) +
+    map_theme +
+    theme(axis.title = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0),"cm"))
   
   # return
   out <- list(rstr = ret.rstr,
@@ -195,21 +200,43 @@ disc$predmap <- purrr::map(disc$prevmapfit, smooth_preds_prevmap_mlelin,
 # pull pieces out
 disc$predmap_plot <- purrr::map(disc$predmap, "plotObj")
 disc$predmap_rstr <- purrr::map(disc$predmap, "rstr")
+```
 
+### All Samples
+```{r}
 #......................
 # make plots
 #......................
-left <- cowplot::plot_grid(disc$pointmaps[[1]], disc$pointmaps[[2]], disc$pointmaps[[3]], ncol = 1, labels = c("(A)", "(B)", "(C)"))
-right <- cowplot::plot_grid(disc$predmap_plot[[1]], disc$predmap_plot[[2]], disc$predmap_plot[[3]], ncol = 1, labels = c("(A)", "(B)", "(C)"))
-mainfig <- cowplot::plot_grid(left, right, ncol = 2)
+left <- cowplot::plot_grid(disc$pointmaps[[1]], disc$pointmaps[[2]], disc$pointmaps[[3]], nrow = 1, align = "hv", labels = c("(A)", "(B)", "(C)"))
+right <- cowplot::plot_grid(disc$predmap_plot[[1]], disc$predmap_plot[[2]], disc$predmap_plot[[3]], nrow = 1)
+mainfig <- cowplot::plot_grid(left, right, nrow = 2)
 # plot out
-jpeg("results/figures/DISC_results_mapped.jpg",
+jpeg("results/figures/allsmpls_DISC_results_mapped.jpg",
      width = 8, height = 11, units = "in", res = 800)
 plot(mainfig)
 graphics.off()
 ```
 
-```{r, results='asis'}
+```{r, results='asis', width = 11, height = 8}
+plot(mainfig)
+```
+
+### Monoclonal Samples
+```{r}
+#......................
+# make plots
+#......................
+left <- cowplot::plot_grid(disc$pointmaps[[4]], disc$pointmaps[[5]], disc$pointmaps[[6]], nrow = 1, align = "hv", labels = c("(A)", "(B)", "(C)"))
+right <- cowplot::plot_grid(disc$predmap_plot[[4]], disc$predmap_plot[[5]], disc$predmap_plot[[6]], nrow = 1)
+mainfig <- cowplot::plot_grid(left, right, nrow = 2)
+# plot out
+jpeg("results/figures/monoclonal_DISC_results_mapped.jpg",
+     width = 8, height = 11, units = "in", res = 800)
+plot(mainfig)
+graphics.off()
+```
+
+```{r, results='asis', width = 11, height = 8}
 plot(mainfig)
 ```
 
@@ -241,7 +268,7 @@ get_pt_corr <- function(clst_inbdset, covardf) {
     tidyr::pivot_longer(data = ., cols = c("incidence", "urban"),
                         names_to = "covarlvl", values_to = "covar") %>% 
     dplyr::mutate(covarlvl = factor(covarlvl, levels = c("incidence", "urban"),
-                                 labels = c("Incidence", "Urbanicity"))) %>% 
+                                    labels = c("Incidence", "Urbanicity"))) %>% 
     ggplot() +
     geom_point(aes(x = covar, y = est)) +
     geom_smooth(aes(x = covar, y = est)) + 
@@ -262,7 +289,7 @@ cowplot::plot_grid(allsmpls_covars$covarplots[[1]],
                    allsmpls_covars$covarplots[[2]],
                    allsmpls_covars$covarplots[[3]],
                    labels = c("(A)", "(B)", "(C)"),
-                   ncol = 1)
+                   nrow = 1)
 ```
 
 ### Raster Correlations
@@ -271,7 +298,7 @@ cowplot::plot_grid(allsmpls_covars$covarplots[[1]],
 urbanrstPlotObj <- ggplot() +
   ggspatial::layer_spatial(data = urbanrstr, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_dark +
+  smpl_base_map +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu",
                        na.value = NA) +
   geom_point(data = drccites, 
@@ -290,7 +317,7 @@ plot(urbanrstPlotObj)
 pfincidencePlotObj <- ggplot() +
   ggspatial::layer_spatial(data = pfincidence, aes(fill = stat(band1))) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_dark +
+  smpl_base_map +
   scale_fill_distiller("Pf Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_point(data = drccites, 
              aes(x = longnum, y=latnum)) +
@@ -300,7 +327,7 @@ pfincidencePlotObj <- ggplot() +
 
 ```
 ```{r, results='asis'}
-plot(pfincidenceplotObj)
+plot(pfincidencePlotObj)
 ```
 
 ```{r}
@@ -312,7 +339,7 @@ rstcompr <- function(xrstr, yrstr) {
   }
   stck <- raster::stack(xrstr, yrstr)
   out <- raster::layerStats(stck, 'pearson', na.rm=T)
-  put <- out$`pearson correlation coefficient`[lower.tri(out$`pearson correlation coefficient`)]
+  out <- out$`pearson correlation coefficient`[lower.tri(out$`pearson correlation coefficient`)]
   return(out)
 }
 
@@ -320,7 +347,7 @@ rstcompr <- function(xrstr, yrstr) {
 # all samples only
 #......................
 allsmplsrstr <- disc %>% 
-  dplyr::filter(lvl == "all")
+  dplyr::filter(lvl == "all") %>% 
   dplyr::select(c("spacetype", "predmap_rstr"))
 
 allsmplsrstr$urban_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, yrstr = urbanrstr)
