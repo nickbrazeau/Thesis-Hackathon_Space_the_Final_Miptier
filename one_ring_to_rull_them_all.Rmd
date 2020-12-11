@@ -16,13 +16,13 @@ editor_options:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
-                      fig.align = 'center', fig.width = 8, fig.height = 8)
+                      fig.align = 'center', fig.width = 6, fig.height = 6)
 knitr::opts_knit$set(root.dir = here::here(""))
 
 ```
 
-```{r, child = 'ind_reports/01-Sample_Clsts_Descriptive.Rmd'}
-```
+<!-- ```{r, child = 'ind_reports/01-Sample_Clsts_Descriptive.Rmd'} -->
+<!-- ``` -->
 
 ```{r, child = 'ind_reports/02-Genetic_Summaries.Rmd'}
 ```
@@ -37,10 +37,6 @@ knitr::opts_knit$set(root.dir = here::here(""))
 ```
 
 ```{r, child = 'ind_reports/06-IBD_meioticsibs.Rmd'}
-```
-
-
-```{r, child = 'ind_reports/999-SNP_autocorr.Rmd'}
 ```
 
 ```{r, child = 'ind_reports/999-within_household.Rmd'}
