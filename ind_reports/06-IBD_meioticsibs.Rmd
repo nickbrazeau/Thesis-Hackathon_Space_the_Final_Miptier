@@ -26,13 +26,26 @@ source("R/pairwise_helpers.R")
 DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
 load("data/map_bases/space_mips_maps_bases.rda")
 
+# highly related pairs
+ibD <- readRDS("data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibD.long.mtdt.rds")
+ibD.meiotic <- ibD %>%
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "malecotf")) %>%
+  dplyr::filter(malecotf >= 0.5)
+# dhs in data
+dhsind <- readRDS("data/derived_data/DHS_qPCR_DRCsmpls_geo.rds")
+
+
+#......................
+# get coord points and jitter slightly for plotting
+#......................
 # load data
 mtdt <- readRDS("data/derived_data/sample_metadata.rds") %>% 
   dplyr::select(c("name", "barcode", "hv001", "longnum", "latnum"))
-coords.pts <- readRDS("data/derived_data/meiotic_sibs_coordpts.rds")
-ibD.meiotic <- readRDS("data/derived_data/bigbarcode_genetic_data/meiotic_sibs_mipanalyzer.DRCibD.long.mtdt.rds")
-# dhs in data
-dhsind <- readRDS("data/derived_data/DHS_qPCR_DRCsmpls_geo.rds")
+
+coords.pts <-  mtdt %>% 
+  dplyr::filter(hv001 %in% unique(c(ibD.meiotic$hv001.x, ibD.meiotic$hv001.y))) %>% 
+  dplyr::mutate(long_jitter = longnum + purrr::map_dbl(dplyr::n(), function(x) rnorm(1, 0.5, 0.01)),
+                lat_jitter = latnum + purrr::map_dbl(dplyr::n(), function(x) rnorm(1, 0.5, 01)))
 
 
 ```
@@ -40,10 +53,21 @@ dhsind <- readRDS("data/derived_data/DHS_qPCR_DRCsmpls_geo.rds")
 ## Overview of Meiotic Pairs
 ### Pair Plot
 ```{r, results='asis'}
+hv001.x <- coords.pts %>% 
+  dplyr::rename(hv001.x = hv001) %>% 
+  dplyr::select(c("hv001.x", "long_jitter", "lat_jitter"))
+hv001.y <- coords.pts %>% 
+  dplyr::rename(hv001.y = hv001)  %>% 
+  dplyr::select(c("hv001.y", "long_jitter", "lat_jitter"))
+
+ibD.meiotic.hv001 <- dplyr::left_join(ibD.meiotic, hv001.x, by = "hv001.x")
+ibD.meiotic.hv001 <- dplyr::left_join(ibD.meiotic.hv001, hv001.y, by = "hv001.y")
+ibD.meiotic.hv001 <- ibD.meiotic.hv001 %>% 
+  dplyr::mutate(long_jitter.x = ifelse(hv001.x == hv001.y, long_jitter.x - 1e-3, long_jitter.x))
 ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  smpl_bckgrnd +
-  geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
+  smpl_base_map +
+  geom_curve(data = ibD.meiotic.hv001, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf)) +
@@ -58,7 +82,7 @@ ggplot() +
 ```{r, results = 'asis'}
 
 ibD.meiotic %>% 
-  dplyr::select(c("adm1name.x", "hv001.x", "smpl1", "adm1name.y", "hv001.y", "smpl2", "malecotf")) %>% 
+  dplyr::select(c("hv001.x", "smpl1", "hv001.y", "smpl2", "malecotf")) %>% 
   DT::datatable(., extensions='Buttons',
                 options = list(
                   searching = T,
@@ -94,7 +118,7 @@ ibD.meiotic.clsts <- ibD.meiotic.clsts %>%
 ```{r, results='asis'}
 ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  smpl_bckgrnd +
+  smpl_base_map +
   geom_point(data = ibD.meiotic.clsts, aes(x = longnum, y = latnum, 
                                            shape = lvl, fill = ind_within_pairs), 
              alpha = 0.5, color = "#ffffff", size = 1.5) +
@@ -103,11 +127,31 @@ ggplot() +
   theme(
     legend.position = "right",
     legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
-    legend.text = element_text(face = "bold", size = 11),
+    legend.text = element_text(face = "bold", size = 11, angle = 0),
     legend.key = element_rect(fill = "#737373")
   ) + 
   guides(size = guide_legend(ncol=2),
          color = guide_legend(nrow=1)) 
+
+ibD.meiotic.clsts %>% 
+  dplyr::filter(lvl == "Y") %>% 
+  ggplot() +
+  geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+  smpl_base_map +
+  geom_point(aes(x = longnum, y = latnum, 
+                 shape = lvl, fill = ind_within_pairs), 
+             alpha = 0.5, color = "#ffffff", size = 1.5) +
+  scale_fill_distiller("Count of \n Highly Related Pairs", type = "div", palette = "RdYlBu") +
+  scale_shape_manual("Pairs Present", values = c(21)) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
+    legend.text = element_text(face = "bold", size = 11, angle = 0),
+    legend.key = element_rect(fill = "#737373")
+  ) + 
+  guides(size = guide_legend(ncol=2),
+         color = guide_legend(nrow=1)) 
+
 
 ```
 Overall, we identified `r sum(ibD.meiotic.clsts$lvl == "Y")` clusters with at least one sample in a highly related pair while `r sum(ibD.meiotic.clsts$lvl == "N")` clusters had no highly related pairs.
@@ -203,7 +247,7 @@ edge_dens_plot <- EdgeDens %>%
                                                 levels = 1:max(EdgeDens$node_edge_density))) %>% 
   ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
+  smpl_base_map +
   geom_point(aes(x = longnum, y = latnum, 
                  fill = node_edge_density_disc), 
              alpha = 0.5, size = 2, shape = 21, stroke = 0.3, color = "#d9d9d9") +
@@ -212,7 +256,8 @@ edge_dens_plot <- EdgeDens %>%
                            size = 3, fontface = "bold", color = "#bdbdbd") +
   scale_fill_manual("Edge Density", values = rev(RColorBrewer::brewer.pal(max(EdgeDens$node_edge_density), 
                                                                           name = "RdYlBu"))) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        legend.text = element_text(angle = 0))
 
 
 ```
@@ -304,8 +349,8 @@ cluster_connect_set <- cluster_connect_set %>%
 coords.pts <- dplyr::left_join(coords.pts, cluster_connect_set, by = "hv001")
 DRCtransmap <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_curve(data = ibD.meiotic, alpha = 0.5, size = 1.1,
+  smpl_base_map +
+  geom_curve(data = ibD.meiotic.hv001, alpha = 0.5, size = 1.1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
                  color = malecotf)) +
@@ -331,20 +376,20 @@ plot(DRCtransmap)
 #......................
 # Import Distance matrix
 #...................... 
-distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds")
+distancematrix.cluster <- readRDS("data/distance_data/distancematrix_bycluster.rds") %>% 
+  dplyr::mutate(hv001.x = as.numeric(hv001.x),
+                hv001.y = as.numeric(hv001.y))
 
-ibDdist <- long_distance_matrix_join(x = ibD.meiotic, y = distancematrix.cluster,
+ibDdist <- long_distance_matrix_join(x = ibD.meiotic.hv001, y = distancematrix.cluster,
                                      by = c("hv001.x", "hv001.y")) %>%
   dplyr::mutate(gcdistance = gcdistance/1e3,
                 roaddistance = roaddistance/1e3,
-                riverdistance = riverdistance/1e3,
                 airportdistance = airportdistance/1e3)
 
 
 # take care of cluster diagnonals
 ibDdist$gcdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 ibDdist$roaddistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
-ibDdist$riverdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 ibDdist$airportdistance[ibDdist$hv001.x == ibDdist$hv001.y] <- 0
 
 #......................
@@ -355,13 +400,13 @@ notsameclst.edges <- ibD.meiotic.network %>%
   tibble::as_tibble(.) %>% 
   dplyr::filter(hv001.x != hv001.y)
 ibDdist <- ibDdist %>% 
-  dplyr::select(c("barcode.x", "barcode.y", "gcdistance", "roaddistance", "riverdistance", "airportdistance"))
+  dplyr::select(c("smpl1", "smpl2", "hv001.x", "hv001.y", "gcdistance", "roaddistance", "airportdistance"))
 
 ```
 ```{r, results='asis'}
 dplyr::left_join(notsameclst.edges,
-                 ibDdist, by = c("barcode.x", "barcode.y")) %>% 
-  dplyr::select(c("gcdistance", "roaddistance", "riverdistance", "airportdistance")) %>% 
+                 ibDdist, by = c("hv001.x", "hv001.y")) %>% 
+  dplyr::select(c("gcdistance", "roaddistance", "airportdistance")) %>% 
   tidyr::gather(., key = "distcat", value = "distance") %>% 
   summ_var(., x = "distance", groupingvar = "distcat") %>% 
   pretty_DT_tab(.)
@@ -413,7 +458,8 @@ urban.pts <- urban.pts %>%
 #...................... 
 # read in urbanicity 
 #......................
-urban <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/urbanicity_raster/urbanicity.grd")
+covarstack <- readRDS("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/covar_rasterstack_raw.RDS")
+urban <- covarstack[["urban"]]
 
 urbanmean <- rep(NA, nrow(urban.pts)) 
 for (i in 1:nrow(urban.pts)) {
@@ -431,15 +477,21 @@ urban.pts <- urban.pts %>%
                 urbanmean = urbanmean)
 sf::st_geometry(urban.pts) <- NULL
 
+# get coords
+meioticcoords <- ibD.meiotic.hv001 %>% 
+  dplyr::select(c("hv001.x", "hv001.y", dplyr::starts_with("long"), dplyr::starts_with("lat"))) %>% 
+  dplyr::filter(!duplicated(.))
+
 # make plot
 ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
+  dplyr::left_join(., y = meioticcoords) %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
   ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
+  smpl_base_map +
   geom_curve(alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -454,26 +506,6 @@ ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>%
 plot(ibD.meiotic_plot_urbanrstr)
 ```
 
-```{r}
-# reproject for aesthetics in figure but keep simpler planar (ESP4326) for geodist calcs
-urban_reproj <- raster::projectRaster(urban, "+proj=utm +zone=34 +datum=WGS84 +units=m")
-urban.cities <- ggplot() +
-  ggspatial::layer_spatial(data = urban_reproj, aes(fill = stat(band1))) +
-  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
-  ggrepel::geom_text_repel(data = drccities, aes(label = city, x = longnum, y=latnum), 
-                           hjust = 0.5, vjust = 0.5, nudge_y = 0.8, fontface = "bold") +
-  geom_point(data = drccities, aes(x = longnum, y=latnum), shape = 21, stroke = 0.3, fill = NA) +
-  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) 
-jpgsnapshot(outpath = "results/figures/DRC_cities_citylights_raster.jpg",
-            plot = urban.cities)
-```
-
-```{r, results='asis'}
-plot(urban.cities)
-```
-
-
 
 
 
@@ -483,7 +515,7 @@ plot(urban.cities)
 #.............
 # Pf Incidence
 #.............
-parasiterate <- raster::raster("~/Documents/GitHub/Space_the_Final_Miptier/data/derived_data/MAPrasters/pfincidence.grd")
+parasiterate <- covarstack[["incidence"]]
 
 #...................... 
 # extract incidence data per cluster
@@ -505,9 +537,9 @@ incid.pts.meiotic <- sf::st_as_sf(incid.pts.meiotic, coords = c("longnum", "latn
 incidmean <- rep(NA, nrow(incid.pts.meiotic)) 
 for (i in 1:nrow(incid.pts.meiotic)) {
   incidmean[i] <-  raster::extract(x = parasiterate,
-                                  y = sf::as_Spatial(incid.pts.meiotic$geometry[i]),
-                                  buffer = incid.pts.meiotic$urban_rura_ext[i],
-                                  fun = mean, na.rm = T
+                                   y = sf::as_Spatial(incid.pts.meiotic$geometry[i]),
+                                   buffer = incid.pts.meiotic$urban_rura_ext[i],
+                                   fun = mean, na.rm = T
   )
 }
 
@@ -523,18 +555,15 @@ incid.pts <- incid.pts.meiotic %>%
 
 ```{r}
 
-# reproject for aesthetics in figure but keep simpler planar (ESP4326) for geodist calcs
-parasiterate_reproj <- raster::projectRaster(parasiterate, "+proj=utm +zone=34 +datum=WGS84 +units=m")
-
-
 ibD.meiotic_plot_prev <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
+  dplyr::left_join(., y = meioticcoords) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = parasiterate_reproj, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
   scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
+  smpl_base_map +
   geom_curve(alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -557,11 +586,12 @@ plot(ibD.meiotic_plot_prev)
 ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
+  dplyr::left_join(., y = meioticcoords) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = urban_reproj, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = urban, aes(fill = stat(band1))) +
   scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
+  smpl_base_map +
   geom_curve(alpha = 0.5, size = 1, show.legend = F,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -573,12 +603,13 @@ ibD.meiotic_plot_urbanrstr <- ibD.meiotic.network %>%
 # incidence 
 ibD.meiotic_plot_incidence <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
+  dplyr::left_join(., y = meioticcoords) %>% 
   tibble::as_tibble(.) %>% 
   ggplot() +
-  ggspatial::layer_spatial(data = parasiterate_reproj, aes(fill = stat(band1))) +
+  ggspatial::layer_spatial(data = parasiterate, aes(fill = stat(band1))) +
   scale_fill_distiller("MAP \n Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
   geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
+  smpl_base_map +
   geom_curve(alpha = 0.5, size = 1, show.legend = F,
              aes(x = long_jitter.x, y = lat_jitter.x, 
                  xend = long_jitter.y, yend = lat_jitter.y, 
@@ -594,6 +625,7 @@ ibD.meiotic_plot_incidence <- ibD.meiotic.network %>%
 legend_dummy <- ibD.meiotic.network %>% 
   tidygraph::activate(., "edges") %>% 
   tibble::as_tibble(.) %>% 
+  dplyr::left_join(., y = meioticcoords) %>% 
   ggplot() +
   geom_curve(alpha = 0.5, size = 1,
              aes(x = long_jitter.x, y = lat_jitter.x, 
