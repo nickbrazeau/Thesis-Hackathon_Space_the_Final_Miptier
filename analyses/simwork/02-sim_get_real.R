@@ -88,16 +88,15 @@ retmap <- expand.grid(c("mtn", "rift", "fourcorner"), 1:1028) %>%
   dplyr::rename(pair_hosts = data)
 
 #............................................................
-# make drake plan
-#...........................................................
-#............................................................
 # Make Drake Plan
 #...........................................................
+batch_names <- paste0(retmap$lvl, retmap$batchset)
 plan <- drake::drake_plan(
   sims = target(
     get_ibd_batch_wrap(simdatpath, lvl, batchset, pair_hosts),
     transform = map(
-      .data = !!retmap
+      .data = !!retmap,
+      .names = !!batch_names
     )
   )
 )
