@@ -67,3 +67,11 @@ DRCmp.ibS.long <- broom::tidy(as.dist(t(DRCmp.ibS))) %>%  # note, Bob returns up
 
 saveRDS(DRCmp.ibS.long, "data/derived_data/bigbarcode_genetic_data/mipanalyzer.DRCibS.long.rds")
 
+#............................................................
+# write out a vcf for downstream
+#............................................................
+# using same error assumed for the RMCL analysis
+mipbi.vcfR.DRC <- MIPanalyzer::MIPanalyzerbi2vcfR(mipbi.mip.DRC, cutoff = 0.1)
+# write out this vcf
+vcfR::write.vcf(x = mipbi.vcfR.DRC,
+                file = "data/derived_data/bigbarcode_genetic_data/mipbivcfR.DRC.vcf.gz")
