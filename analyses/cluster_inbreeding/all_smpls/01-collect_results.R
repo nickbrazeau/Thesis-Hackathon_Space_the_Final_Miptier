@@ -26,7 +26,7 @@ mastermap <- readRDS("analyses/cluster_inbreeding/all_smpls/paramset/mastermap.R
 #..............................................................
 # read in data from slurm scr
 #..............................................................
-filepaths <- list.files("results/clust_inbd_results/all_smpls/Find_grad_descent_results/",
+filepaths <- list.files("results/clust_inbd_results/all_smpls/",
                         pattern = ".RDS", full.names = T)
 
 read_cost_results <- function(path, clstnames){
@@ -61,7 +61,7 @@ mastermap_mincost <- mastermap_rets %>%
 # pull out min results
 #...........................................................
 clust_inb <- mastermap_mincost %>%
-  dplyr::mutate(param_set = paste0("results/clust_inbd_results/all_smpls/Find_grad_descent_results/", param_set, ".RDS"),
+  dplyr::mutate(param_set = paste0("results/clust_inbd_results/all_smpls/", param_set, ".RDS"),
                 param_set = purrr::map(param_set, readRDS),
                 cost = purrr::map(param_set, "cost"))
 #......................

@@ -1,9 +1,10 @@
 library(ggplot2)
 map_theme <- theme(axis.text = element_blank(),
                    axis.title = element_blank(),
+                   axis.ticks = element_blank(),
                    legend.position = "right",
                    legend.title = element_text(family = "Helvetica", face = "bold", vjust = 0.85, size = 12),
-                   legend.text = element_text(family = "Helvetica", hjust = 0.5, vjust = 0.5, angle = 90, size = 10),
+                   legend.text = element_text(family = "Helvetica", hjust = 0.5, vjust = 0.5, angle = 0, size = 10),
                    panel.background = element_rect(fill = "transparent"),
                    plot.background = element_rect(fill = "transparent"),
                    panel.grid = element_blank(),

@@ -42,10 +42,13 @@ clust_params <- cbind(fparams, "m" = ms)
 #..............................................................
 # Add in Learning Rate
 #..............................................................
-f_learningrate <- c(1e-7, 5e-6, 1e-6, 5e-5, 1e-5, 4e-4, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
-m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
-learningrates <- expand.grid(f_learningrate, m_learningrate)
-colnames(learningrates) <- c("f_learningrate", "m_learningrate")
+# f_learningrate <- c(1e-7, 5e-6, 1e-6, 5e-5, 1e-5, 4e-4, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
+# m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
+# learningrates <- expand.grid(f_learningrate, m_learningrate)
+# colnames(learningrates) <- c("f_learningrate", "m_learningrate")
+learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8)
+learningrates <- data.frame("f_learningrate" = learningrate,
+                            "m_learningrate" = learningrate)
 
 # cluster start params
 clust_lrandparams <- lapply(1:nrow(learningrates), function(x){return(clust_params)}) %>%
