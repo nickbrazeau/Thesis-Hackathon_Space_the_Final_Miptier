@@ -11,8 +11,6 @@ library(drake)
 # read in and setup
 #...........................................................
 workers <- 1028 # max nodes to go across
-simdat <- readRDS("data/sim_data/swf_simulations.rds")
-locats <- readRDS("data/sim_data/sim_locations.rds")
 smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts.rds")
 
 #............................................................
