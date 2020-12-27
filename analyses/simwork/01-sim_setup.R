@@ -40,7 +40,7 @@ plot(raster::rasterFromXYZ(gridmig))
 raster::contour(raster::rasterFromXYZ(gridmig),
                 add = TRUE, drawlabels = FALSE, col = "#969696")
 
-# store
+# store, same approx order of mag as distance for migration
 simdat$gridmig[1] <- list( gridmig %>%
                              dplyr::mutate(migration = migration/1e3) )
 
@@ -65,10 +65,9 @@ plot(raster::rasterFromXYZ(gridmig))
 raster::contour(raster::rasterFromXYZ(gridmig),
                 add = TRUE, drawlabels = FALSE, col = "#969696")
 
-# store
+# store, same approx order of mag as distance for migration
 simdat$gridmig[2] <- list( gridmig %>%
                              dplyr::mutate(migration = migration/1e3) )
-
 
 
 #......................
@@ -113,9 +112,9 @@ plot(raster::rasterFromXYZ(gridmig))
 raster::contour(raster::rasterFromXYZ(gridmig),
                 add = TRUE, drawlabels = FALSE, col = "#969696")
 
-# store
+# store, same approx order of mag as distance for migration
 simdat$gridmig[3] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e3) )
+                             dplyr::mutate(migration = migration/1e2) )
 
 
 
@@ -139,9 +138,9 @@ simdat <- simdat %>%
 #   sample 350 locations
 #...........................................................
 locats <- gridmig[sample(1:nrow(gridmig), size = 350), c("longnum", "latnum")] %>%
-  dplyr::arrange(longnum, latnum)
+  dplyr::mutate(deme = 1:dplyr::n())
 
-get_connection_matrix  <- function(gridmig, locats) {
+get_dist_matrix  <- function(gridmig, locats) {
   #......................
   # liftovers
   #......................
@@ -155,47 +154,63 @@ get_connection_matrix  <- function(gridmig, locats) {
   locatcomb <- t(combn(1:nrow(locats), 2)) %>%
     tibble::as_tibble(., .name_repair = "minimal") %>%
     magrittr::set_colnames(c("xy1", "xy2"))
-  xy1 <- locats[locatcomb$xy1, ]
-  xy2 <- locats[locatcomb$xy2, ]
-
-  height1 <- raster::extract(rstr, xy1)
-  height2 <- raster::extract(rstr, xy2)
 
   #......................
   # calculate
   #......................
-  matlocat <- tibble::tibble(height1 = height1,
-                             height2 = height2,
-                             xy1 = split(xy1, 1:nrow(xy1)),
-                             xy2 = split(xy2, 1:nrow(xy2)))
+  matlocat <- tibble::tibble(xy1 = locatcomb$xy1,
+                             xy2 = locatcomb$xy2)
 
-  connval <- furrr::future_pmap(matlocat, function(height1, height2,
-                                  xy1, xy2){
-    # euclidean distance scaled by RMS of "height"
-    height <- sqrt((height2 - height1)^2)
-    # if same height, then just euclidean distance
-    height <- ifelse(height == 0, 1, height)
+  connval <- furrr::future_pmap(matlocat, function(xy1, xy2, locats){
+    # get long lat
+    xy1 <- locats[xy1, c("longnum", "latnum")]
+    xy2 <- locats[xy2, c("longnum", "latnum")]
+
+    # get height
+    height1 <- raster::extract(rstr, xy1)
+    height2 <- raster::extract(rstr, xy2)
+
     # euclidean distance
-    ret <- 1/dist(rbind(xy1, xy2)) *  height
-    return(ret)})
+    euc <- dist(rbind(xy1, xy2))
+    # "connectedness" is 1/distance plus difference in "heights" -- i.e. if same "plane" or not
+    height <- sqrt((height2 - height1)^2)
+    ret <- euc +  height
+    return(ret)},
+    locats = locats)
 
   # spread out values for matrix
   for (i in 1:nrow(locatcomb)) {
-    mat[locatcomb[[i, 1]], locatcomb[[i, 2]]] <- connval[[i]]
+    x <- as.numeric(attr(connval[[i]], "Labels")[1])
+    y <- as.numeric(attr(connval[[i]], "Labels")[2])
+    mat[x,y] <- connval[[i]]
   }
 
   # make symmetrical
   mat[lower.tri(mat)]  <- t(mat)[lower.tri(mat)]
-  # diagnonal max value
-  diag(mat) <- max(mat, na.rm = T)
+  diag(mat) <- 0
   return(mat)
 }
 
 #......................
-# find migration matrices
+# find distance matrices
 #......................
 simdat <- simdat %>%
-  dplyr::mutate(migmat = purrr::map(gridmig, get_connection_matrix, locats = locats))
+  dplyr::mutate(distmat = purrr::map(gridmig, get_dist_matrix, locats = locats))
+# NB these are currently distances, later convert them into "connectivity"
+
+#......................
+# liftover to migration matrix
+#......................
+simdat <- simdat %>%
+  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 1e3){
+                                      x <- exp(-x/scalar)
+                                      return(x)
+                                    })
+  )
+# NB these are currently distances, later convert them into "connectivity"
+
+
+
 
 #............................................................
 # run sWF simulator
@@ -268,5 +283,7 @@ smpl_hosts <- lapply(comb_hosts, exp_host_pairwise, smpl_hosts = smpl_hosts) %>%
 # save out
 #......................
 saveRDS(simdat, "data/sim_data/swf_simulations.rds")
-saveRDS(locats, "data/sim_data/sim_locations.rds")
+locats %>%
+  dplyr::mutate(deme = 1:dplyr::n()) %>%
+  saveRDS(., "data/sim_data/sim_locations.rds")
 saveRDS(smpl_hosts, "data/sim_data/sim_smpl_hosts.rds")
