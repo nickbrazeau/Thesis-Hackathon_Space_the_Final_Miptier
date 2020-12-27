@@ -5,7 +5,8 @@
 ##        End user may have to change number of nodes that they can parallelize across
 ##        for batch submission
 ## .................................................................................
-
+library(tidyverse)
+library(drake)
 #............................................................
 # read in and setup
 #...........................................................
