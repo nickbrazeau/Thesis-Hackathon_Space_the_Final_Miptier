@@ -107,7 +107,7 @@ options(clustermq.scheduler = "slurm",
         clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
      parallelism = "clustermq",
-     jobs = workers,
+     jobs = nrow(retmap),
      log_make = "swfsim_deploy_drake.log", verbose = 2,
      log_progress = TRUE,
      log_build_times = FALSE,
