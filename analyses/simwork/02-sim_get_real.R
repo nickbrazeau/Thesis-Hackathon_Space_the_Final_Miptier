@@ -106,7 +106,7 @@ plan <- drake::drake_plan(
 options(clustermq.scheduler = "slurm",
         clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
-     parallelism = "clustermq_staged",
+     parallelism = "clustermq",
      jobs = nrow(retmap),
      log_make = "swfsim_deploy_drake.log", verbose = 4,
      log_progress = TRUE,
