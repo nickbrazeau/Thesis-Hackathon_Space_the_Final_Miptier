@@ -10,7 +10,7 @@ library(drake)
 #............................................................
 # read in and setup
 #...........................................................
-workers <- 1028 # max nodes to go across
+workers <- 150 # nodes to ask for, fewer nodes, less expensive for reading in data and not placing burden on scheduler
 smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts.rds")
 
 #............................................................
@@ -78,7 +78,7 @@ smpl_hosts_nested <- smpl_hosts %>%
 #............................................................
 # now tidy up the rest in the inputs I need
 #...........................................................
-retmap <- expand.grid(c("mtn", "rift", "fourcorner"), 1:1028) %>%
+retmap <- expand.grid(c("mtn", "rift", "fourcorner"), 1:workers) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
   magrittr::set_colnames(c("lvl", "batchset")) %>%
   dplyr::mutate(simdatpath = "data/sim_data/swf_simulations.rds") %>%
@@ -106,14 +106,15 @@ plan <- drake::drake_plan(
 options(clustermq.scheduler = "slurm",
         clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
-     parallelism = "clustermq",
+     parallelism = "clustermq_staged",
      jobs = nrow(retmap),
-     log_make = "swfsim_deploy_drake.log", verbose = 2,
+     log_make = "swfsim_deploy_drake.log", verbose = 4,
      log_progress = TRUE,
      log_build_times = FALSE,
      recoverable = FALSE,
      history = FALSE,
      session_info = FALSE,
+     garbage_collection = TRUE,
      lock_envir = FALSE,
      lock_cache = FALSE)
 
