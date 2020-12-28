@@ -232,7 +232,7 @@ swf_sim_wrapper <- function(migmat) {
   pos <- sort(sample(1.664e6, 1e3))
 
   # from verity et al coi in the DRC: 2.23 (2.15– 2.31)
-  # assuming deme size of 50 for ease
+  # assuming deme size of 10 for ease
   # tlim at 10 generations as before from verity et al
 
   #......................
@@ -240,7 +240,7 @@ swf_sim_wrapper <- function(migmat) {
   #......................
   swfsim <- polySimIBD::sim_swf(pos =       pos,
                                 migr_dist_mat = migmat,
-                                N =         rep(50, nrow(migmat)),
+                                N =         rep(10, nrow(migmat)),
                                 m =         rep(0.5, nrow(migmat)),
                                 rho =       rho,
                                 mean_coi =  rep(2.23, nrow(migmat)),
@@ -259,8 +259,8 @@ simdat <- simdat %>%
 # Pairwise IBD realizations
 #...........................................................
 # will assume 3 individuals in every deme
-all_hosts <- tibble::tibble(host = 1:(50*ncol(simdat$migmat[[1]])),
-                            host_deme =sort(rep(1:ncol(simdat$migmat[[1]]), 50)))
+all_hosts <- tibble::tibble(host = 1:(10*ncol(simdat$migmat[[1]])),
+                            host_deme =sort(rep(1:ncol(simdat$migmat[[1]]), 10)))
 all_hosts <- split(all_hosts, factor(all_hosts$host_deme))
 smpl_hosts <- lapply(all_hosts, function(x){x[sample(1:nrow(x), size = 3),]}) %>%
   dplyr::bind_rows()
