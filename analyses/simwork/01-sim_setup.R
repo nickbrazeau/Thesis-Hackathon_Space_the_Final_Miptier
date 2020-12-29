@@ -15,7 +15,7 @@ library(polySimIBD)
 #...........................................................
 set.seed(48)
 nCell <- 300
-simdat <- tibble::tibble(name = c("mtn", "rift", "fourcorner"),
+simdat <- tibble::tibble(name = c("mtn", "rift", "oppcorner"),
                          gridmig = NA,
                          plotObj = NA)
 
@@ -71,7 +71,7 @@ simdat$gridmig[2] <- list( gridmig %>%
 
 
 #......................
-# four corners
+# opposite corners
 #......................
 gridmig <- matrix(NA, nrow = nCell, ncol = nCell)
 gridmig <- data.frame(longnum = as.vector(row(gridmig)),
@@ -79,24 +79,14 @@ gridmig <- data.frame(longnum = as.vector(row(gridmig)),
                       migration = NA)
 gridmig <- gridmig %>%
   dplyr::mutate(migration = dplyr::case_when(
-    longnum <= 100 & latnum <= 100 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
+    longnum <= 150 & latnum <= 150 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
       mvtnorm::dmvnorm(c(x, y),
                        mean = c(50, 50),
                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                        log = T)}),
-    longnum <= 100 & latnum > 200 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      mvtnorm::dmvnorm(c(x, y),
-                       mean = c(50, 250),
-                       sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
-                       log = T)}),
 
-    longnum <= 300 & latnum <= 100  &  longnum > 200  ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      mvtnorm::dmvnorm(c(x, y),
-                       mean = c(250, 50),
-                       sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
-                       log = T)}),
-    longnum <= 300  &  longnum > 200 & latnum > 200 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      mvtnorm::dmvnorm(c(x, y),
+    longnum <= 300  &  longnum > 150 & latnum > 150 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
+      -mvtnorm::dmvnorm(c(x, y), # negative here to make this one go "up"
                        mean = c(250, 250),
                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                        log = T)}),
@@ -105,7 +95,7 @@ gridmig <- gridmig %>%
 
 # make "ground"
 gridmig$migration[is.na(gridmig$migration)] <- quantile(gridmig$migration,
-                                                        probs = 0.01,
+                                                        probs = 0.5,
                                                         na.rm = T)
 # visualize to confirm
 plot(raster::rasterFromXYZ(gridmig))
