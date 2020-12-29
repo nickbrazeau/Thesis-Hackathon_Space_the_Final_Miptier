@@ -109,6 +109,7 @@ retmap$gengeodat <- purrr::map(retmap$data, fix_gen_geo, geodat = locatdist_long
 #............................................................
 #
 #...........................................................
+start <- Sys.time()
 start_params <- rep(0.1, 350)
 names(start_params) <- 1:350
 start_params <- c(start_params, "m" = 1e-14)
@@ -122,7 +123,7 @@ ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = retmap$gengeodat[[3]]
                                        steps = 1e4,
                                        report_progress = TRUE)
 
-
+Sys.time() - start
 #......................
 # f values
 #......................

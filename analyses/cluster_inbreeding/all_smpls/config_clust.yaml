@@ -1,4 +1,0 @@
-# configuration for alignment pipeline
-manifest: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analyses/cluster_inbreeding/all_smpls/paramset/snake_map.txt
-outdir: /pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/clust_inbd_results/all_smpls/
-paramdir: /proj/ideel/meshnick/users/NickB/Projects/Space_the_Final_Miptier/analyses/cluster_inbreeding/all_smpls/paramset/
