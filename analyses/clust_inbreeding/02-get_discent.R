@@ -10,6 +10,10 @@ workers <- 512 # nodes to ask for, fewer nodes, less expensive for reading in da
 library(tidyverse)
 library(drake)
 
+# cluster names
+mtdt <- readRDS("data/derived_data/sample_metadata.rds")
+clsts <- sort(unique(c(mtdt$hv001)))
+
 
 #............................................................
 # functions for drake
@@ -27,9 +31,10 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn) {
-    input <- readRDS(inputpath)
+  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, clst_names) {
+    input <- readRDS(as.character(inputpath))
     our_start_params <- rep(f_start, 351) # 351 is all clusters in drc
+    names(our_start_params) <- clst_names
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                            start_params = our_start_params,
@@ -68,8 +73,9 @@ ms <- c(1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5)
 f_learningrate <- c(1e-7, 5e-6, 1e-6, 5e-5, 1e-5, 4e-4, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
 m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
 
-param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate)
-colnames(param_map) <- c("inputpath", "f_start", "m_start", "f_learn", "m_learn")
+param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate) %>%
+  tibble::as_tibble(., .name_repair = "minimal") %>%
+  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn"))
 
 
 #............................................................
@@ -92,8 +98,8 @@ param_map_nested <- param_map %>%
 #......................
 batch_names <- paste0("batch", param_map_nested$batchset)
 plan <- drake::drake_plan(
-  sims = target(
-    drake_wrapper(batchset),
+  runs = target(
+    drake_wrapper(data),
     transform = map(
       .data = !!param_map_nested,
       .names = !!batch_names
