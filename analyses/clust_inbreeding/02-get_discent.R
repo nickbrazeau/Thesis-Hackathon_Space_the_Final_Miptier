@@ -75,7 +75,8 @@ m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-1
 
 param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn"))
+  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn")) %>%
+  dplyr::mutate(clst_names = list(clsts))
 
 
 #............................................................

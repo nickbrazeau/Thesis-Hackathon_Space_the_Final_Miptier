@@ -78,7 +78,7 @@ smpl_hosts_nested <- smpl_hosts %>%
 #............................................................
 # now tidy up the rest in the inputs I need
 #...........................................................
-retmap <- expand.grid(c("mtn", "rift", "fourcorner"), 1:workers) %>%
+retmap <- expand.grid(c("mtn", "rift", "oppcorner"), 1:workers) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
   magrittr::set_colnames(c("lvl", "batchset")) %>%
   dplyr::mutate(simdatpath = "data/sim_data/swf_simulations.rds") %>%
