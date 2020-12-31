@@ -1,0 +1,126 @@
+## .................................................................................
+## Purpose: Setup the the Malecot's Spatial Gradient Descent (discent) model and run it with drake on cluster
+##
+## Notes:
+## .................................................................................
+#............................................................
+#  setup
+#...........................................................
+workers <- 512 # nodes to ask for, fewer nodes, less expensive for reading in data and not placing burden on scheduler
+library(tidyverse)
+library(drake)
+
+
+#............................................................
+# functions for drake
+#...........................................................
+drake_wrapper <- function(batchset_df) {
+
+  # call future
+  no_cores <- future::availableCores() - 1
+  if (no_cores > 1) {
+    future::plan(future::multicore, workers = no_cores)
+  } else {
+    future::plan("sequential")
+  }
+
+  #......................
+  # internal function to wrap discent
+  #......................
+  discent_wrapper <- function(lvl, f_start, m_start, f_learn, m_learn) {
+    input <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
+      dplyr::filter(lvl == lvl)
+
+    input <- input$gengeodat[[1]]
+    our_start_params <- rep(f_start, 350) # 350 sim clusters
+    names(our_start_params) <- 1:350
+    our_start_params <- c(our_start_params, "m" = m_start)
+    ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
+                                           start_params = our_start_params,
+                                           m_lowerbound = 1e-25,
+                                           m_upperbound = 5e-4,
+                                           f_learningrate = f_learn,
+                                           m_learningrate = m_learn,
+                                           full_matrix = FALSE,
+                                           steps = 1e4,
+                                           report_progress = FALSE)
+    return(ret)
+  }
+
+  #......................
+  # run batches to not overload scheduler
+  #......................
+  batchset_df$discentret = furrr::future_pmap(batchset_df, discent_wrapper)
+
+  # now write out
+  dir.create("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/sim_cluster_inbreed_ests/", recursive = T)
+  saveRDS(batchset_df,
+          file = paste0("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/sim_cluster_inbreed_ests/",
+                        batchset_df$batchset, ".RDS")
+  )
+  return(0)
+}
+
+#............................................................
+# make the parammap we are going to explore
+#...........................................................
+input <- readRDS("data/sim_data/sim_gengeodat.rds")
+lvl <- input$lvl
+fs <- seq(0.1, 0.9, by = 0.1)
+ms <- c(1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5)
+f_learningrate <- c(1e-7, 5e-6, 1e-6, 5e-5, 1e-5, 4e-4, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
+m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
+
+param_map <- expand.grid(lvl, fs, ms, f_learningrate, m_learningrate) %>%
+  tibble::as_tibble(., .name_repair = "minimal") %>%
+  magrittr::set_colnames(c("lvl", "f_start", "m_start", "f_learn", "m_learn"))
+
+
+#............................................................
+# make the batches and drake plan
+#...........................................................
+#......................
+# nest and split up pairwise comparisons for batching
+#......................
+batchnum <- sort( rep(1:workers, ceiling(nrow(param_map) / workers)) )
+batchnum <- batchnum[1 :nrow(param_map)]
+
+param_map_nested <- param_map %>%
+  dplyr::mutate(batchset = batchnum) %>%
+  dplyr::group_by(batchset) %>%
+  tidyr::nest() %>%
+  dplyr::ungroup()
+
+#......................
+# make drake plan
+#......................
+batch_names <- paste0("batch", param_map_nested$batchset)
+plan <- drake::drake_plan(
+  runs = target(
+    drake_wrapper(data),
+    transform = map(
+      .data = !!param_map_nested,
+      .names = !!batch_names
+    )
+  )
+)
+
+#......................
+# call drake to send out to slurm
+#......................
+options(clustermq.scheduler = "slurm",
+        clustermq.template = "drake_clst/slurm_clustermq_LL_med.tmpl")
+make(plan,
+     parallelism = "clustermq",
+     jobs = nrow(param_map_nested),
+     log_make = "simwork_discent_drc_dat_deploy_drake.log", verbose = 4,
+     log_progress = TRUE,
+     log_build_times = FALSE,
+     recoverable = FALSE,
+     history = FALSE,
+     session_info = FALSE,
+     garbage_collection = TRUE,
+     lock_envir = FALSE,
+     lock_cache = FALSE)
+
+
