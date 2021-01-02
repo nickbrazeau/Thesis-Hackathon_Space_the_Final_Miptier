@@ -56,7 +56,7 @@ drake_wrapper <- function(batchset_df) {
   dir.create("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/sim_cluster_inbreed_ests/", recursive = T)
   saveRDS(batchset_df,
           file = paste0("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/sim_cluster_inbreed_ests/",
-                        batchset_df$id, ".RDS")
+                        "simdat_", unique(batchset_df$id), ".RDS")
   )
   return(0)
 }
