@@ -57,7 +57,7 @@ drake_wrapper <- function(batchset_df) {
   dir.create("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/cluster_inbreed_ests/", recursive = T)
   saveRDS(batchset_df,
           file = paste0("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/cluster_inbreed_ests/",
-                        batchset_df$batchset, ".RDS")
+                        batchset_df$id, ".RDS")
   )
   return(0)
 }
@@ -89,7 +89,8 @@ batchnum <- sort( rep(1:workers, ceiling(nrow(param_map) / workers)) )
 batchnum <- batchnum[1 :nrow(param_map)]
 
 param_map_nested <- param_map %>%
-  dplyr::mutate(batchset = batchnum) %>%
+  dplyr::mutate(id = batchnum,
+                batchset = batchnum) %>%
   dplyr::group_by(batchset) %>%
   tidyr::nest() %>%
   dplyr::ungroup()
@@ -112,7 +113,7 @@ plan <- drake::drake_plan(
 # call drake to send out to slurm
 #......................
 options(clustermq.scheduler = "slurm",
-        clustermq.template = "drake_clst/slurm_clustermq_LL_long.tmpl")
+        clustermq.template = "drake_clst/slurm_clustermq_LL_long_liteme.tmpl")
 make(plan,
      parallelism = "clustermq",
      jobs = nrow(param_map_nested),
