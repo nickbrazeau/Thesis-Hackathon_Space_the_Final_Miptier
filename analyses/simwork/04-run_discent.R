@@ -27,7 +27,7 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(lvl, f_start, m_start, f_learn, m_learn) {
+  discent_wrapper <- function(lvl, f_start, m_start, f_learn, m_learn, id) {
     input <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
       dplyr::filter(lvl == lvl)
 

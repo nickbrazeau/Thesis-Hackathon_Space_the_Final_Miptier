@@ -31,7 +31,7 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, clst_names) {
+  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, clst_names, id) {
     input <- readRDS(as.character(inputpath))
     our_start_params <- rep(f_start, 351) # 351 is all clusters in drc
     names(our_start_params) <- clst_names
@@ -113,7 +113,7 @@ plan <- drake::drake_plan(
 # call drake to send out to slurm
 #......................
 options(clustermq.scheduler = "slurm",
-        clustermq.template = "drake_clst/slurm_clustermq_LL_long_liteme.tmpl")
+        clustermq.template = "drake_clst/slurm_clustermq_LL_long_litemem.tmpl")
 make(plan,
      parallelism = "clustermq",
      jobs = nrow(param_map_nested),
