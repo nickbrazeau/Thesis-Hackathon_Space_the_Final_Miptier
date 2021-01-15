@@ -18,6 +18,8 @@ sandbox/
 ignore/
 results/
 paramset/
+gendat/
+analyses/admixture/*.txt
 
 # RStudio files
 .Rproj.user/
