@@ -69,7 +69,11 @@ cafunion <- sf::st_simplify(cafunion, preserveTopology = TRUE)
 prettybasemap_nodrc <- list(
   geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
-  coord_sf(datum = NA),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'],
+                    st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'],
+                    st_bbox(DRCprov)['ymax']),
+           datum = NA),
   ggspatial::annotation_north_arrow(location = "bl", which_north = "true",
                                     pad_y = unit(1.25, "cm")),
   theme(panel.background = element_rect(fill = "#9ecae1"),
@@ -83,7 +87,11 @@ prettybasemap_nodrc <- list(
 prettybasemap_nodrc_nonorth <- list(
   geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
-  coord_sf(datum = NA),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'],
+                    st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'],
+                    st_bbox(DRCprov)['ymax']),
+           datum = NA),
   #   ggspatial::annotation_north_arrow(location = "bl", which_north = "true", pad_y = unit(1.25, "cm")),
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
@@ -93,7 +101,11 @@ prettybasemap_nodrc_nonorth <- list(
 
 prettybasemap_nodrc_dark <- list(
   geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
-  coord_sf(datum = NA),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'],
+                    st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'],
+                    st_bbox(DRCprov)['ymax']),
+           datum = NA),
   ggspatial::annotation_north_arrow(location = "bl", which_north = "true",
                                     pad_y = unit(1.25, "cm")),
   theme(panel.background = element_rect(fill = "#9ecae1"),
@@ -104,7 +116,11 @@ prettybasemap_nodrc_dark <- list(
 
 prettybasemap_nodrc_nonorth_dark <- list(
   geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
-  coord_sf(datum = NA),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'],
+                    st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'],
+                    st_bbox(DRCprov)['ymax']),
+           datum = NA),
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
         axis.text = element_blank(),
@@ -116,7 +132,11 @@ prettybasemap_nodrc_nonorth_dark <- list(
 # simple background
 #..............................................................
 smpl_base_map <- list(
-  coord_sf(datum = NA),
+  coord_sf(xlim = c(st_bbox(DRCprov)['xmin'],
+                    st_bbox(DRCprov)['xmax']),
+           ylim = c(st_bbox(DRCprov)['ymin'],
+                    st_bbox(DRCprov)['ymax']),
+           datum = NA),
   theme(plot.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, size = 14),
         legend.position = "bottom",
         legend.title = element_text(family = "Helvetica", face = "bold", vjust = 0.85, size = 12),
