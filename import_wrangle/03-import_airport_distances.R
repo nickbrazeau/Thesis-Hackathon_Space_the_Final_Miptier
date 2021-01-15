@@ -9,9 +9,8 @@ library(sf)
 DRC <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_0_sp.rds"))
 
 #..................
-# First pass, just assume you
-# teleport --> will download aiprots from
-# OSM Humanitarian
+# we assume you teleport
+#airport data downloaded from OSM Humanitarian
 #..................
 # https://data.humdata.org/dataset/ourairports-cod
 airports <- readr::read_csv("data/raw_data/flight_data/hotosm_cd-airports.csv") %>%
