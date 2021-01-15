@@ -44,7 +44,8 @@ drake_wrapper <- function(batchset_df) {
                                            m_learningrate = m_learn,
                                            full_matrix = FALSE,
                                            steps = 1e4,
-                                           report_progress = FALSE)
+                                           report_progress = FALSE,
+                                           return_verbose = FALSE)
     return(ret)
   }
 
