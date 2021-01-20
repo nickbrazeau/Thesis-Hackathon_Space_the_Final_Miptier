@@ -111,7 +111,7 @@ plan <- drake::drake_plan(
 # call drake to send out to slurm
 #......................
 options(clustermq.scheduler = "slurm",
-        clustermq.template = "drake_clst/slurm_clustermq_LL_med.tmpl")
+        clustermq.template = "drake_clst/slurm_clustermq_LL_long_litemem.tmpl")
 make(plan,
      parallelism = "clustermq",
      jobs = nrow(param_map_nested),
