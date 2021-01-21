@@ -45,7 +45,7 @@ drake_wrapper <- function(batchset_df) {
                                            full_matrix = FALSE,
                                            steps = 1e4,
                                            report_progress = FALSE,
-                                           return_verbose = TRUE)
+                                           return_verbose = FALSE)
     return(ret)
   }
 

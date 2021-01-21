@@ -86,12 +86,21 @@ gridmig <- gridmig %>%
                        log = T)}),
 
     longnum <= 300  &  longnum > 150 & latnum > 150 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      -mvtnorm::dmvnorm(c(x, y), # negative here to make this one go "up"
+      mvtnorm::dmvnorm(c(x, y), # 1- here to make this one go "up"
                        mean = c(250, 250),
                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                        log = T)}),
 
   ))
+
+# make other direction hill and "ground"
+gridmig_min <- min(gridmig$migration, na.rm = T) * -1
+gridmig <- gridmig %>%
+  dplyr::mutate(migration = dplyr::case_when(
+    longnum <= 300  &  longnum > 150 & latnum > 150 ~ migration + gridmig_min,
+    longnum <= 150 & latnum <= 150 ~ migration
+  ))
+
 
 # make "ground"
 gridmig$migration[is.na(gridmig$migration)] <- quantile(gridmig$migration,
@@ -193,9 +202,9 @@ simdat <- simdat %>%
 #......................
 simdat <- simdat %>%
   dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 1e3){
-                                      x <- exp(-x/scalar)
-                                      return(x)
-                                    })
+    x <- exp(-x/scalar)
+    return(x)
+  })
   )
 # NB these are currently distances, later convert them into "connectivity"
 
