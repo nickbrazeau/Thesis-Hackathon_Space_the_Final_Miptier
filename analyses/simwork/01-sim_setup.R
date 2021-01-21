@@ -80,10 +80,10 @@ gridmig <- data.frame(longnum = as.vector(row(gridmig)),
 gridmig <- gridmig %>%
   dplyr::mutate(migration = dplyr::case_when(
     longnum <= 150 & latnum <= 150 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      mvtnorm::dmvnorm(c(x, y),
-                       mean = c(50, 50),
-                       sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
-                       log = T)}),
+      -mvtnorm::dmvnorm(c(x, y),
+                        mean = c(50, 50),
+                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
+                        log = T)}),
 
     longnum <= 300  &  longnum > 150 & latnum > 150 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
       mvtnorm::dmvnorm(c(x, y), # 1- here to make this one go "up"
@@ -94,11 +94,13 @@ gridmig <- gridmig %>%
   ))
 
 # make other direction hill and "ground"
-gridmig_min <- min(gridmig$migration, na.rm = T) * -1
+gridmig_min <- min(gridmig$migration, na.rm = T)
+gridmig_max <- max(gridmig$migration, na.rm = T)
+
 gridmig <- gridmig %>%
   dplyr::mutate(migration = dplyr::case_when(
-    longnum <= 300  &  longnum > 150 & latnum > 150 ~ migration + gridmig_min,
-    longnum <= 150 & latnum <= 150 ~ migration
+    longnum <= 300  &  longnum > 150 & latnum > 150 ~ migration - gridmig_min,
+    longnum <= 150 & latnum <= 150 ~ migration - gridmig_max
   ))
 
 
@@ -281,6 +283,7 @@ smpl_hosts <- lapply(comb_hosts, exp_host_pairwise, smpl_hosts = smpl_hosts) %>%
 #......................
 # save out
 #......................
+dir.create("data/sim_data/")
 saveRDS(simdat, "data/sim_data/swf_simulations.rds")
 locats %>%
   dplyr::mutate(deme = 1:dplyr::n()) %>%
