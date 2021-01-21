@@ -69,10 +69,10 @@ drake_wrapper <- function(batchset_df) {
 allsmpls_gengeodatpaths <- list.files("data/derived_data/allsmpls_clst_inbreeding_dat/", full.names = T)
 monoclonals_gengeodatpaths <- list.files("data/derived_data/coione_clst_inbreeding_dat/", full.names = T)
 gengeodatpaths <- c(allsmpls_gengeodatpaths, monoclonals_gengeodatpaths)
-fs <- seq(0.1, 0.9, by = 0.1)
+fs <- seq(0.1, 0.9, by = 0.2)
 ms <- c(1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5)
-f_learningrate <- c(1e-7, 5e-6, 1e-6, 5e-5, 1e-5, 4e-4, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2)
-m_learningrate <- c(1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
+f_learningrate <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
+m_learningrate <- c(1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12)
 
 param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
