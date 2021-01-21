@@ -28,8 +28,9 @@ drake_wrapper <- function(batchset_df) {
   # internal function to wrap discent
   #......................
   discent_wrapper <- function(lvl, f_start, m_start, f_learn, m_learn, id) {
+    lvlbang <- enquo(lvl)
     input <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
-      dplyr::filter(lvl == lvl)
+      dplyr::filter(lvl == !!lvlbang)
 
     input <- input$gengeodat[[1]]
     our_start_params <- rep(f_start, 350) # 350 sim clusters
