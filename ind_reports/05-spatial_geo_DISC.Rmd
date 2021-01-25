@@ -38,14 +38,21 @@ ge <- readRDS("data/derived_data/spacemips_GE.rds") %>%
 #......................
 # read results
 #......................
-all_disc <- readRDS("results/clust_inbd_results/all_smpls/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
-  dplyr::mutate(lvl = "all")
-coi_1_disc <-readRDS("results/clust_inbd_results/smpls_coione/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
-  dplyr::mutate(lvl = "monoclonal")
+all_disc <- readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "allsmpls")
+coi_1_disc <-readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "coione")
 
 # bring together
 disc <- dplyr::bind_rows(all_disc, coi_1_disc)
 
+#......................
+# tidy param results
+#......................
+disc <- disc %>% 
+  dplyr::group_by(distlvl, datalvl) %>% 
+  dplyr::mutate(inbreed_ests = purrr::map(discentret, nick),
+                m = purrr::map(discentret, "Final_m")) 
 ```
 
 ## Parameter Estimates
@@ -53,10 +60,9 @@ disc <- dplyr::bind_rows(all_disc, coi_1_disc)
 ```{r, results='asis'}
 disc %>% 
   dplyr::ungroup() %>% 
-  dplyr::select(c("lvl", "spacetype", "inbreed_ests")) %>% 
+  dplyr::select(c("datalvl", "distlvl", "inbreed_ests")) %>% 
   tidyr::unnest(cols = "inbreed_ests") %>% 
-  dplyr::filter(param != "m") %>% 
-  dplyr::mutate(newcol = paste0(spacetype, "-", lvl)) %>% 
+  dplyr::mutate(newcol = paste0(distlvl, "-", datalvl)) %>% 
   dplyr::select(c("newcol", "param", "est")) %>% 
   tidyr::pivot_wider(data = ., names_from = "newcol", values_from = "est") %>% 
   dplyr::mutate_if(is.numeric, round, 4) %>%
@@ -75,10 +81,10 @@ disc %>%
 ```{r, results='asis'}
 disc %>% 
   dplyr::ungroup() %>% 
-  dplyr::select(c("lvl", "spacetype", "inbreed_ests")) %>% 
+  dplyr::select(c("datalvl", "distlvl", "inbreed_ests")) %>% 
   tidyr::unnest(cols = "inbreed_ests") %>% 
   dplyr::filter(param == "m") %>% 
-  dplyr::mutate(newcol = paste0(spacetype, "-", lvl)) %>% 
+  dplyr::mutate(newcol = paste0(distlvl, "-", datalvl)) %>% 
   dplyr::select(c("newcol", "param", "est")) %>% 
   tidyr::pivot_wider(data = ., names_from = "newcol", values_from = "est") %>% 
   dplyr::mutate_if(is.numeric, formatC, format = "e", digits = 3) %>%
@@ -256,6 +262,7 @@ covarrstrstack <- readRDS("data/derived_data/covar_rasterstack_raw.RDS")
 urbanrstr <- covarrstrstack[["urban"]]
 pfincidence <- covarrstrstack[["incidence"]]
 ```
+
 ### Point Correlations
 ```{r}
 
@@ -278,8 +285,8 @@ get_pt_corr <- function(clst_inbdset, covardf) {
 }
 
 allsmpls_covars <- disc %>% 
-  dplyr::filter(lvl == "all") %>% 
-  dplyr::select(c("spacetype", "inbreed_ests")) %>% 
+  dplyr::filter(datalvl == "allsmpls") %>% 
+  dplyr::select(c("distlvl", "inbreed_ests")) %>% 
   dplyr::mutate(covarplots = purrr::map(inbreed_ests, get_pt_corr, covardf = covarpt))
 
 
@@ -347,8 +354,8 @@ rstcompr <- function(xrstr, yrstr) {
 # all samples only
 #......................
 allsmplsrstr <- disc %>% 
-  dplyr::filter(lvl == "all") %>% 
-  dplyr::select(c("spacetype", "predmap_rstr"))
+  dplyr::filter(datalvl == "allsmpls") %>% 
+  dplyr::select(c("distlvl", "predmap_rstr"))
 
 allsmplsrstr$urban_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, yrstr = urbanrstr)
 allsmplsrstr$incid_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, yrstr = pfincidence)
@@ -356,7 +363,7 @@ allsmplsrstr$incid_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, y
 
 ```{r, results='asis'}
 allsmplsrstr %>% 
-  dplyr::select(c("spacetype", "urban_corr", "incid_corr")) %>% 
+  dplyr::select(c("distlvl", "urban_corr", "incid_corr")) %>% 
   pretty_DT_tab()
 
 ```

@@ -21,8 +21,10 @@ source("R/themes.R")
 #......................
 # read results
 #......................
-all_disc <- readRDS("results/clust_inbd_results/all_smpls/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
-coi_1_disc <-readRDS("results/clust_inbd_results/smpls_coione/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
+all_disc <- readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "allsmpls")
+coi_1_disc <-readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "coione")
 ```
 
 ## Visualize Cost
@@ -31,13 +33,13 @@ coi_1_disc <-readRDS("results/clust_inbd_results/smpls_coione/min_cost_inbreedin
 p1 <- all_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
   dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -47,14 +49,14 @@ p1 <- all_disc %>%
 p2 <- all_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   dplyr::filter(iteration != 1) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -64,14 +66,14 @@ p2 <- all_disc %>%
 p3 <- all_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   dplyr::filter(iteration %in% 2000:4000) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -81,14 +83,14 @@ p3 <- all_disc %>%
 p4 <- all_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   dplyr::filter(iteration %in% 9000:1e4) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -107,13 +109,13 @@ cowplot::plot_grid(p1, p2, p3, p4, nrow = 4, align = "v")
 p1 <- coi_1_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -123,14 +125,14 @@ p1 <- coi_1_disc %>%
 p2 <- coi_1_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
-  dplyr::filter(iteration != 1) %>% 
+  dplyr::filter(iteration %in% 100:10000) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -140,14 +142,14 @@ p2 <- coi_1_disc %>%
 p3 <- coi_1_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   dplyr::filter(iteration %in% 2000:4000) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
@@ -158,14 +160,14 @@ p3 <- coi_1_disc %>%
 p4 <- coi_1_disc %>% 
   tidyr::unnest(cols = "cost") %>% 
    dplyr::mutate(costdiff = c(diff(cost), NA)) %>% 
-  dplyr::group_by(spacetype) %>% 
+  dplyr::group_by(distlvl) %>% 
   dplyr::mutate(iteration = 1:dplyr::n(),
-                spacetype = factor(spacetype, levels = c("gcdist", "roaddist", "airdist"),
+                distlvl = factor(distlvl, levels = c("gcdist", "roaddist", "airdist"),
                                    labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
   dplyr::filter(iteration %in% 9000:1e4) %>% 
   ggplot() + 
   geom_point(aes(x = iteration, y = costdiff)) +
-  facet_wrap(~spacetype, scales = "free") + 
+  facet_wrap(~distlvl, scales = "free") + 
   xlab("Iteration") + 
   ylab("Cost Difference") +
   plot_theme + 
