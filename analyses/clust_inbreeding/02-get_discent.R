@@ -33,7 +33,8 @@ drake_wrapper <- function(batchset_df) {
   #......................
   discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, clst_names, id) {
     input <- readRDS(as.character(inputpath))
-    our_start_params <- rep(f_start, 351) # 351 is all clusters in drc
+    clstnum <- length(unique(c(input$locat1, input$locat2)))
+    our_start_params <- rep(f_start, clstnum) # cluster are different sizes depending on coi of 1 or all
     names(our_start_params) <- clst_names
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
