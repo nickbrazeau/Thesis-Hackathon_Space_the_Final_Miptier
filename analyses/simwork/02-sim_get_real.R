@@ -18,8 +18,9 @@ smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts.rds")
 #...........................................................
 get_ibd_batch_wrap <- function(simdatpath, lvl, batchset, pair_hosts) {
   simdat <- readRDS(simdatpath)
+  lvlbang <- enquo(lvl)
   swfsim <- simdat %>%
-    dplyr::filter(name == lvl)
+    dplyr::filter(name == !!lvlbang)
   # pull out swfsim
   swfsim <- swfsim$swfsim[[1]]
 

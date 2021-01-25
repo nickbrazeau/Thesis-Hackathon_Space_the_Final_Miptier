@@ -85,7 +85,7 @@ param_map <- expand.grid(lvl, fs, ms, f_learningrate, m_learningrate) %>%
 # nest and split up pairwise comparisons for batching
 #......................
 batchnum <- sort( rep(1:workers, ceiling(nrow(param_map) / workers)) )
-batchnum <- batchnum[1 :nrow(param_map)]
+batchnum <- batchnum[1 : nrow(param_map)]
 
 param_map_nested <- param_map %>%
   dplyr::mutate(id = batchnum,

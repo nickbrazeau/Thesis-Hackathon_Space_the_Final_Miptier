@@ -7,6 +7,7 @@ library(tidyverse)
 library(raster)
 #remotes::install_github("nickbrazeau/polySimIBD")
 library(polySimIBD)
+set.seed(48)
 
 #............................................................
 # make spatial setup
