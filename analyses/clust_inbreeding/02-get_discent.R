@@ -10,10 +10,6 @@ workers <- 512 # nodes to ask for, fewer nodes, less expensive for reading in da
 library(tidyverse)
 library(drake)
 
-# cluster names
-mtdt <- readRDS("data/derived_data/sample_metadata.rds")
-clsts <- sort(unique(c(mtdt$hv001)))
-
 
 #............................................................
 # functions for drake
@@ -31,10 +27,14 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, clst_names, id) {
+  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, id) {
     input <- readRDS(as.character(inputpath))
+    # cluster details
+    #   cluster are different sizes depending on coi of 1 or all
     clstnum <- length(unique(c(input$locat1, input$locat2)))
-    our_start_params <- rep(f_start, clstnum) # cluster are different sizes depending on coi of 1 or all
+    clst_names <- sort(unique(c(input$locat1, input$locat2)))
+    # start param
+    our_start_params <- rep(f_start, clstnum)
     names(our_start_params) <- clst_names
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
@@ -77,8 +77,7 @@ m_learningrate <- c(1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12)
 
 param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn")) %>%
-  dplyr::mutate(clst_names = list(clsts))
+  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn"))
 
 
 #............................................................
