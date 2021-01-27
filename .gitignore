@@ -16,6 +16,7 @@ data/
 rdhs.json
 sandbox/
 ignore/
+sharepoint/
 results/
 paramset/
 gendat/
