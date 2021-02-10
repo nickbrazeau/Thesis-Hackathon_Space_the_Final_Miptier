@@ -14,7 +14,6 @@ set.seed(48)
 #   plan will be a square always with some "genetic" barrier set of shapes
 #   will use 'elevation' and euclidean distance btwn points to parameterize migration rates
 #...........................................................
-set.seed(48)
 nCell <- 300
 simdat <- tibble::tibble(name = c("mtn", "rift", "oppcorner"),
                          gridmig = NA,
@@ -116,7 +115,7 @@ raster::contour(raster::rasterFromXYZ(gridmig),
 
 # store, same approx order of mag as distance for migration
 simdat$gridmig[3] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e2) )
+                             dplyr::mutate(migration = migration/1e3) )
 
 
 
@@ -212,7 +211,7 @@ simdat <- simdat %>%
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 1e3){
+  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 7.5){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })

@@ -6,7 +6,7 @@
 #-----------------------------------------------------------------------------------------------------------------------------------------
 library(tidyverse)
 library(vcfR)
-remotes::install_github("nickbrazeau/vcfRmanip")
+remotes::install_github("IDEELResearch/vcfRmanip")
 library(vcfRmanip)
 remotes::install_github("mrc-ide/MIPanalyzer", ref = "master")
 library(MIPanalyzer)
