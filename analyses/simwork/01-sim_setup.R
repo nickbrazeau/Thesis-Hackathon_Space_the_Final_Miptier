@@ -5,7 +5,7 @@
 ## .................................................................................
 library(tidyverse)
 library(raster)
-#remotes::install_github("nickbrazeau/polySimIBD")
+#remotes::install_github("nickbrazeau/polySimIBD", ref = "develop")
 library(polySimIBD)
 set.seed(48)
 
@@ -14,7 +14,6 @@ set.seed(48)
 #   plan will be a square always with some "genetic" barrier set of shapes
 #   will use 'elevation' and euclidean distance btwn points to parameterize migration rates
 #...........................................................
-set.seed(48)
 nCell <- 300
 simdat <- tibble::tibble(name = c("mtn", "rift", "oppcorner"),
                          gridmig = NA,
@@ -116,7 +115,7 @@ raster::contour(raster::rasterFromXYZ(gridmig),
 
 # store, same approx order of mag as distance for migration
 simdat$gridmig[3] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e2) )
+                             dplyr::mutate(migration = migration/1e3) )
 
 
 
@@ -153,7 +152,7 @@ get_dist_matrix  <- function(gridmig, locats) {
   #......................
   # get combinations I need
   #......................
-  locatcomb <- t(combn(1:nrow(locats), 2)) %>%
+  locatcomb <- t(combn(locats$deme, 2)) %>%
     tibble::as_tibble(., .name_repair = "minimal") %>%
     magrittr::set_colnames(c("xy1", "xy2"))
 
@@ -163,7 +162,7 @@ get_dist_matrix  <- function(gridmig, locats) {
   matlocat <- tibble::tibble(xy1 = locatcomb$xy1,
                              xy2 = locatcomb$xy2)
 
-  connval <- furrr::future_pmap(matlocat, function(xy1, xy2, locats){
+  matlocat$connval <- furrr::future_pmap_dbl(matlocat, function(xy1, xy2, locats){
     # get long lat
     xy1 <- locats[xy1, c("longnum", "latnum")]
     xy2 <- locats[xy2, c("longnum", "latnum")]
@@ -180,17 +179,25 @@ get_dist_matrix  <- function(gridmig, locats) {
     return(ret)},
     locats = locats)
 
+  #......................
+  # fix values in matrix
+  #......................
   # spread out values for matrix
-  for (i in 1:nrow(locatcomb)) {
-    x <- as.numeric(attr(connval[[i]], "Labels")[1])
-    y <- as.numeric(attr(connval[[i]], "Labels")[2])
-    mat[x,y] <- connval[[i]]
-  }
+  matlocat_dist <- matlocat %>%
+    tidyr::pivot_wider(data = .,
+                       names_from = "xy2",
+                       values_from = "connval")
+  colnames(matlocat_dist)[1] <- locats$deme[1]
+  matlocat_dist[,1] <- NA
+  matlocat_dist <- rbind.data.frame(matlocat_dist, rep(NA, ncol(matlocat_dist)))
+  rownames(matlocat_dist) <- locats$deme
+  # convert to matrix
+  matlocat_dist <- as.matrix(matlocat_dist)
 
   # make symmetrical
-  mat[lower.tri(mat)]  <- t(mat)[lower.tri(mat)]
-  diag(mat) <- 0
-  return(mat)
+  matlocat_dist[lower.tri(matlocat_dist)]  <- t(matlocat_dist)[lower.tri(matlocat_dist)]
+  diag(matlocat_dist) <- 0
+  return(matlocat_dist)
 }
 
 #......................
@@ -204,7 +211,7 @@ simdat <- simdat %>%
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 1e3){
+  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 7.5){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })

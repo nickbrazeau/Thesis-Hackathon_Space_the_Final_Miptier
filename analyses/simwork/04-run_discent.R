@@ -38,8 +38,8 @@ drake_wrapper <- function(batchset_df) {
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                            start_params = our_start_params,
-                                           m_lowerbound = 1e-25,
-                                           m_upperbound = 5e-4,
+                                           m_lowerbound = 1e-10,
+                                           m_upperbound = 1,
                                            f_learningrate = f_learn,
                                            m_learningrate = m_learn,
                                            full_matrix = FALSE,
@@ -69,7 +69,7 @@ drake_wrapper <- function(batchset_df) {
 input <- readRDS("data/sim_data/sim_gengeodat.rds")
 lvl <- input$lvl
 fs <- seq(0.1, 0.9, by = 0.2)
-ms <- c(1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5)
+ms <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
 f_learningrate <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
 m_learningrate <- c(1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12)
 

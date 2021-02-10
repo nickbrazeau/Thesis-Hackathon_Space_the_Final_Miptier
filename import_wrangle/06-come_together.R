@@ -17,7 +17,7 @@ DRC <- readRDS("data/map_bases/gadm/gadm36_COD_0_sp.rds")
 #.............
 # Pf Incidence
 #.............
-pfincidence <- raster::raster("data/raw_data/MAPrasters/getRaster/2019_Global_Pf_Incidence.201310_.18_40_8_2020_12_04.tiff")
+pfincidence <- raster::raster("data/raw_data/MAPrasters/getRaster/2019_Global_Pf_Incidence.201310_.18_40_8_2020_08_07.tiff")
 pfincidence <- raster::mask(pfincidence, DRC)
 pfincidence <- raster::aggregate(pfincidence, fact = 1.5, fun = mean)
 summary(values(pfincidence))
@@ -25,7 +25,7 @@ summary(values(pfincidence))
 #................................
 # Urbanicity
 #................................
-urban <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_accessibility_to_cities_v1.0_latest_10_.18_40_8_2020_12_04.tiff")
+urban <- raster::raster("data/raw_data/MAPrasters/getRaster/2015_accessibility_to_cities_v1.0_latest_10_.18_40_8_2020_08_07.tiff")
 urban <- raster::mask(urban, DRC)
 summary(values(urban))
 # tidy up
