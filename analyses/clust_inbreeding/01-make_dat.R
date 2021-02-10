@@ -50,32 +50,13 @@ saveRDS(as.data.frame(airdist_gens),
         file = "data/derived_data/allsmpls_clst_inbreeding_dat/airdist_gens.RDS")
 
 
-
-
 #............................................................
 #### data for monoclonals  #####
 #...........................................................
 #......................
 # subset to monoclonals
 #......................
-coi <- readRDS("data/raw_data/RMCL_results/non_summariased_cois.rds") %>%
-  dplyr::filter(region_denom == 1) %>% # just subset to DRc
-  dplyr::filter(region == "DRC") %>%
-  dplyr::filter(gt == 0.1) %>% # same as in Big Barcode Manuscript
-  dplyr::mutate(barcode = ifelse(nchar(name) == 9, paste(strsplit(name, split = "")[[1]][5:nchar(name)], collapse = ""),
-                                 ifelse(nchar(name) == 8, paste(strsplit(name, split = "")[[1]][4:nchar(name)], collapse = ""),
-                                        ifelse(nchar(name) == 6, paste(strsplit(name, split = "")[[1]][2:nchar(name)], collapse = ""),
-                                               name))))
-
-# metadata
-drcsmpls <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  dplyr::select(c("barcode", "hv001", "longnum", "latnum"))
-
-# bring together
-coi_ge <- dplyr::left_join(coi, drcsmpls, by = "barcode")
-monoclonals <- coi_ge %>% dplyr::filter(median == 1)
-dir.create("data/derived_data/RMCL_results/", recursive = T)
-saveRDS(monoclonals, "data/derived_data/RMCL_results/monoclonals.rds")
+monoclonals <- readRDS("data/derived_data/RMCL_results/monoclonals.rds")
 
 ibD.monoclonals <- ibD %>%
   dplyr::filter(barcode.x %in% monoclonals$barcode & barcode.y %in% monoclonals$barcode)
@@ -111,11 +92,11 @@ airdist_gens_monoclonals <- ibD.monoclonals %>%
 # save out
 #......................
 dir.create("data/derived_data/coione_clst_inbreeding_dat")
-saveRDS(as.data.frame(gcdist_gens),
+saveRDS(as.data.frame(gcdist_gens_monoclonals),
         file = "data/derived_data/coione_clst_inbreeding_dat/gcdist_gens.RDS")
-saveRDS(as.data.frame(roaddist_gens),
+saveRDS(as.data.frame(roaddist_gens_monoclonals),
         file = "data/derived_data/coione_clst_inbreeding_dat/roaddist_gens.RDS")
-saveRDS(as.data.frame(airdist_gens),
+saveRDS(as.data.frame(airdist_gens_monoclonals),
         file = "data/derived_data/coione_clst_inbreeding_dat/airdist_gens.RDS")
 
 

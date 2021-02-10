@@ -1,25 +1,9 @@
 ## .................................................................................
-## Purpose: Look at COI estimation from RMCL from big barcode manuscript
-##
+## Purpose: Compare maps of COI estimation from RMCL from big barcode manuscript and DISC
 ##
 ## Notes:
 ## .................................................................................
 library(tidyverse)
-#............................................................
-##### Data Wrangle ####
-#...........................................................
-coi <- readRDS("data/raw_data/RMCL_results/non_summariased_cois.rds") %>%
-  dplyr::filter(region_denom == 1) %>% # just subset to DRc
-  dplyr::filter(region == "DRC") %>%
-  dplyr::filter(gt == 0.1) %>% # same as in Big Barcode Manuscript
-  dplyr::mutate(barcode = ifelse(nchar(name) == 9, paste(strsplit(name, split = "")[[1]][5:nchar(name)], collapse = ""),
-                                 ifelse(nchar(name) == 8, paste(strsplit(name, split = "")[[1]][4:nchar(name)], collapse = ""),
-                                        ifelse(nchar(name) == 6, paste(strsplit(name, split = "")[[1]][2:nchar(name)], collapse = ""),
-                                               name))))
-
-# metadata
-drcsmpls <- readRDS("data/derived_data/sample_metadata.rds") %>%
-  dplyr::select(c("barcode", "hv001", "longnum", "latnum"))
 
 # bring together
 coi_ge <- dplyr::left_join(coi, drcsmpls, by = "barcode")
@@ -69,7 +53,7 @@ rmcl_summ_plotObj <- rmcl_summ %>%
 
 
 # look at incidence
-pfincidence <- raster::raster("data/raw_data/MAPrasters/getRaster/2019_Global_Pf_Incidence.201310_.18_40_8_2020_09_18.tiff")
+pfincidence <- raster::raster("data/raw_data/MAPrasters/getRaster/2019_Global_Pf_Incidence.201310_.18_40_8_2020_08_07.tiff")
 pfincidence <- raster::mask(pfincidence, DRCprov)
 pfincidence_plotObj <- ggplot() +
   ggspatial::layer_spatial(data = pfincidence, aes(fill = stat(band1))) +
