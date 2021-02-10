@@ -46,7 +46,7 @@ locats <- readRDS("data/sim_data/sim_locations.rds")
 #............................................................
 # get ibd sim results
 #...........................................................
-retfiles <- list.files("results/sim_clust_results/swf_sim_ret/",
+retfiles <- list.files("results/swf_sim_ret/",
                        full.names = T)
 retmap <- tibble::tibble(lvl = stringr::str_split_fixed(basename(retfiles), "_", 2)[,1],
                          simIBD = retfiles) %>%
