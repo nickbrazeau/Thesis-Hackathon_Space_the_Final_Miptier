@@ -1,4 +1,4 @@
-
+source("R/basics.R")
 
 
 
@@ -8,23 +8,23 @@
 start <- Sys.time()
 start_params <- rep(0.1, 350)
 names(start_params) <- 1:350
-start_params <- c(start_params, "m" = 1e-14)
-ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = retmap$gengeodat[[3]],
-                                       start_params = start_params,
-                                       m_lowerbound = 1e-25,
-                                       m_upperbound = 5e-4,
-                                       f_learningrate = 1e-8,
-                                       m_learningrate = 1e-12,
-                                       full_matrix = F,
-                                       steps = 1e4,
-                                       report_progress = TRUE)
+start_params <- c(start_params, "m" = 0.1)
+retdisc <- discent::deme_inbreeding_spcoef(K_gendist_geodist = retmap$gengeodat[[1]],
+                                           start_params = start_params,
+                                           m_lowerbound = 1e-10,
+                                           m_upperbound = 1,
+                                           f_learningrate = 1e-5,
+                                           m_learningrate = 1e-10,
+                                           full_matrix = F,
+                                           steps = 5e4,
+                                           report_progress = TRUE)
 
 Sys.time() - start
 #......................
 # f values
 #......................
-fvals <- tibble::tibble(deme = ret$deme_key$Deme,
-                        Finbd = ret$Final_Fis) %>%
+fvals <- tibble::tibble(deme = retdisc$deme_key$Deme,
+                        Finbd = retdisc$Final_Fis) %>%
   dplyr::left_join(., locats)
 
 
