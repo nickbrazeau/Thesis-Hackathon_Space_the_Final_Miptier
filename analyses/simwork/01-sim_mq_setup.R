@@ -11,7 +11,7 @@ set.seed(48)
 
 
 #............................................................
-# QUESTION 1: Can we compare model distance matrices 
+# QUESTION 1: Can we compare model distance matrices
 #...........................................................
 #......................
 # make spatial setup
@@ -33,7 +33,7 @@ latticemodel <- latticemodel %>%
                      mean = c(nCell/2, nCell/2),
                      sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                      log = T)
-    
+
   }))
 
 # visualize to confirm
@@ -63,16 +63,16 @@ locatcomb <- t(combn(sort(values(rstr$deme)), 2)) %>%
 #......................
 # calculate for euclidean and height
 #......................
-# euc and height 
+# euc and height
 gridmig <- furrr::future_pmap_dbl(locatcomb, function(deme1, deme2){
   # get long lat
   xy1 <- latticemodel[latticemodel$deme == deme1, c("longnum", "latnum")]
   xy2 <- latticemodel[latticemodel$deme == deme2, c("longnum", "latnum")]
-  
+
   # get height
   height1 <- raster::extract(rstr, xy1)[, "migration"]
   height2 <- raster::extract(rstr, xy2)[, "migration"]
-  
+
   # euclidean distance
   euc <- dist(rbind(xy1, xy2))
   # "connectedness" is 1/distance plus difference in "heights" -- i.e. if same "plane" or not
@@ -81,7 +81,7 @@ gridmig <- furrr::future_pmap_dbl(locatcomb, function(deme1, deme2){
   return(ret)})
 
 # save out for later
-gridmig <- dplyr::bind_cols(locatcomb, distval = gridmig) 
+gridmig <- dplyr::bind_cols(locatcomb, distval = gridmig)
 # spread out values for matrix
 gridmigmat <- gridmig %>%
   tidyr::pivot_wider(data = .,
@@ -95,6 +95,12 @@ gridmigmat <- as.matrix(gridmigmat)
 gridmigmat[lower.tri(gridmigmat)]  <- t(gridmigmat)[lower.tri(gridmigmat)]
 diag(gridmigmat) <- 0
 
+# liftover to migration PROBABILITY matrix
+gridmigmat <- exp(-gridmigmat/nCell)
+gridmigmat <- gridmigmat/rowSums(gridmigmat)
+
+# sanity
+table( sample(1:ncol(eucmat), size = 1e3, prob = gridmigmat[1,], replace = T) )
 
 #......................
 # calculate for euclidean
@@ -104,13 +110,13 @@ euc <- furrr::future_pmap_dbl(locatcomb, function(deme1, deme2){
   # get long lat
   xy1 <- latticemodel[latticemodel$deme == deme1, c("longnum", "latnum")]
   xy2 <- latticemodel[latticemodel$deme == deme2, c("longnum", "latnum")]
-  
+
   # euclidean distance
   euc <- dist(rbind(xy1, xy2))
   return(as.numeric(euc))})
 
 # save out for later
-euc <- dplyr::bind_cols(locatcomb, distval = euc) 
+euc <- dplyr::bind_cols(locatcomb, distval = euc)
 # spread out values for matrix
 eucmat <- euc %>%
   tidyr::pivot_wider(data = .,
@@ -122,8 +128,13 @@ eucmat <- rbind.data.frame(eucmat, rep(NA, ncol(eucmat)))
 eucmat <- as.matrix(eucmat)
 # make symmetrical
 eucmat[lower.tri(eucmat)]  <- t(eucmat)[lower.tri(eucmat)]
-diag(eucmat) <- 0
+diag(eucmat) <- 0.1 # some offset for prob mat
 
+# liftover to migration PROBABILITY matrix
+eucmat <- exp(-eucmat)
+eucmat <- eucmat/rowSums(eucmat)
+# sanity
+table( sample(1:ncol(eucmat), size = 1e3, prob = eucmat[1,], replace = T) )
 
 #............................................................
 # run sWF simulator
@@ -137,17 +148,17 @@ swf_sim_wrapper <- function(migmat) {
   rho <- 7.4e-7
   # going to assume we can only detect things 10 generations ago
   tlim <- 10
-  
+
   # approximate average of Pf3d7 Chromosome Lengths
   pflen <- 1.664e6
   # assuming single chromosome for ease
   # assuming 1e3 loci
   pos <- sort(sample(1.664e6, 1e3))
-  
+
   # from verity et al coi in the DRC: 2.23 (2.15– 2.31)
   # assuming deme size of 10 for ease
   # tlim at 10 generations as before from verity et al
-  
+
   #......................
   # run structured WF
   #......................
@@ -199,3 +210,4 @@ saveRDS(swfsim, "data/sim_data/mq_swf_simulations.rds")
 saveRDS(gridmig, "data/sim_data/gridmig_geodist.rds")
 saveRDS(euc, "data/sim_data/euclidean_geodist.rds")
 saveRDS(smpl_hosts, "data/sim_data/sim_smpl_hosts_mq.rds")
+saveRDS(latticemodel, "data/sim_data/lattice_model.rds")

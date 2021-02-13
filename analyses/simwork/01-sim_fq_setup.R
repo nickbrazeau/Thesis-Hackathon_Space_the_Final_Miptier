@@ -11,7 +11,7 @@ set.seed(48)
 
 
 #............................................................
-# QUESTION 1: Can we get F values right based on deme/COI?
+# QUESTION 2: Can we get F values right based on deme/COI?
 #...........................................................
 #......................
 # make spatial setup
@@ -175,4 +175,4 @@ saveRDS(ne_grad_sim, "data/sim_data/ne_sim_grad.rds")
 saveRDS(coi_grad_sim, "data/sim_data/coi_sim_grad.rds")
 saveRDS(coi_smpl_hosts, "data/sim_data/sim_smpl_hosts_coi_fq.rds")
 saveRDS(ne_smpl_hosts, "data/sim_data/sim_smpl_hosts_nepop_fq.rds")
-saveRDS(euc, "data/sim_data/euclidean_geodist_fq.rds")
+# saveRDS(euc, "data/sim_data/euclidean_geodist_fq.rds") remember, euclidean is same as in mq setup
