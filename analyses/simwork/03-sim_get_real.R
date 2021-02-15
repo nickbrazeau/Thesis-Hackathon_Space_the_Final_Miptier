@@ -58,7 +58,7 @@ get_ver_realized_ibd <- function(swfsim, smpl1, smpl2) {
 
 
 #............................................................
-# read in data and make retmap 
+# read in data and make retmap
 #...........................................................
 mq_smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts_mq.rds")
 coi_smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts_coi_fq.rds")
@@ -69,8 +69,8 @@ retmap <- tibble::tibble(
   simdatpath = c("data/sim_data/mq_swf_simulations.rds",
                  "data/sim_data/coi_sim_grad.rds",
                  "data/sim_data/ne_sim_grad.rds"),
-  hosts = list(mq_smpl_hosts, 
-               coi_smpl_hosts, 
+  hosts = list(mq_smpl_hosts,
+               coi_smpl_hosts,
                ne_smpl_hosts))
 
 
@@ -81,7 +81,7 @@ batchnum <- sort( rep(1:workers, ceiling( sum(sapply(retmap$hosts, nrow)) / work
 batchnum <- batchnum[1 : sum(sapply(retmap$hosts, nrow))]
 
 retmap_nested <- retmap %>%
-  tidyr::unnest(cols = "hosts") %>% 
+  tidyr::unnest(cols = "hosts") %>%
   dplyr::mutate(batchset = batchnum) %>%
   dplyr::group_by(batchset, lvl, simdatpath) %>%
   tidyr::nest() %>%
@@ -110,7 +110,7 @@ options(clustermq.scheduler = "slurm",
         clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
      parallelism = "clustermq",
-     jobs = nrow(retmap),
+     jobs = nrow(retmap_nested),
      log_make = "swfsim_deploy_drake.log", verbose = 4,
      log_progress = TRUE,
      log_build_times = FALSE,
