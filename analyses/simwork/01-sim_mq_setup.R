@@ -15,7 +15,7 @@ set.seed(48)
 #...........................................................
 #......................
 # make spatial setup
-#   plan will be a square always with some "mountain" barrier
+#   plan will be a square always with some "rift" barrier
 #......................
 nCell <- 100
 coords <- round(seq(1, nCell, by = 10))
@@ -25,13 +25,13 @@ colnames(latticemodel) <- c("longnum", "latnum")
 
 
 #......................
-# migration climbing central mountain
+# migration with central rift
 #......................
 latticemodel <- latticemodel %>%
   dplyr::mutate(migration = purrr::map2_dbl(longnum, latnum, function(x, y){
     mvtnorm::dmvnorm(c(x, y),
                      mean = c(nCell/2, nCell/2),
-                     sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
+                     sigma = matrix(c(0.1, 1e-3, 1e-3, 5), ncol = 2),
                      log = T)
 
   }))
@@ -93,14 +93,20 @@ gridmigmat <- rbind.data.frame(gridmigmat, rep(NA, ncol(gridmigmat)))
 gridmigmat <- as.matrix(gridmigmat)
 # make symmetrical
 gridmigmat[lower.tri(gridmigmat)]  <- t(gridmigmat)[lower.tri(gridmigmat)]
-diag(gridmigmat) <- 0
 
-# liftover to migration PROBABILITY matrix
-gridmigmat <- exp(-gridmigmat/nCell)
+# liftover to migration PROBABILITY matrix w/out the diagonal
+gridmigmat <- exp(-gridmigmat)
+gridmigmat <- gridmigmat/rowSums(gridmigmat, na.rm = T)
+
+# now add in diagonal and offset for stay more often -- 50% time at home
+max_val <- max(gridmigmat, na.rm = T)
+diag(gridmigmat) <- 1
+# now re-make probability matrix
 gridmigmat <- gridmigmat/rowSums(gridmigmat)
 
 # sanity
-table( sample(1:ncol(eucmat), size = 1e3, prob = gridmigmat[1,], replace = T) )
+table( sample(1:ncol(gridmigmat), size = 1e3, prob = gridmigmat[1,], replace = T) )
+table( sample(1:ncol(gridmigmat), size = 1e3, prob = gridmigmat[56,], replace = T) )
 
 #......................
 # calculate for euclidean
@@ -128,13 +134,26 @@ eucmat <- rbind.data.frame(eucmat, rep(NA, ncol(eucmat)))
 eucmat <- as.matrix(eucmat)
 # make symmetrical
 eucmat[lower.tri(eucmat)]  <- t(eucmat)[lower.tri(eucmat)]
-diag(eucmat) <- 0.1 # some offset for prob mat
 
-# liftover to migration PROBABILITY matrix
+# liftover to migration PROBABILITY matrix w/out the diagonal
 eucmat <- exp(-eucmat)
+eucmat <- eucmat/rowSums(eucmat, na.rm = T)
+
+# now add in diagonal element
+max_val <- max(eucmat, na.rm = T)
+# some offset for more stay -- about 50% of time want them to stay
+diag(eucmat) <- 1
+
+# liftover to migration PROBABILITY matrix WITH the diagonal
 eucmat <- eucmat/rowSums(eucmat)
+
 # sanity
 table( sample(1:ncol(eucmat), size = 1e3, prob = eucmat[1,], replace = T) )
+table( sample(1:ncol(eucmat), size = 1e3, prob = eucmat[56,], replace = T) )
+
+# quick compare
+plot(euc$distval, gridmig$distval)
+
 
 #............................................................
 # run sWF simulator
@@ -211,3 +230,5 @@ saveRDS(gridmig, "data/sim_data/gridmig_geodist.rds")
 saveRDS(euc, "data/sim_data/euclidean_geodist.rds")
 saveRDS(smpl_hosts, "data/sim_data/sim_smpl_hosts_mq.rds")
 saveRDS(latticemodel, "data/sim_data/lattice_model.rds")
+saveRDS(eucmat, "data/sim_data/euclidean_prob_matrix.rds")
+saveRDS(gridmigmat, "data/sim_data/gridmig_prob_matrix.rds")

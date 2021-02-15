@@ -15,45 +15,11 @@ set.seed(48)
 #...........................................................
 #......................
 # make spatial setup
-#   plan will be a gradient of demes
+#   plan will be a gradient of demes (using previous euclidean setup)
 #......................
-nCell <- 100
-coords <- round(seq(1, nCell, by = 10))
-latticemodel <- expand.grid(coords, coords)
-plot(latticemodel)
-colnames(latticemodel) <- c("longnum", "latnum")
-latticemodel <- latticemodel %>%
-  dplyr::mutate(deme = 1:dplyr::n())
-
-# euclidean for an iso by dist frame
-# location combinatoins
-locatcomb <- t(combn(sort(latticemodel$deme), 2)) %>%
-  tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("deme1", "deme2"))
-
-eucmigmat <- furrr::future_pmap_dbl(locatcomb, function(deme1, deme2){
-  # get long lat
-  xy1 <- latticemodel[latticemodel$deme == deme1, c("longnum", "latnum")]
-  xy2 <- latticemodel[latticemodel$deme == deme2, c("longnum", "latnum")]
-
-  # euclidean distance
-  eucmigmat <- dist(rbind(xy1, xy2))
-  return(as.numeric(eucmigmat))})
-
-# save out for later
-euc <- dplyr::bind_cols(locatcomb, distval = eucmigmat)
-# spread out values for matrix
-eucmigmat <- euc %>%
-  tidyr::pivot_wider(data = .,
-                     names_from = "deme2",
-                     values_from = "distval")
-eucmigmat[,1] <- NA
-eucmigmat <- rbind.data.frame(eucmigmat, rep(NA, ncol(eucmigmat)))
-# convert to matrix
-eucmigmat <- as.matrix(eucmigmat)
-# make symmetrical
-eucmigmat[lower.tri(eucmigmat)]  <- t(eucmigmat)[lower.tri(eucmigmat)]
-diag(eucmigmat) <- 0
+eucmigmat <- readRDS("data/sim_data/euclidean_prob_matrix.rds")
+latticemodel <- readRDS("data/sim_data/lattice_model.rds")
+coords <- round(seq(1, nrow(latticemodel), by = 10)) # just need moving along x-axis
 
 
 #............................................................

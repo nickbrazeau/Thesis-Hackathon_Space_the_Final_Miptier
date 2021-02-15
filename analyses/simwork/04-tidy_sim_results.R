@@ -76,9 +76,9 @@ distmap <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq"),
                                    "data/sim_data/gridmig_geodist.rds",
                                    "data/sim_data/euclidean_geodist.rds"))
 # bring together
-retmap <- dplyr::left_join(retmap, distmap, by = "lvl") %>% 
-  dplyr::mutate(geodist = purrr::map(path, readRDS)) %>% 
-  dplyr::select(-c("path")) %>% 
+retmap <- dplyr::left_join(retmap, distmap, by = "lvl") %>%
+  dplyr::mutate(geodist = purrr::map(path, readRDS)) %>%
+  dplyr::select(-c("path")) %>%
   dplyr::rename(gendat = data)
 
 
@@ -128,13 +128,17 @@ plot_ibd_pairs <- function(gengeodat, locats) {
 }
 
 # read in locats
-locats <- readRDS("data/sim_data/lattice_model.rds") %>% 
+locats <- readRDS("data/sim_data/lattice_model.rds") %>%
   dplyr::select(-c("migration"))
 
 # run function
 retmap <- retmap %>%
   dplyr::mutate(pairPlotObj = purrr::map(gengeodat, plot_ibd_pairs, locats = locats))
 
+retmap$pairPlotObj[[1]]
+retmap$pairPlotObj[[2]]
+retmap$pairPlotObj[[3]]
+retmap$pairPlotObj[[4]]
 
 
 #......................
