@@ -32,7 +32,7 @@ coi_grad <- tibble::tibble(longnum = coords,
 
 
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad = seq(5, 500, length.out = length(coords))) %>%
+                          negrad = seq(5, 50, length.out = length(coords))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum") %>%
   dplyr::pull("negrad")
 
