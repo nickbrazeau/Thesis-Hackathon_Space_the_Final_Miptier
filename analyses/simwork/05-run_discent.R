@@ -32,9 +32,10 @@ drake_wrapper <- function(batchset_df) {
     input <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
       dplyr::filter(lvl == !!lvlbang)
 
-    input <- input$gengeodat[[1]]
-    our_start_params <- rep(f_start, 350) # 350 sim clusters
-    names(our_start_params) <- 1:350
+    input <- input$gengeodat[[1]] %>%
+      dplyr::filter(locat1 != locat2)
+    our_start_params <- rep(f_start, 100) # 100 sim clusters
+    names(our_start_params) <- 1:100
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                            start_params = our_start_params,

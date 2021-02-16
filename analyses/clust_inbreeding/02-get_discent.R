@@ -28,7 +28,8 @@ drake_wrapper <- function(batchset_df) {
   # internal function to wrap discent
   #......................
   discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, id) {
-    input <- readRDS(as.character(inputpath))
+    input <- readRDS(as.character(inputpath)) %>%
+      dplyr::filter(locat1 != locat2)
     # cluster details
     #   cluster are different sizes depending on coi of 1 or all
     clstnum <- length(unique(c(input$locat1, input$locat2)))
