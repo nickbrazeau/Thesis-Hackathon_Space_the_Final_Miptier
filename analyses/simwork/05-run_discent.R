@@ -27,10 +27,10 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(lvl, f_start, m_start, f_learn, m_learn, id) {
-    lvlbang <- enquo(lvl)
+  discent_wrapper <- function(q, f_start, m_start, f_learn, m_learn, id) {
+    qbang <- enquo(q)
     input <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
-      dplyr::filter(lvl == !!lvlbang)
+      dplyr::filter(q == !!qbang)
 
     input <- input$gengeodat[[1]] %>%
       dplyr::filter(locat1 != locat2)
@@ -67,15 +67,15 @@ drake_wrapper <- function(batchset_df) {
 # make the parammap we are going to explore
 #...........................................................
 input <- readRDS("data/sim_data/sim_gengeodat.rds")
-lvl <- input$lvl
+q <- input$q
 fs <- seq(0.1, 0.9, by = 0.2)
 ms <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
 f_learningrate <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
 m_learningrate <- c(1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12)
 
-param_map <- expand.grid(lvl, fs, ms, f_learningrate, m_learningrate) %>%
+param_map <- expand.grid(q, fs, ms, f_learningrate, m_learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("lvl", "f_start", "m_start", "f_learn", "m_learn"))
+  magrittr::set_colnames(c("q", "f_start", "m_start", "f_learn", "m_learn"))
 
 
 #............................................................
