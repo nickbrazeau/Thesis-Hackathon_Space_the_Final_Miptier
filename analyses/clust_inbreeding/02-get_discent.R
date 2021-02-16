@@ -14,7 +14,7 @@ library(drake)
 #............................................................
 # functions for drake
 #...........................................................
-drake_wrapper <- function(batchset_df) {
+drake_wrapper <- function(batchset_df, batchset) {
 
   # call future
   no_cores <- future::availableCores() - 1
@@ -27,7 +27,7 @@ drake_wrapper <- function(batchset_df) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn, id) {
+  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn) {
     input <- readRDS(as.character(inputpath)) %>%
       dplyr::filter(locat1 != locat2)
     # cluster details
@@ -59,7 +59,7 @@ drake_wrapper <- function(batchset_df) {
   dir.create("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/cluster_inbreed_ests/", recursive = T)
   saveRDS(batchset_df,
           file = paste0("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/cluster_inbreed_ests/",
-                        "gendat_", unique(batchset_df$id), ".RDS")
+                        "gendat_", unique(batchset), ".RDS")
   )
   return(0)
 }
@@ -90,8 +90,7 @@ batchnum <- sort( rep(1:workers, ceiling(nrow(param_map) / workers)) )
 batchnum <- batchnum[1 :nrow(param_map)]
 
 param_map_nested <- param_map %>%
-  dplyr::mutate(id = batchnum,
-                batchset = batchnum) %>%
+  dplyr::mutate(batchset = batchnum) %>%
   dplyr::group_by(batchset) %>%
   tidyr::nest() %>%
   dplyr::ungroup()
@@ -102,7 +101,7 @@ param_map_nested <- param_map %>%
 batch_names <- paste0("batch", param_map_nested$batchset)
 plan <- drake::drake_plan(
   runs = target(
-    drake_wrapper(data),
+    drake_wrapper(data, batchset),
     transform = map(
       .data = !!param_map_nested,
       .names = !!batch_names
