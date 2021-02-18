@@ -22,16 +22,23 @@ sim_disc_map <- tibble::tibble(paths = list.files("results/sim_cluster_inbreed_e
 # look at cost distributions
 #......................
 sim_disc_map %>%
-  dplyr::select(c("lvl", "mincost")) %>%
+  dplyr::select(c("q", "mincost")) %>%
   ggplot() +
   geom_boxplot(aes(x = mincost)) +
   coord_flip() +
-  facet_wrap(~lvl, scales = "free")
+  facet_wrap(~q, scales = "free")
 
 
 
 #............................................................
 # save out min costs
 #...........................................................
+out <- sim_disc_map %>%
+  dplyr::group_by(q) %>%
+  dplyr::filter(mincost == min(mincost))
+
+
+dir.create("results/sim_inbreed_ests/min_cost_inbreedingresults/", recursive = T)
+saveRDS(out, "results/sim_inbreed_ests/min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
 
 

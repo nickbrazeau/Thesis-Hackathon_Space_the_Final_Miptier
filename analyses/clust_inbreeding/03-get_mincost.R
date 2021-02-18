@@ -12,8 +12,7 @@ library(tidyverse)
 ret_read_wrapper <- function(path) {
   readRDS(path) %>%
     dplyr::mutate(datalvl = stringr::str_extract(inputpath, "allsmpls|coione"),
-                  distlvl = stringr::str_extract(inputpath, "gcdist|roaddist|airdist")) %>%
-    dplyr::select(-c("inputpath", "clst_names", "id"))
+                  distlvl = stringr::str_extract(inputpath, "gcdist|roaddist|airdist"))
 }
 
 # get paths and read in results
@@ -43,6 +42,10 @@ retmap %>%
 out <- retmap %>%
   dplyr::group_by(datalvl, distlvl) %>%
   dplyr::filter(mincost == min(mincost))
+
+# drop extra
+out <- out %>%
+  dplyr::select(c("datalvl", "distlvl", "discentret", "mincost"))
 
 
 dir.create("results/cluster_inbreed_ests/min_cost_inbreedingresults/", recursive = T)
