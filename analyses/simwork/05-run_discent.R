@@ -6,7 +6,7 @@
 #............................................................
 #  setup
 #...........................................................
-workers <- 512 # nodes to ask for, fewer nodes, less expensive for reading in data and not placing burden on scheduler
+workers <- 4000 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
 
