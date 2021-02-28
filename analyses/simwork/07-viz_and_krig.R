@@ -42,7 +42,28 @@ simmap <- simmap %>%
 
 
 
+simdat <- readRDS("data/sim_data/sim_gengeodat.rds") %>%
+  dplyr::select(c("q", "pairPlotObj"))
+
+simmap <- simmap %>% dplyr::left_join(., simdat, by = "q")
 
 
+simmap$pairPlotObj[[1]]
+View(simmap$rasterpreds[[1]])
+simmap$pointplot[[1]]
+simmap$rasterplot[[1]]
 
+
+simmap$pairPlotObj[[3]]
+simmap$pointplot[[3]]
+simmap$rasterplot[[3]]
+
+
+simmap$pointplot[[2]]
+simmap$pairPlotObj[[2]]
+simmap$rasterplot[[2]]
+
+simmap$pairPlotObj[[4]]
+simmap$pointplot[[4]]
+simmap$rasterplot[[4]]
 

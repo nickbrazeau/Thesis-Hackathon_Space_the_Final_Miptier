@@ -7,8 +7,7 @@
 ## .................................................................................
 library(tidyverse)
 library(drake)
-workers <- 512 # nodes to ask for, fewer nodes, less expensive for reading in data and not placing burden on scheduler
-
+workers <- 1e3
 #............................................................
 # functions for drake plan
 #...........................................................
