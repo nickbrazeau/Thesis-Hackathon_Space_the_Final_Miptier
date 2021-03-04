@@ -69,9 +69,9 @@ drake_wrapper <- function(batchset_df, batchset) {
 input <- readRDS("data/sim_data/sim_gengeodat.rds")
 q <- input$q
 fs <- seq(0, 1, by = 0.1)
-ms <- c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.5, 1, 10)
-f_learningrate <- c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1)
-m_learningrate <- c(1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-9, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
+ms <- c(1e-6, 1e-5, 1e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 0.75, 0.5, 1, 5)
+f_learningrate <- c(1e-7, 1e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 1e-1)
+m_learningrate <- c(1e-21, 1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
 
 param_map <- expand.grid(q, fs, ms, f_learningrate, m_learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
