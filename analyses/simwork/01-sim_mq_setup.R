@@ -25,15 +25,14 @@ colnames(latticemodel) <- c("longnum", "latnum")
 
 
 #......................
-# migration with central rift
+# migration with mountain peak
 #......................
 latticemodel <- latticemodel %>%
   dplyr::mutate(migration = purrr::map2_dbl(longnum, latnum, function(x, y){
     mvtnorm::dmvnorm(c(x, y),
                      mean = c(nCell/2, nCell/2),
-                     sigma = matrix(c(0.1, 1e-3, 1e-3, 5), ncol = 2),
-                     log = T)
-
+                         sigma = matrix(c(0.1, 0, 0, 0.1), ncol = 2),
+                         log = T)
   }))
 
 # visualize to confirm
