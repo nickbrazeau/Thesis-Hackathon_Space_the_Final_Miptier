@@ -39,7 +39,7 @@ drake_wrapper <- function(batchset_df, batchset) {
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                            start_params = our_start_params,
-                                           m_lowerbound = 1e-25,
+                                           m_lowerbound = 1e-50,
                                            m_upperbound = 100,
                                            f_learningrate = f_learn,
                                            m_learningrate = m_learn,
