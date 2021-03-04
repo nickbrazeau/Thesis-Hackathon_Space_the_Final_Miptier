@@ -26,13 +26,13 @@ coords <- round(seq(1, nrow(latticemodel), by = 10)) # just need moving along x-
 # gradient
 #...........................................................
 coi_grad <- tibble::tibble(longnum = coords,
-                           coigrad = seq(1, 8, length.out = length(coords))) %>%
+                           coigrad = seq(1, 6, length.out = length(coords))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum") %>%
   dplyr::pull("coigrad")
 
 
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad = seq(5, 50, length.out = length(coords))) %>%
+                          negrad = round(3^seq(1, 5, length.out = length(coords)))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum") %>%
   dplyr::pull("negrad")
 
