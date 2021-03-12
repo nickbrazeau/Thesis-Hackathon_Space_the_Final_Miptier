@@ -22,15 +22,10 @@ colnames(latticemodel) <- c("longnum", "latnum")
 
 
 #......................
-# migration with mountain peak
+# migration on a ramp
 #......................
 latticemodel <- latticemodel %>%
-  dplyr::mutate(migration = purrr::map2_dbl(longnum, latnum, function(x, y){
-    mvtnorm::dmvnorm(c(x, y),
-                     mean = c(nCell/2, nCell/2),
-                     sigma = matrix(c(0.1, 0, 0, 0.1), ncol = 2),
-                     log = T)
-  }))
+  dplyr::mutate(migration = purrr::map_dbl(longnum, function(x){ x^2 })) # euclidean distance along x-axis only from origin
 
 # visualize to confirm
 plot(raster::rasterFromXYZ(latticemodel))

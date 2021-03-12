@@ -59,8 +59,8 @@ simmap$pointplot[[3]]
 simmap$rasterplot[[3]]
 
 
-simmap$pointplot[[2]]
 simmap$pairPlotObj[[2]]
+simmap$pointplot[[2]]
 simmap$rasterplot[[2]]
 
 simmap$pairPlotObj[[4]]
