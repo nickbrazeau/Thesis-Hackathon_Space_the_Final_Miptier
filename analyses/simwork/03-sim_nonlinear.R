@@ -283,7 +283,8 @@ smpl_hosts <- lapply(comb_hosts, exp_host_pairwise, smpl_hosts = smpl_hosts) %>%
 # save out
 #......................
 dir.create("data/sim_data/")
-saveRDS(simdat$swfsim[simdat$name == "mtn"], "data/sim_data/mtn_nonlinear_migration_sim_swf.rds")
-saveRDS(simdat$swfsim[simdat$name == "rift"], "data/sim_data/rift_nonlinear_migration_sim_swf.rds")
-saveRDS(simdat$swfsim[simdat$name == "oppcorner"], "data/sim_data/oppcorner_nonlinear_migration_sim_swf.rds")
+# need to get correct "level" and unnest the list so we are swfsim class
+saveRDS(simdat$swfsim[simdat$name == "mtn"][[1]], "data/sim_data/mtn_nonlinear_migration_sim_swf.rds")
+saveRDS(simdat$swfsim[simdat$name == "rift"][[1]], "data/sim_data/rift_nonlinear_migration_sim_swf.rds")
+saveRDS(simdat$swfsim[simdat$name == "oppcorner"][[1]], "data/sim_data/oppcorner_nonlinear_migration_sim_swf.rds")
 saveRDS(smpl_hosts, "data/sim_data/sim_smpl_hosts_nonlinear_migration.rds")
