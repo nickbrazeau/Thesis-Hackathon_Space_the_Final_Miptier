@@ -69,12 +69,19 @@ retmap$ibd_plotObj_nonzero[[3]]
 # bring in distance
 #   remember considering m-dst twice
 #...........................................................
-distmap <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq"),
-                          q = c("coi", "ne", "mq_good", "mq_bad"),
+distmap <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq", "mtn", "rift", "oppcorner"),
+                          q = c("coi", "ne", "mq_good", "mq_bad", "mtn", "rift", "oppcorner"),
                           path = c("data/sim_data/euclidean_geodist.rds",
                                    "data/sim_data/euclidean_geodist.rds",
                                    "data/sim_data/gridmig_geodist.rds",
-                                   "data/sim_data/euclidean_geodist.rds"))
+                                   "data/sim_data/euclidean_geodist.rds",
+                                   "data/sim_data/mtn_nonlinear_migration_geodist.rds",
+                                   "data/sim_data/rift_nonlinear_migration_geodist.rds",
+                                   "data/sim_data/oppcorner_nonlinear_migration_geodist.rds"
+                                   ))
+
+
+
 # bring together
 retmap <- dplyr::left_join(retmap, distmap, by = "lvl") %>%
   dplyr::mutate(geodist = purrr::map(path, readRDS)) %>%

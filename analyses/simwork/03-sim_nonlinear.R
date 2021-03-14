@@ -287,4 +287,9 @@ dir.create("data/sim_data/")
 saveRDS(simdat$swfsim[simdat$name == "mtn"][[1]], "data/sim_data/mtn_nonlinear_migration_sim_swf.rds")
 saveRDS(simdat$swfsim[simdat$name == "rift"][[1]], "data/sim_data/rift_nonlinear_migration_sim_swf.rds")
 saveRDS(simdat$swfsim[simdat$name == "oppcorner"][[1]], "data/sim_data/oppcorner_nonlinear_migration_sim_swf.rds")
+# save out geodistances
+saveRDS(simdat$distmat[simdat$name == "mtn"][[1]], "data/sim_data/mtn_nonlinear_migration_geodist.rds")
+saveRDS(simdat$distmat[simdat$name == "rift"][[1]], "data/sim_data/rift_nonlinear_migration_geodist.rds")
+saveRDS(simdat$distmat[simdat$name == "oppcorner"][[1]], "data/sim_data/oppcorner_nonlinear_migration_geodist.rds")
+# save out sampled hosts
 saveRDS(smpl_hosts, "data/sim_data/sim_smpl_hosts_nonlinear_migration.rds")
