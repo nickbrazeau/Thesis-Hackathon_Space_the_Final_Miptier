@@ -202,13 +202,18 @@ simdat <- simdat %>%
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-  dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 7.5){ # scaled above slightly too!
+    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 6){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })
   )
 # NB these are currently distances, later convert them into "connectivity"
 
+
+# sanity
+table( sample(1:ncol(simdat$migmat[[1]]), size = 1e3, prob = simdat$migmat[[1]][1,], replace = T) )
+table( sample(1:ncol(simdat$migmat[[2]]), size = 1e3, prob = simdat$migmat[[2]][1,], replace = T) )
+table( sample(1:ncol(simdat$migmat[[3]]), size = 1e3, prob = simdat$migmat[[3]][1,], replace = T) )
 
 
 

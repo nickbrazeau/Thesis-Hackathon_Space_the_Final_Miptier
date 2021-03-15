@@ -25,7 +25,13 @@ colnames(latticemodel) <- c("longnum", "latnum")
 # migration on a ramp
 #......................
 latticemodel <- latticemodel %>%
-  dplyr::mutate(migration = purrr::map_dbl(longnum, function(x){ x^2 })) # euclidean distance along x-axis only from origin
+  dplyr::mutate(migration = purrr::map2_dbl(longnum, latnum,
+                                           function(x, y){
+                                             # euclidean distance along x-axis only from origin
+                                             # of 0,50
+                                             y <- y - 50
+                                             sqrt((x^2) + (y^2))
+                                             }))
 
 # visualize to confirm
 plot(raster::rasterFromXYZ(latticemodel))
@@ -34,7 +40,7 @@ raster::contour(raster::rasterFromXYZ(latticemodel),
 
 # store, same approx order of mag as distance for migration
 latticemodel <- latticemodel %>%
-  dplyr::mutate(migration = migration/1e2,
+  dplyr::mutate(migration = migration,
                 deme = 1:dplyr::n())
 
 
