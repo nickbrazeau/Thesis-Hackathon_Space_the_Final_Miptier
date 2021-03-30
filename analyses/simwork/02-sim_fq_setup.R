@@ -25,15 +25,23 @@ coords <- round(seq(1, nrow(latticemodel), by = 10)) # just need moving along x-
 #............................................................
 # gradient
 #...........................................................
+# coi
 coi_grad <- tibble::tibble(longnum = coords,
-                           coigrad = seq(1, 6, length.out = length(coords))) %>%
-  dplyr::left_join(latticemodel, ., by = "longnum") %>%
-  dplyr::pull("coigrad")
+                           coigrad = seq(1, 5, length.out = length(coords))) %>%
+  dplyr::left_join(latticemodel, ., by = "longnum")
+# sanity
+plot(raster::rasterFromXYZ(xyz = coi_grad[c("longnum", "latnum", "coigrad")]))
+# pull
+coi_grad <- coi_grad %>% dplyr::pull("coigrad")
 
-
+# ne
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad = round(3^seq(1, 5, length.out = length(coords)))) %>%
-  dplyr::left_join(latticemodel, ., by = "longnum") %>%
+                          negrad =  seq(10, 100, length.out = length(coords))) %>%
+  dplyr::left_join(latticemodel, ., by = "longnum")
+# sanity
+plot(raster::rasterFromXYZ(xyz = ne_grad[c("longnum", "latnum", "negrad")]))
+# pull
+ne_grad <- ne_grad %>%
   dplyr::pull("negrad")
 
 
@@ -41,7 +49,11 @@ ne_grad <- tibble::tibble(longnum = coords,
 #............................................................
 # run sWF simulator
 #...........................................................
-swf_sim_wrapper <- function(migmat, coivec, nevec) {
+# magic numbers outside
+Nesize <- 25
+mscale <- 0.5
+
+swf_sim_wrapper <- function(migmat, coivec, nevec, mscale) {
   #......................
   # magic numbers
   #......................
@@ -64,7 +76,7 @@ swf_sim_wrapper <- function(migmat, coivec, nevec) {
   swfsim <- polySimIBD::sim_swf(pos =       pos,
                                 migr_dist_mat = migmat,
                                 N =         nevec,
-                                m =         rep(0.5, nrow(migmat)),
+                                m =         rep(mscale, nrow(migmat)),
                                 rho =       rho,
                                 mean_coi =  coivec,
                                 tlim =      tlim)
@@ -76,12 +88,13 @@ swf_sim_wrapper <- function(migmat, coivec, nevec) {
 #...........................................................
 coi_grad_sim <- swf_sim_wrapper(migmat = eucmigmat,
                                 coivec = coi_grad,
-                                nevec = rep(10, nrow(eucmigmat)))
+                                nevec = rep(Nesize, nrow(eucmigmat)),
+                                mscale = mscale)
 
 # IBD realizations for coi grad
-#   straightforward because host size doesn't change from 10
-coi_all_hosts <- tibble::tibble(host = 1:(10*ncol(eucmigmat)),
-                                host_deme = sort(rep(1:ncol(eucmigmat), 10)))
+#   straightforward because host size doesn't change from Nesize
+coi_all_hosts <- tibble::tibble(host = 1:(Nesize*ncol(eucmigmat)),
+                                host_deme = sort(rep(1:ncol(eucmigmat), Nesize)))
 coi_all_hosts <- split(coi_all_hosts, factor(coi_all_hosts$host_deme))
 coi_smpl_hosts <- lapply(coi_all_hosts, function(x){x[sample(1:nrow(x), size = 3),]}) %>%
   dplyr::bind_rows()
@@ -102,13 +115,13 @@ coi_smpl_hosts <- lapply(coi_comb_hosts, exp_host_pairwise, smpl_hosts = coi_smp
 
 
 
-
 #............................................................
 # run simulation for Effective Population Size gradient
 #............................................................
 ne_grad_sim <- swf_sim_wrapper(migmat = eucmigmat,
                                coivec = rep(2.23, nrow(eucmigmat)),
-                               nevec = ne_grad)
+                               nevec = ne_grad,
+                               mscale = mscale)
 
 # will assume 3 individuals in every deme
 ne_all_hosts <- tibble::tibble(host = 1:sum(ne_grad),

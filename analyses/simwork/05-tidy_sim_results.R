@@ -44,6 +44,8 @@ retfiles <- list.files("results/swf_sim_ret/",
                        full.names = T)
 retmap <- tibble::tibble(lvl = stringr::str_split_fixed(basename(retfiles), "_", 2)[,1],
                          simIBD = retfiles) %>%
+  dplyr::mutate(lvl = factor(lvl, levels = c("mq", "coi", "ne",
+                                             "mtn", "oppcorner", "rift"))) %>%
   dplyr::mutate(simIBD = purrr::map(simIBD, readRDS)) %>%
   tidyr::unnest(cols = simIBD) %>%
   dplyr::group_by(lvl) %>%
@@ -57,13 +59,21 @@ retmap <- retmap %>%
   dplyr::mutate(ibd_plotObj_all = purrr::map(data, make_ibd_histogram, filt = -1),
                 ibd_plotObj_nonzero =  purrr::map(data, make_ibd_histogram, filt = 0))
 
+# all
 retmap$ibd_plotObj_all[[1]]
 retmap$ibd_plotObj_all[[2]]
 retmap$ibd_plotObj_all[[3]]
+retmap$ibd_plotObj_all[[4]]
+retmap$ibd_plotObj_all[[5]]
+retmap$ibd_plotObj_all[[6]]
 
+# non zero
 retmap$ibd_plotObj_nonzero[[1]]
 retmap$ibd_plotObj_nonzero[[2]]
 retmap$ibd_plotObj_nonzero[[3]]
+retmap$ibd_plotObj_nonzero[[4]]
+retmap$ibd_plotObj_nonzero[[5]]
+retmap$ibd_plotObj_nonzero[[6]]
 
 #............................................................
 # bring in distance
@@ -111,7 +121,10 @@ distmap_nonlinear <- tibble::tibble(lvl = c("mtn", "rift", "oppcorner"),
 #......................
 retmap <- dplyr::bind_rows(distmap_reg, distmap_nonlinear) %>%
   dplyr::left_join(retmap, ., by = "lvl") %>%
-  dplyr::rename(gendat = data)
+  dplyr::rename(gendat = data) %>%
+  dplyr::mutate(q = factor(q, levels = c("mq_good", "mq_bad", "coi", "ne",
+                                             "mtn", "oppcorner", "rift"))) %>%
+  dplyr::arrange(q)
 
 
 #......................

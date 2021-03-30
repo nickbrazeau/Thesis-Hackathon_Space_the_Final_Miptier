@@ -24,7 +24,11 @@ gridmigmat <- readRDS("data/sim_data/gridmig_prob_matrix.rds")
 #............................................................
 # run sWF simulator
 #...........................................................
-swf_sim_wrapper <- function(migmat) {
+# magic numbers outside
+Nesize <- 25
+mscale <- 0.5
+
+swf_sim_wrapper <- function(migmat, Nesize, mscale) {
   #......................
   # magic numbers
   #......................
@@ -49,8 +53,8 @@ swf_sim_wrapper <- function(migmat) {
   #......................
   swfsim <- polySimIBD::sim_swf(pos =       pos,
                                 migr_dist_mat = migmat,
-                                N =         rep(10, nrow(migmat)),
-                                m =         rep(0.5, nrow(migmat)),
+                                N =         rep(Nesize, nrow(migmat)),
+                                m =         rep(mscale, nrow(migmat)),
                                 rho =       rho,
                                 mean_coi =  rep(2.23, nrow(migmat)),
                                 tlim =      tlim)
@@ -60,15 +64,15 @@ swf_sim_wrapper <- function(migmat) {
 #......................
 # run simulations
 #......................
-swfsim <- swf_sim_wrapper(gridmigmat)
+swfsim <- swf_sim_wrapper(gridmigmat, Nesize = Nesize, mscale = mscale)
 
 
 #............................................................
 # Pairwise IBD realizations
 #...........................................................
 # will assume 3 individuals in every deme
-all_hosts <- tibble::tibble(host = 1:(10*ncol(gridmigmat)),
-                            host_deme = sort(rep(1:ncol(gridmigmat), 10)))
+all_hosts <- tibble::tibble(host = 1:(Nesize*ncol(gridmigmat)),
+                            host_deme = sort(rep(1:ncol(gridmigmat), Nesize)))
 all_hosts <- split(all_hosts, factor(all_hosts$host_deme))
 smpl_hosts <- lapply(all_hosts, function(x){x[sample(1:nrow(x), size = 3),]}) %>%
   dplyr::bind_rows()

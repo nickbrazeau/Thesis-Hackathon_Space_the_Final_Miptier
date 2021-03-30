@@ -40,7 +40,7 @@ raster::contour(raster::rasterFromXYZ(gridmig),
 
 # store, same approx order of mag as distance for migration
 simdat$gridmig[1] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e3) )
+                             dplyr::mutate(migration = migration/250) )
 
 #......................
 # migration with central rift
@@ -61,7 +61,7 @@ raster::contour(raster::rasterFromXYZ(gridmig),
 
 # store, same approx order of mag as distance for migration
 simdat$gridmig[2] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e3) )
+                             dplyr::mutate(migration = migration/250) )
 
 
 #......................
@@ -75,37 +75,49 @@ gridmig <- latticemodel %>%
                         sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                         log = T)}),
 
-    longnum <= 100  &  longnum > 50 & latnum > 50 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
-      mvtnorm::dmvnorm(c(x, y), # 1- here to make this one go "up"
-                       mean = c(75, 75),
+    longnum <= 50 & latnum > 50 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
+      mvtnorm::dmvnorm(c(x, y),
+                       mean = c(25, 75),
                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
                        log = T)}),
+    longnum > 50 & latnum > 50 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
+      -mvtnorm::dmvnorm(c(x, y),
+                        mean = c(75, 75),
+                        sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
+                        log = T)}),
+
+    longnum > 50 & latnum <= 50 ~ purrr::map2_dbl(longnum, latnum, function(x, y){
+      mvtnorm::dmvnorm(c(x, y),
+                       mean = c(75, 25),
+                       sigma = matrix(c(0.1, 1e-3, 1e-3, 0.1), ncol = 2),
+                       log = T)})
 
   ))
 
-# make other direction hill and "ground"
+# make other direction hill
 gridmig_min <- min(gridmig$migration, na.rm = T)
 gridmig_max <- max(gridmig$migration, na.rm = T)
 
 gridmig <- gridmig %>%
   dplyr::mutate(migration = dplyr::case_when(
-    longnum <= 100  &  longnum > 50 & latnum > 50 ~ migration - gridmig_min,
-    longnum <= 50 & latnum <= 50 ~ migration - gridmig_max
+    longnum <= 50 & latnum > 50 ~ migration - gridmig_min,
+    longnum <= 50 & latnum <= 50 ~ migration - gridmig_max,
+    longnum > 50 & latnum > 50 ~ migration - gridmig_max,
+    longnum > 50 & latnum <= 50 ~ migration - gridmig_min
   ))
 
-
-# make "ground"
-gridmig$migration[is.na(gridmig$migration)] <- quantile(gridmig$migration,
-                                                        probs = 0.5,
-                                                        na.rm = T)
 # visualize to confirm
 plot(raster::rasterFromXYZ(gridmig))
 raster::contour(raster::rasterFromXYZ(gridmig),
                 add = TRUE, drawlabels = FALSE, col = "#969696")
 
+
+
+
+
 # store, same approx order of mag as distance for migration
 simdat$gridmig[3] <- list( gridmig %>%
-                             dplyr::mutate(migration = migration/1e3) )
+                             dplyr::mutate(migration = migration/250) )
 
 
 
@@ -198,11 +210,12 @@ simdat <- simdat %>%
   dplyr::mutate(distmat = purrr::map(gridmig, get_dist_matrix, locats = locats))
 # NB these are currently distances, later convert them into "connectivity"
 
+
 #......................
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 6){ # scaled above slightly too!
+    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 3.5){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })
@@ -211,8 +224,8 @@ simdat <- simdat %>%
 
 
 # sanity
-table( sample(1:ncol(simdat$migmat[[1]]), size = 1e3, prob = simdat$migmat[[1]][1,], replace = T) )
-table( sample(1:ncol(simdat$migmat[[2]]), size = 1e3, prob = simdat$migmat[[2]][1,], replace = T) )
+table( sample(1:ncol(simdat$migmat[[1]]), size = 1e3, prob = simdat$migmat[[1]][10,], replace = T) )
+table( sample(1:ncol(simdat$migmat[[2]]), size = 1e3, prob = simdat$migmat[[2]][10,], replace = T) )
 table( sample(1:ncol(simdat$migmat[[3]]), size = 1e3, prob = simdat$migmat[[3]][1,], replace = T) )
 
 
