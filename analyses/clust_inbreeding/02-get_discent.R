@@ -27,7 +27,7 @@ drake_wrapper <- function(batchset_df, batchset) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn) {
+  discent_wrapper <- function(inputpath, f_start, m_start, learn) {
     input <- readRDS(as.character(inputpath)) %>%
       dplyr::filter(locat1 != locat2)
     # cluster details
@@ -40,11 +40,11 @@ drake_wrapper <- function(batchset_df, batchset) {
     our_start_params <- c(our_start_params, "m" = m_start)
     ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
                                            start_params = our_start_params,
-                                           m_lowerbound = 1e-50,
+                                           m_lowerbound = -.Machine$double.xmax,
                                            m_upperbound = 100,
-                                           f_learningrate = f_learn,
-                                           m_learningrate = m_learn,
-                                           steps = 1e4,
+                                           f_learningrate = learn,
+                                           m_learningrate = learn,
+                                           steps = 5e4,
                                            report_progress = FALSE,
                                            return_verbose = FALSE)
     return(ret)
@@ -72,12 +72,11 @@ monoclonals_gengeodatpaths <- list.files("data/derived_data/coione_clst_inbreedi
 gengeodatpaths <- c(allsmpls_gengeodatpaths, monoclonals_gengeodatpaths)
 fs <- seq(0, 1, by = 0.1)
 ms <- c(1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
-f_learningrate <- c(1e-7, 1e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 1e-1)
-m_learningrate <- c(1e-21, 1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10)
-
-param_map <- expand.grid(gengeodatpaths, fs, ms, f_learningrate, m_learningrate) %>%
+learningrate <- c(1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10,
+                  1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 1e-1)
+param_map <- expand.grid(gengeodatpaths, fs, ms, learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn"))
+  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "learn"))
 
 
 #............................................................

@@ -43,10 +43,6 @@ out <- retmap %>%
   dplyr::group_by(datalvl, distlvl) %>%
   dplyr::filter(mincost == min(mincost))
 
-# drop extra
-out <- out %>%
-  dplyr::select(c("datalvl", "distlvl", "discentret", "mincost"))
-
 
 dir.create("results/cluster_inbreed_ests/min_cost_inbreedingresults/", recursive = T)
 saveRDS(out, "results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS")
