@@ -1,4 +1,4 @@
-#' @title Krigging by Verity
+#' @title Krigging by fields package
 #' @description function is not generalizable and is meant for this project use case
 get_krigged <- function(discentret, locats, range, res) {
   # check
@@ -130,8 +130,9 @@ raster_plotter <- function(pred_discentret) {
 }
 
 
-#' @title Basic Raster Plotter
-#' @description raster super simple function is not generalizable and is meant for this project use case
+
+#' @title Basic Point Plotter
+#' @description plot points for disc
 point_plotter <- function(discentret, locats) {
   if(!all(colnames(locats) %in% c("longnum", "latnum", "deme"))){
     stop("locats object not right")
@@ -149,4 +150,56 @@ point_plotter <- function(discentret, locats) {
                size = 1.2, alpha = 0.9)
   # out and let user do graph things (eg themes)
   return(plotObj)
+}
+
+
+#' @title DISC Estimates & Realized IBD
+#' @description Combine disc estimates and realized ibd plots
+plot_realIBD_discent <- function(gengeodat, discentret, locats) {
+  if(!all(colnames(locats) %in% c("longnum", "latnum", "deme"))){
+    stop("locats object not right")
+  }
+
+  #......................
+  # DISC estimates
+  #......................
+  # make discent return object
+  ret <- tibble::tibble(disc = discentret$Final_Fis,
+                        key = discentret$deme_key$key,
+                        deme = discentret$deme_key$Deme)
+
+  # put back in geo locations
+  discplotdat <- dplyr::left_join(ret, locats, by = "deme")
+
+  #......................
+  # realized ibd
+  #......................
+  # quick manips
+  locats1 <- locats %>%
+    dplyr::rename(locat1 = deme)
+  locats2 <- locats %>%
+    dplyr::rename(locat2 = deme)
+  # bring together realized
+  realIBD_plotdat <- gengeodat %>%
+    dplyr::left_join(., y = locats1, by = "locat1") %>%
+    dplyr::left_join(., y = locats2, by = "locat2") %>%
+    dplyr::filter(gendist > 0 )
+
+  #......................
+  # bring together and out
+  #......................
+  ggplot() +
+    geom_point(data = discplotdat, aes(x = longnum, y = latnum, fill = disc),
+               size = 4, alpha = 1, shape = 22, color = "#000000") +
+    geom_segment(data = realIBD_plotdat,
+                 aes(x = longnum.x,
+                     y = latnum.x,
+                     xend = longnum.y,
+                     yend = latnum.y,
+                     color = gendist),
+                 alpha = 0.5) +
+    scale_color_viridis_c("Sim. IBD", option = "viridis") +
+    scale_fill_viridis_c("Pred. DISC", option = "cividis") +
+    theme_void()
+
 }
