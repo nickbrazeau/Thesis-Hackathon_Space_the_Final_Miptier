@@ -73,7 +73,7 @@ gengeodatpaths <- c(allsmpls_gengeodatpaths, monoclonals_gengeodatpaths)
 fs <- seq(0, 1, by = 0.1)
 ms <- c(1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
 learningrate <- c(1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10,
-                  1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 1e-1)
+                  1e-9, 1e-8, 1e-7, 1e-6, 1e-5)
 param_map <- expand.grid(gengeodatpaths, fs, ms, learningrate) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
   magrittr::set_colnames(c("inputpath", "f_start", "m_start", "learn"))

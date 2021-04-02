@@ -50,7 +50,8 @@ retmap <- tibble::tibble(lvl = stringr::str_split_fixed(basename(retfiles), "_",
   tidyr::unnest(cols = simIBD) %>%
   dplyr::group_by(lvl) %>%
   tidyr::nest() %>%
-  dplyr::ungroup()
+  dplyr::ungroup() %>%
+  dplyr::arrange(lvl)
 
 #......................
 # get ibd plots
