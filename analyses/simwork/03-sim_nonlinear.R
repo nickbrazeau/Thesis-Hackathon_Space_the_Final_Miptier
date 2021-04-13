@@ -215,7 +215,7 @@ simdat <- simdat %>%
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 3.5){ # scaled above slightly too!
+    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 5){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })
@@ -258,7 +258,7 @@ swf_sim_wrapper <- function(migmat) {
   #......................
   swfsim <- polySimIBD::sim_swf(pos =       pos,
                                 migr_dist_mat = migmat,
-                                N =         rep(10, nrow(migmat)),
+                                N =         rep(25, nrow(migmat)),
                                 m =         rep(0.5, nrow(migmat)),
                                 rho =       rho,
                                 mean_coi =  rep(2.23, nrow(migmat)),

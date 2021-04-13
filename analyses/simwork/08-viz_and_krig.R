@@ -66,26 +66,32 @@ simmap$rasterplot[[1]]
 
 simmap$pairPlotObj[[2]]
 simmap$pointplot[[2]]
+simmap$plotObj_realIBD_discent[[2]]
 simmap$rasterplot[[2]]
 
 simmap$pairPlotObj[[3]]
 simmap$pointplot[[3]]
+simmap$plotObj_realIBD_discent[[3]]
 simmap$rasterplot[[3]]
 
 simmap$pairPlotObj[[4]]
 simmap$pointplot[[4]]
+simmap$plotObj_realIBD_discent[[4]]
 simmap$rasterplot[[4]]
 
 simmap$pairPlotObj[[5]]
 simmap$pointplot[[5]]
+simmap$plotObj_realIBD_discent[[5]]
 simmap$rasterplot[[5]]
 
 simmap$pairPlotObj[[6]]
 simmap$pointplot[[6]]
+simmap$plotObj_realIBD_discent[[6]]
 simmap$rasterplot[[6]]
 
 simmap$pairPlotObj[[7]]
 simmap$pointplot[[7]]
+simmap$plotObj_realIBD_discent[[7]]
 simmap$rasterplot[[7]]
 
 
