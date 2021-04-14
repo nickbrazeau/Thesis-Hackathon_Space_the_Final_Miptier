@@ -31,14 +31,23 @@ get_krigged <- function(discentret, locats, range, res) {
   # predict at new places
   krig_preds <- predictSurface(object = krig_fit,
                                nx = res, ny = res)
+  krig_ses <- predictSurfaceSE(object = krig_fit,
+                                 nx = res, ny = res)
+
 
   #......................
   # out
   #......................
   # bring together
-  out <- cbind.data.frame(expand.grid(krig_preds$x, krig_preds$y),
+  preds <- cbind.data.frame(expand.grid(krig_preds$x, krig_preds$y),
                           as.vector(krig_preds$z))
-  colnames(out) <- c("longnum", "latnum", "pred_disc")
+  colnames(preds) <- c("longnum", "latnum", "pred_disc")
+
+  ses <- cbind.data.frame(expand.grid(krig_ses$x, krig_ses$y),
+                            as.vector(krig_ses$z))
+  colnames(ses) <- c("longnum", "latnum", "pred_disc_ses")
+  # out
+  out <- dplyr::left_join(preds, ses, by = c("longnum", "latnum"))
 
   return(tibble::as_tibble(out))
 
