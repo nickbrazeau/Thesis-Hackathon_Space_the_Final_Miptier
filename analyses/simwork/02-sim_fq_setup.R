@@ -39,7 +39,7 @@ coi_grad <- coi_grad %>% dplyr::pull("coigrad")
 
 # ne
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad =  seq(10, 250, length.out = length(coords))) %>%
+                          negrad =  round(seq(3, 300, length.out = length(coords)))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum")
 # sanity
 plot(raster::rasterFromXYZ(xyz = ne_grad[c("longnum", "latnum", "negrad")]))
@@ -123,7 +123,7 @@ coi_smpl_hosts <- lapply(coi_comb_hosts, exp_host_pairwise, smpl_hosts = coi_smp
 #............................................................
 ne_grad_sim <- swf_sim_wrapper(migmat = eucmigmat,
                                coivec = rep(2.23, nrow(eucmigmat)),
-                               nevec = round(ne_grad),
+                               nevec = ne_grad,
                                mscale = mscale)
 
 # will assume 3 individuals in every deme
