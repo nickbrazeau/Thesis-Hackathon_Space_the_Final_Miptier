@@ -13,10 +13,11 @@ library(discent)
 #............................................................
 # Simulation function
 #...........................................................
+#' @description not a generalizable function -- but to make a quick wrapper
 #' @param nsmpls integer; samples per deme
 #' @param ndemes integer; number of demes
 
-time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100) {
+time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100, rep = 1) {
   #......................
   # framework setup and tidy
   #......................
@@ -60,9 +61,9 @@ time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100) {
   # bring together
   K_gendist_geodist <- dplyr::left_join(K_gendist_geodist, geodist, by = c("locat1", "locat2"))
 
-  start_params = rep(0.1, length(locatnames))
+  start_params = rep(0.5, length(locatnames))
   names(start_params) <- locatnames
-  start_params <- c(start_params, "m" = 1e-4)
+  start_params <- c(start_params, "m" = 1e-2)
   #......................
   # run model
   #......................
@@ -82,10 +83,10 @@ time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100) {
     steps = steps,
     time_elapsed = time_elapsed)
   # now write out
-  dir.create("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/discent_comp_time/", recursive = T)
+  dir.create("results/discent_comp_time/", recursive = T)
   saveRDS(batchset_df,
-          file = paste0("/pine/scr/n/f/nfb/Projects/Space_the_Final_Miptier/discent_comp_time/",
-                        "comptime_", paste0(nsmpls, "-", ndemes, "-", steps), ".RDS")
+          file = paste0("results/discent_comp_time/",
+                        "comptime_", paste0(nsmpls, "-", ndemes, "-", steps, "-", rep), ".RDS")
   )
   return(0)
 
@@ -101,6 +102,11 @@ steps <- c(100, 1e3, 1e4, 1e5)
 param_map <- expand.grid(nsmpls, ndemes, steps) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
   magrittr::set_colnames(c("nsmpls", "ndemes", "steps"))
+# make reps
+nreps <- 5
+param_map <- lapply(1:nreps, function(x)return(param_map))
+param_map <- param_map %>%
+  dplyr::bind_rows(., .id = "rep")
 
 #......................
 # make drake plan
@@ -108,7 +114,7 @@ param_map <- expand.grid(nsmpls, ndemes, steps) %>%
 run_names <- paste0("run", 1:nrow(param_map))
 plan <- drake::drake_plan(
   runs = target(
-    time_elapsed_discent(nsmpls, ndemes, steps),
+    time_elapsed_discent(nsmpls, ndemes, steps, rep),
     transform = map(
       .data = !!param_map,
       .names = !!run_names
@@ -117,14 +123,8 @@ plan <- drake::drake_plan(
 )
 
 
-#......................
-# call drake to send out to slurm
-#......................
-options(clustermq.scheduler = "slurm",
-        clustermq.template = "drake_clst/slurm_clustermq_LL_long_litemem.tmpl")
+
 make(plan,
-     parallelism = "clustermq",
-     jobs = nrow(param_map),
      log_make = "computational_time_discent.log", verbose = 4,
      log_progress = TRUE,
      log_build_times = FALSE,

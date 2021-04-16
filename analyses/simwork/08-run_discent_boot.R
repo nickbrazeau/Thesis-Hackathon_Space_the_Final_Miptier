@@ -1,0 +1,19 @@
+## .................................................................................
+## Purpose: Run discent many times to get a "bootstrapped" CI of the gradient descent F and M estimates
+## Notes:
+## .................................................................................
+#............................................................
+#  setup
+#...........................................................
+library(tidyverse)
+library(drake)
+
+#......................
+# read in data
+#......................
+beststart <- readRDS("results/sim_inbreed_ests/min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
+
+
+
+
+saveRDS("results/boot_best_sim_cluster_inbreed_ests/")

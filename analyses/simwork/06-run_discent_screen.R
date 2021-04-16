@@ -6,7 +6,7 @@
 #............................................................
 #  setup
 #...........................................................
-workers <- 8000 # slurm array jobs to partition across
+workers <- 4000 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
 
@@ -43,7 +43,7 @@ drake_wrapper <- function(batchset_df, batchset) {
                                            m_upperbound = 100,
                                            f_learningrate = learn,
                                            m_learningrate = learn,
-                                           steps = 5e4,
+                                           steps = 1e5,
                                            report_progress = FALSE,
                                            return_verbose = FALSE)
     return(ret)
@@ -110,7 +110,7 @@ plan <- drake::drake_plan(
 # call drake to send out to slurm
 #......................
 options(clustermq.scheduler = "slurm",
-        clustermq.template = "drake_clst/slurm_clustermq_LL_long_litemem.tmpl")
+        clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
      parallelism = "clustermq",
      jobs = nrow(param_map_nested),
