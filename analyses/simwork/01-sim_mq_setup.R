@@ -27,6 +27,7 @@ gridmigmat <- readRDS("data/sim_data/gridmig_prob_matrix.rds")
 # magic numbers outside
 Nesize <- 25
 mscale <- 0.5
+verity_coi2 <- readRDS("results/optim_coi_lambdas/optim_lambda.RDS")[2]
 
 swf_sim_wrapper <- function(migmat, Nesize, mscale) {
   #......................
@@ -44,7 +45,8 @@ swf_sim_wrapper <- function(migmat, Nesize, mscale) {
   # assuming 1e3 loci
   pos <- sort(sample(1.664e6, 1e3))
 
-  # from verity et al coi in the DRC: 2.23 (2.15– 2.31)
+  # from verity et al coi in the DRC: 2.23 (2.15– 2.31), going to use
+  # a lambda of 2 as it is close
   # assuming deme size of 10 for ease
   # tlim at 10 generations as before from verity et al
 
@@ -56,7 +58,7 @@ swf_sim_wrapper <- function(migmat, Nesize, mscale) {
                                 N =         rep(Nesize, nrow(migmat)),
                                 m =         rep(mscale, nrow(migmat)),
                                 rho =       rho,
-                                mean_coi =  rep(2.23, nrow(migmat)),
+                                mean_coi =  rep(verity_coi2, nrow(migmat)),
                                 tlim =      tlim)
   return(swfsim)
 }

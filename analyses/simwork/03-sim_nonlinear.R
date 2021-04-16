@@ -111,16 +111,9 @@ plot(raster::rasterFromXYZ(gridmig))
 raster::contour(raster::rasterFromXYZ(gridmig),
                 add = TRUE, drawlabels = FALSE, col = "#969696")
 
-
-
-
-
 # store, same approx order of mag as distance for migration
 simdat$gridmig[3] <- list( gridmig %>%
                              dplyr::mutate(migration = migration/250) )
-
-
-
 
 #......................
 # store nice plots
@@ -215,7 +208,7 @@ simdat <- simdat %>%
 # liftover to migration matrix
 #......................
 simdat <- simdat %>%
-    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 5){ # scaled above slightly too!
+    dplyr::mutate(migmat = purrr::map(distmat, function(x, scalar = 3.5){ # scaled above slightly too!
     x <- exp(-x/scalar)
     return(x)
   })
@@ -233,6 +226,11 @@ table( sample(1:ncol(simdat$migmat[[3]]), size = 1e3, prob = simdat$migmat[[3]][
 #............................................................
 # run sWF simulator
 #...........................................................
+# magic numbers outside
+Nesize <- 25
+mscale <- 0.5
+verity_coi2 <- readRDS("results/optim_coi_lambdas/optim_lambda.RDS")[2]
+
 swf_sim_wrapper <- function(migmat) {
   #......................
   # magic numbers
@@ -258,10 +256,10 @@ swf_sim_wrapper <- function(migmat) {
   #......................
   swfsim <- polySimIBD::sim_swf(pos =       pos,
                                 migr_dist_mat = migmat,
-                                N =         rep(25, nrow(migmat)),
-                                m =         rep(0.5, nrow(migmat)),
+                                N =         rep(Nesize, nrow(migmat)),
+                                m =         rep(mscale, nrow(migmat)),
                                 rho =       rho,
-                                mean_coi =  rep(2.23, nrow(migmat)),
+                                mean_coi =  rep(verity_coi2, nrow(migmat)),
                                 tlim =      10)
   return(swfsim)
 }

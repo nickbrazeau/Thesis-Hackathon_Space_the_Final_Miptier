@@ -25,11 +25,11 @@ coords <- round(seq(1, nrow(latticemodel), by = 10)) # just need moving along x-
 #............................................................
 # gradient
 #...........................................................
-optim_lambda_from_verity_etal <- readRDS("data/raw_data/optim_lambda_verity_etal2020.RDS")
+optim_lambda_from_verity_etal <- readRDS("results/optim_coi_lambdas/optim_lambda.RDS")
 # coi
 coi_grad <- tibble::tibble(longnum = coords,
-                           coigrad = seq(optim_lambda_from_verity_etal[[1]],
-                                         optim_lambda_from_verity_etal[[2]],
+                           coigrad = seq(min(optim_lambda_from_verity_etal),
+                                         max(optim_lambda_from_verity_etal),
                                          length.out = length(coords))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum")
 # sanity
@@ -39,7 +39,7 @@ coi_grad <- coi_grad %>% dplyr::pull("coigrad")
 
 # ne
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad =  round(seq(3, 300, length.out = length(coords)))) %>%
+                          negrad =  round(seq(5, 250, length.out = length(coords)))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum")
 # sanity
 plot(raster::rasterFromXYZ(xyz = ne_grad[c("longnum", "latnum", "negrad")]))
@@ -122,7 +122,7 @@ coi_smpl_hosts <- lapply(coi_comb_hosts, exp_host_pairwise, smpl_hosts = coi_smp
 # run simulation for Effective Population Size gradient
 #............................................................
 ne_grad_sim <- swf_sim_wrapper(migmat = eucmigmat,
-                               coivec = rep(2.23, nrow(eucmigmat)),
+                               coivec = rep(optim_lambda_from_verity_etal[2], nrow(eucmigmat)),
                                nevec = ne_grad,
                                mscale = mscale)
 
