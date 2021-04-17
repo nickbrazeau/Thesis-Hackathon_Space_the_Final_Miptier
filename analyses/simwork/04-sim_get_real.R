@@ -62,23 +62,16 @@ get_ver_realized_ibd <- function(swfsim, smpl1, smpl2) {
 mq_smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts_mq.rds")
 coi_smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts_coi_fq.rds")
 ne_smpl_hosts <- readRDS("data/sim_data/sim_smpl_hosts_nepop_fq.rds")
-non_linear_hosts <- readRDS("data/sim_data/sim_smpl_hosts_nonlinear_migration.rds")
 
 # bring together
 retmap <- tibble::tibble(
-  lvl = c("mq", "coi", "ne", "mtn", "rift", "oppcorner"),
+  lvl = c("mq", "coi", "ne"),
   simdatpath = c("data/sim_data/mq_swf_simulations.rds",
                  "data/sim_data/coi_sim_grad.rds",
-                 "data/sim_data/ne_sim_grad.rds",
-                 "data/sim_data/mtn_nonlinear_migration_sim_swf.rds",
-                 "data/sim_data/rift_nonlinear_migration_sim_swf.rds",
-                 "data/sim_data/oppcorner_nonlinear_migration_sim_swf.rds"),
+                 "data/sim_data/ne_sim_grad.rds"),
   hosts = list(mq_smpl_hosts,
                coi_smpl_hosts,
-               ne_smpl_hosts,
-               non_linear_hosts,
-               non_linear_hosts,
-               non_linear_hosts))
+               ne_smpl_hosts))
 
 
 #............................................................
