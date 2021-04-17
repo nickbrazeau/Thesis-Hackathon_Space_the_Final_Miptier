@@ -10,8 +10,8 @@ minLambda <- function(x, y){
 }
 
 lamdba_optimdf <- tibble::tibble(
-  meancoi = c(1, 2, 3, 4),
-  start = c(1e-5, 2.3, 3.1, 4.1)
+  meancoi = c(1, 2, 3),
+  start = c(1e-5, 2.3, 3.1)
 )
 
 lamdba_optimdf$optimpar <- purrr::pmap(lamdba_optimdf, function(meancoi, start){
