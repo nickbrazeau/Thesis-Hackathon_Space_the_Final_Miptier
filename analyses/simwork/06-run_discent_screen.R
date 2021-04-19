@@ -41,8 +41,7 @@ drake_wrapper <- function(batchset_df, batchset) {
                                            start_params = our_start_params,
                                            m_lowerbound = -.Machine$double.xmax,
                                            m_upperbound = 100,
-                                           f_learningrate = learn,
-                                           m_learningrate = learn,
+                                           learningrate = learn,
                                            steps = 1e5,
                                            report_progress = FALSE,
                                            return_verbose = FALSE)

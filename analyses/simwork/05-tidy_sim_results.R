@@ -44,8 +44,7 @@ retfiles <- list.files("results/swf_sim_ret/",
                        full.names = T)
 retmap <- tibble::tibble(lvl = stringr::str_split_fixed(basename(retfiles), "_", 2)[,1],
                          simIBD = retfiles) %>%
-  dplyr::mutate(lvl = factor(lvl, levels = c("mq", "coi", "ne",
-                                             "mtn", "oppcorner", "rift"))) %>%
+  dplyr::mutate(lvl = factor(lvl, levels = c("mq", "coi", "ne"))) %>%
   dplyr::mutate(simIBD = purrr::map(simIBD, readRDS)) %>%
   tidyr::unnest(cols = simIBD) %>%
   dplyr::group_by(lvl) %>%
@@ -64,17 +63,11 @@ retmap <- retmap %>%
 retmap$ibd_plotObj_all[[1]]
 retmap$ibd_plotObj_all[[2]]
 retmap$ibd_plotObj_all[[3]]
-retmap$ibd_plotObj_all[[4]]
-retmap$ibd_plotObj_all[[5]]
-retmap$ibd_plotObj_all[[6]]
 
 # non zero
 retmap$ibd_plotObj_nonzero[[1]]
 retmap$ibd_plotObj_nonzero[[2]]
 retmap$ibd_plotObj_nonzero[[3]]
-retmap$ibd_plotObj_nonzero[[4]]
-retmap$ibd_plotObj_nonzero[[5]]
-retmap$ibd_plotObj_nonzero[[6]]
 
 #............................................................
 # bring in distance
@@ -83,7 +76,7 @@ retmap$ibd_plotObj_nonzero[[6]]
 #......................
 # regular sim datas
 #......................
-distmap_reg <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq"),
+dist_map <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq"),
                               q = c("coi", "ne", "mq_good", "mq_bad"),
                               path = c("data/sim_data/euclidean_geodist.rds",
                                        "data/sim_data/euclidean_geodist.rds",
@@ -93,35 +86,11 @@ distmap_reg <- tibble::tibble(lvl = c("coi", "ne", "mq", "mq"),
   dplyr::mutate(geodist = purrr::map(path, readRDS)) %>%
   dplyr::select(-c("path"))
 
-#......................
-# non-linear sim datas
-#   need to slight liftover here
-#......................
-distmap_nonlinear <- tibble::tibble(lvl = c("mtn", "rift", "oppcorner"),
-                                    q = c("mtn", "rift", "oppcorner"),
-                                    path = c("data/sim_data/mtn_nonlinear_migration_geodist.rds",
-                                             "data/sim_data/rift_nonlinear_migration_geodist.rds",
-                                             "data/sim_data/oppcorner_nonlinear_migration_geodist.rds"
-                                    ))  %>%
-  dplyr::mutate(geodist = purrr::map(path, readRDS)) %>%
-  dplyr::select(-c("path")) %>%
-  dplyr::mutate(geodist =  purrr::map(geodist, function(x){
-    # liftover function from a distance matrix wide to long format and rename demes
-    ret <- broom::tidy(as.dist(x))
-    colnames(ret) <- c("deme1", "deme2", "distval")
-    # make sure we are dealing w/ numerics and not factors here for deme names
-    ret <- ret %>%
-      dplyr::mutate(deme1 = as.integer(as.character(deme1)),
-                    deme2 = as.integer(as.character(deme2)))
-    return(ret)
-  }))
-
 
 #......................
 # bring together
 #......................
-retmap <- dplyr::bind_rows(distmap_reg, distmap_nonlinear) %>%
-  dplyr::left_join(retmap, ., by = "lvl") %>%
+retmap <- dplyr::left_join(retmap, dist_map, by = "lvl") %>%
   dplyr::rename(gendat = data) %>%
   dplyr::mutate(q = factor(q, levels = c("mq_good", "mq_bad", "coi", "ne",
                                              "mtn", "oppcorner", "rift"))) %>%
@@ -185,9 +154,6 @@ retmap$pairPlotObj[[1]]
 retmap$pairPlotObj[[2]]
 retmap$pairPlotObj[[3]]
 retmap$pairPlotObj[[4]]
-retmap$pairPlotObj[[5]]
-retmap$pairPlotObj[[6]]
-retmap$pairPlotObj[[7]]
 
 
 #......................

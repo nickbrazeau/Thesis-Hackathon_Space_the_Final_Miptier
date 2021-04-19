@@ -39,7 +39,7 @@ coi_grad <- coi_grad %>% dplyr::pull("coigrad")
 
 # ne
 ne_grad <- tibble::tibble(longnum = coords,
-                          negrad =  round(seq(5, 250, length.out = length(coords)))) %>%
+                          negrad =  round(seq(5, 100, length.out = length(coords)))) %>%
   dplyr::left_join(latticemodel, ., by = "longnum")
 # sanity
 plot(raster::rasterFromXYZ(xyz = ne_grad[c("longnum", "latnum", "negrad")]))
