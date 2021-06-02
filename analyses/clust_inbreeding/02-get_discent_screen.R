@@ -6,7 +6,7 @@
 #............................................................
 #  setup
 #...........................................................
-workers <- 4000 # slurm array jobs to partition across
+workers <- 1028 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
 
@@ -74,7 +74,7 @@ ms <- c(1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1
 learn <- c(1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5,
            1e-4, 1e-3, 1e-2, 0.05,
            0.1, 0.5, 0.75, 1)
-param_map <- expand.grid(gengeodatpaths, fs, ms, learningrate) %>%
+param_map <- expand.grid(gengeodatpaths, fs, ms, learn) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
   magrittr::set_colnames(c("inputpath", "f_start", "m_start", "learn"))
 
