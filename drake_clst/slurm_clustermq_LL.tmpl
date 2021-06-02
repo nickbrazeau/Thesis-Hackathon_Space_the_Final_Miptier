@@ -4,5 +4,5 @@
 #SBATCH --error={{ log_file | /dev/null }}  # log file
 #SBATCH --mem=16g
 #SBATCH --array=1-{{ n_jobs }}              # job array
-#SBATCH --time 24:00:00                     # time
+#SBATCH --time 26:00:00                     # time
 CMQ_AUTH={{ auth }} R --no-save --no-restore -e 'clustermq:::worker("{{ master }}")'
