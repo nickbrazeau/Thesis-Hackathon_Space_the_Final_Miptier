@@ -17,7 +17,7 @@ library(discent)
 #' @param nsmpls integer; samples per deme
 #' @param ndemes integer; number of demes
 
-time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100, rep = 1) {
+time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100) {
   #......................
   # framework setup and tidy
   #......................
@@ -70,25 +70,14 @@ time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100, rep = 1)
   start <- Sys.time()
   mod <- discent::deme_inbreeding_spcoef(K_gendist_geodist = K_gendist_geodist,
                                          start_params = start_params,
-                                         m_lowerbound = 0,
+                                         m_lowerbound = .Machine$double.xmin,
                                          m_upperbound = 1,
-                                         learningrate = 1e-10,
+                                         learningrate = 1e-5,
                                          steps = steps,
                                          report_progress = FALSE)
   time_elapsed <- Sys.time() - start
-  # save out
-  dat <- tibble::tible(
-    nsmpls = nsmpls,
-    ndemes = ndemes,
-    steps = steps,
-    time_elapsed = time_elapsed)
-  # now write out
-  dir.create("results/discent_comp_time/", recursive = T)
-  saveRDS(batchset_df,
-          file = paste0("results/discent_comp_time/",
-                        "comptime_", paste0(nsmpls, "-", ndemes, "-", steps, "-", rep), ".RDS")
-  )
-  return(0)
+  # out
+  return(time_elapsed)
 
 }
 
@@ -96,8 +85,8 @@ time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100, rep = 1)
 #............................................................
 # Param Map for Testing
 #...........................................................
-nsmpls <- c(1, 3, 5, 10, 25, 50)
-ndemes <- round(seq(1, 1000, length.out = 25))
+nsmpls <- c(3, 5, 10)
+ndemes <- c(2, 10, 15, seq(25, 400, by = 25))
 steps <- c(100, 1e3, 1e4, 1e5)
 param_map <- expand.grid(nsmpls, ndemes, steps) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
@@ -109,28 +98,7 @@ param_map <- param_map %>%
   dplyr::bind_rows(., .id = "rep")
 
 #......................
-# make drake plan
+# run out param map
 #......................
-run_names <- paste0("run", 1:nrow(param_map))
-plan <- drake::drake_plan(
-  runs = target(
-    time_elapsed_discent(nsmpls, ndemes, steps, rep),
-    transform = map(
-      .data = !!param_map,
-      .names = !!run_names
-    )
-  )
-)
-
-
-
-make(plan,
-     log_make = "computational_time_discent.log", verbose = 4,
-     log_progress = TRUE,
-     log_build_times = FALSE,
-     recoverable = FALSE,
-     history = FALSE,
-     session_info = FALSE,
-     garbage_collection = TRUE,
-     lock_envir = FALSE,
-     lock_cache = FALSE)
+param_map$time_elapsed <- purrr::pmap(param_map[,c("nsmpls", "ndemes", "steps")],
+                                      time_elapsed_discent)
