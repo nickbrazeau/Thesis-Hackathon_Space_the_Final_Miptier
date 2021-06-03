@@ -40,7 +40,7 @@ discent_wrapper <- function(rep, q, f_start, m_start, learn) {
 #......................
 # read in best results
 #......................
-beststart <- readRDS("results/min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
+beststart <- readRDS("results/simulated_min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
 beststart <- beststart %>%
   dplyr::select(c("q", "f_start", "m_start", "learn"))
 
@@ -72,7 +72,7 @@ options(clustermq.scheduler = "slurm",
 make(plan,
      parallelism = "clustermq",
      jobs = nrow(param_map_nested),
-     log_make = "simwork_discent_drc_dat_deploy_drake.log", verbose = 4,
+     log_make = "finalboot_simwork_discent_drc_dat_deploy_drake.log", verbose = 4,
      log_progress = TRUE,
      log_build_times = FALSE,
      recoverable = FALSE,

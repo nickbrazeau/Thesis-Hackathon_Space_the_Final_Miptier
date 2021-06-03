@@ -38,7 +38,7 @@ out <- sim_disc_map %>%
   dplyr::filter(mincost == min(mincost, na.rm = T))
 
 
-dir.create("results/min_cost_inbreedingresults/", recursive = T)
-saveRDS(out, "results/min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
+dir.create("results/simulated_min_cost_inbreedingresults/", recursive = T)
+saveRDS(out, "results/simulated_min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
 
 
