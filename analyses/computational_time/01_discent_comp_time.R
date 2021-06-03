@@ -74,7 +74,7 @@ time_elapsed_discent <- function(nsmpls = 10, ndemes = 10, steps = 100) {
                                          m_upperbound = 1,
                                          learningrate = 1e-5,
                                          steps = steps,
-                                         report_progress = FALSE)
+                                         report_progress = T)
   time_elapsed <- Sys.time() - start
   # out
   return(time_elapsed)

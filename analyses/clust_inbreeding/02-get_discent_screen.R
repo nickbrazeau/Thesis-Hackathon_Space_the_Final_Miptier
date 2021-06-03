@@ -6,7 +6,7 @@
 #............................................................
 #  setup
 #...........................................................
-workers <- 8000 # slurm array jobs to partition across
+workers <- 4000 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
 
@@ -43,7 +43,7 @@ drake_wrapper <- function(batchset_df, batchset) {
                                            m_lowerbound = -.Machine$double.xmax,
                                            m_upperbound = 100,
                                            learningrate = learn,
-                                           steps = 1e5,
+                                           steps = 1e4,
                                            report_progress = FALSE,
                                            return_verbose = FALSE)
     return(ret)
