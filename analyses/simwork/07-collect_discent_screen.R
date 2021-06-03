@@ -35,7 +35,7 @@ sim_disc_map %>%
 #...........................................................
 out <- sim_disc_map %>%
   dplyr::group_by(q) %>%
-  dplyr::filter(mincost == min(mincost))
+  dplyr::filter(mincost == min(mincost, na.rm = T))
 
 
 dir.create("results/min_cost_inbreedingresults/", recursive = T)
