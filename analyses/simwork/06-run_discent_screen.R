@@ -6,7 +6,7 @@
 #............................................................
 #  setup
 #...........................................................
-workers <- 1028 # slurm array jobs to partition across
+workers <- 800 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
 
