@@ -71,7 +71,7 @@ options(clustermq.scheduler = "slurm",
         clustermq.template = "drake_clst/slurm_clustermq_LL.tmpl")
 make(plan,
      parallelism = "clustermq",
-     jobs = nrow(param_map_nested),
+     jobs = nrow(repbeststart),
      log_make = "finalboot_simwork_discent_drc_dat_deploy_drake.log", verbose = 4,
      log_progress = TRUE,
      log_build_times = FALSE,
