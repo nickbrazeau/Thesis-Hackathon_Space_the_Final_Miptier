@@ -9,7 +9,7 @@
 workers <- 4000 # slurm array jobs to partition across
 library(tidyverse)
 library(drake)
-
+library(discent)
 
 #............................................................
 # functions for drake
@@ -27,7 +27,7 @@ drake_wrapper <- function(batchset_df, batchset) {
   #......................
   # internal function to wrap discent
   #......................
-  discent_wrapper <- function(inputpath, f_start, m_start, learn) {
+  discent_wrapper <- function(inputpath, f_start, m_start, f_learn, m_learn) {
     input <- readRDS(as.character(inputpath)) %>%
       dplyr::filter(locat1 != locat2)
     # cluster details
@@ -42,7 +42,9 @@ drake_wrapper <- function(batchset_df, batchset) {
                                            start_params = our_start_params,
                                            m_lowerbound = -.Machine$double.xmax,
                                            m_upperbound = 100,
-                                           learningrate = learn,
+                                           f_learningrate = f_learn,
+                                           m_learningrate = m_learn,
+                                           momentum = 0.9,
                                            steps = 1e4,
                                            report_progress = FALSE,
                                            return_verbose = FALSE)
@@ -71,12 +73,11 @@ monoclonals_gengeodatpaths <- list.files("data/derived_data/coione_clst_inbreedi
 gengeodatpaths <- c(allsmpls_gengeodatpaths, monoclonals_gengeodatpaths)
 fs <- seq(0, 1, by = 0.1)
 ms <- c(1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
-learn <- c(1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5,
-           1e-4, 1e-3, 1e-2, 0.05,
-           0.1, 0.5, 0.75, 1)
-param_map <- expand.grid(gengeodatpaths, fs, ms, learn) %>%
+f_learn <- c(1e-5, 1e-4, 1e-3, 1e-2, 0.05, 0.1, 0.5, 0.75, 1)
+m_learn <- c(1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3)
+param_map <- expand.grid(gengeodatpaths, fs, ms, f_learn, m_learn) %>%
   tibble::as_tibble(., .name_repair = "minimal") %>%
-  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "learn"))
+  magrittr::set_colnames(c("inputpath", "f_start", "m_start", "f_learn", "m_learn"))
 
 
 #............................................................
