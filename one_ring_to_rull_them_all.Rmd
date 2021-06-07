@@ -21,8 +21,8 @@ knitr::opts_knit$set(root.dir = here::here(""))
 
 ```
 
-<!-- ```{r, child = 'ind_reports/01-Sample_Clsts_Descriptive.Rmd'} -->
-<!-- ``` -->
+```{r, child = 'ind_reports/01-Sample_Clsts_Descriptive.Rmd'}
+```
 
 ```{r, child = 'ind_reports/02-Genetic_Summaries.Rmd'}
 ```
@@ -37,6 +37,12 @@ knitr::opts_knit$set(root.dir = here::here(""))
 ```
 
 ```{r, child = 'ind_reports/06-IBD_meioticsibs.Rmd'}
+```
+
+```{r, child = 'ind_reports/999-SNP_autocorr.Rmd'}
+```
+
+```{r, child = 'ind_reports/999-SpaceCorr.Rmd'}
 ```
 
 ```{r, child = 'ind_reports/999-within_household.Rmd'}
