@@ -89,4 +89,4 @@ jpgsnapshot <- function(outpath, plot, type = "wide") {
 
 
 
-#
+

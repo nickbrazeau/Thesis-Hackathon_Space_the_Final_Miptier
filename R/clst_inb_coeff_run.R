@@ -7,7 +7,7 @@
 # Note, this function is not generalizable -- purpose is
 # project specific
 #..............................................................
-library(MIPanalyzer)
+library(discent)
 library(optparse)
 
 option_list=list(
@@ -81,15 +81,15 @@ f_learningrate <- as.numeric( params["f_learningrate"] )
 m_learningrate <- as.numeric( params["m_learningrate"] )
 fullmatrix <- as.logical( params["full_matrix"] )
 
-ret <- MIPanalyzer::deme_inbreeding_coef(K_gendist_geodist = input,
-                                         start_params = snake_start_params,
-                                         m_lowerbound = 1e-25,
-                                         m_upperbound = 5e-4,
-                                         f_learningrate = f_learningrate,
-                                         m_learningrate = m_learningrate,
-                                         full_matrix = fullmatrix,
-                                         steps = 1e4,
-                                         report_progress = TRUE)
+ret <- discent::deme_inbreeding_spcoef(K_gendist_geodist = input,
+                                       start_params = snake_start_params,
+                                       m_lowerbound = 1e-25,
+                                       m_upperbound = 5e-4,
+                                       f_learningrate = f_learningrate,
+                                       m_learningrate = m_learningrate,
+                                       full_matrix = fullmatrix,
+                                       steps = 1e4,
+                                       report_progress = TRUE)
 
 #..............................................................
 # out

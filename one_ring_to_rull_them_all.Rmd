@@ -1,5 +1,5 @@
 ---
-title: "Falciparum Genetic Distance in the DRC (FalGenDist)"
+title: "Falciparum Genetic Connectedness in the DRC"
 author: "Nicholas F. Brazeau"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -16,7 +16,7 @@ editor_options:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
-                      fig.align = 'center', fig.width = 8, fig.height = 8)
+                      fig.align = 'center', fig.width = 6, fig.height = 6)
 knitr::opts_knit$set(root.dir = here::here(""))
 
 ```
@@ -30,5 +30,20 @@ knitr::opts_knit$set(root.dir = here::here(""))
 ```{r, child = 'ind_reports/03-IBD_S_distance_decay.Rmd'}
 ```
 
+```{r, child = 'ind_reports/04-DISC.Rmd'}
+```
+
+```{r, child = 'ind_reports/05-spatial_geo_DISC.Rmd'}
+```
+
+```{r, child = 'ind_reports/06-IBD_meioticsibs.Rmd'}
+```
+
 ```{r, child = 'ind_reports/999-SNP_autocorr.Rmd'}
+```
+
+```{r, child = 'ind_reports/999-SpaceCorr.Rmd'}
+```
+
+```{r, child = 'ind_reports/999-within_household.Rmd'}
 ```

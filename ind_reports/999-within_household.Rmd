@@ -104,7 +104,7 @@ plotB <- combhouses %>%
 combplot <- cowplot::plot_grid(plotA, plotB, 
                                align = "h", nrow = 1, labels = c("(A)", "(B)"))
 
-jpgsnapshot(outpath = "results/figures/household_IBD.jpg", plot = comblot)
+jpgsnapshot(outpath = "results/figures/household_IBD.jpg", plot = combplot)
 
 ```
 ``````{r, results='asis'}

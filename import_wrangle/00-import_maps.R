@@ -31,8 +31,8 @@ unwanted_array = list(   'Š'='S', 'š'='s', 'Ž'='Z', 'ž'='z', 'À'='A', 'Á'=
                          'ö'='o', 'ø'='o', 'ù'='u', 'ú'='u', 'û'='u', 'ý'='y', 'ý'='y', 'þ'='b', 'ÿ'='y' )
 
 DRCprovgad1$adm1name <- chartr(paste(names(unwanted_array), collapse=''),
-                           paste(unwanted_array, collapse=''),
-                           DRCprovgad1$adm1name)
+                               paste(unwanted_array, collapse=''),
+                               DRCprovgad1$adm1name)
 
 # match dhs and gadm
 DRCprovgad1$adm1name[DRCprovgad1$adm1name == "Kongo-Central"] <- "Kongo Central"
@@ -69,8 +69,10 @@ cafunion <- sf::st_simplify(cafunion, preserveTopology = TRUE)
 prettybasemap_nodrc <- list(
   geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
-  coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
-           ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
+  coord_sf(xlim = c(st_bbox(DRCprovgad1)['xmin'],
+                    st_bbox(DRCprovgad1)['xmax']),
+           ylim = c(st_bbox(DRCprovgad1)['ymin'],
+                    st_bbox(DRCprovgad1)['ymax']),
            datum = NA),
   ggspatial::annotation_north_arrow(location = "bl", which_north = "true",
                                     pad_y = unit(1.25, "cm")),
@@ -85,8 +87,10 @@ prettybasemap_nodrc <- list(
 prettybasemap_nodrc_nonorth <- list(
   geom_sf(data = cafunion, fill = "#f0f0f0", lwd = 1.5),
   # geom_sf(data = drcadm0, fill = "NA"),
-  coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
-           ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
+  coord_sf(xlim = c(st_bbox(DRCprovgad1)['xmin'],
+                    st_bbox(DRCprovgad1)['xmax']),
+           ylim = c(st_bbox(DRCprovgad1)['ymin'],
+                    st_bbox(DRCprovgad1)['ymax']),
            datum = NA),
   #   ggspatial::annotation_north_arrow(location = "bl", which_north = "true", pad_y = unit(1.25, "cm")),
   theme(panel.background = element_rect(fill = "#9ecae1"),
@@ -97,8 +101,10 @@ prettybasemap_nodrc_nonorth <- list(
 
 prettybasemap_nodrc_dark <- list(
   geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
-  coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
-           ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
+  coord_sf(xlim = c(st_bbox(DRCprovgad1)['xmin'],
+                    st_bbox(DRCprovgad1)['xmax']),
+           ylim = c(st_bbox(DRCprovgad1)['ymin'],
+                    st_bbox(DRCprovgad1)['ymax']),
            datum = NA),
   ggspatial::annotation_north_arrow(location = "bl", which_north = "true",
                                     pad_y = unit(1.25, "cm")),
@@ -110,8 +116,10 @@ prettybasemap_nodrc_dark <- list(
 
 prettybasemap_nodrc_nonorth_dark <- list(
   geom_sf(data = cafunion, fill = "#525252", color = "#737373", lwd = 1.5),
-  coord_sf(xlim = c(st_bbox(drcadm0)['xmin'], st_bbox(drcadm0)['xmax']),
-           ylim = c(st_bbox(drcadm0)['ymin'], st_bbox(drcadm0)['ymax']),
+  coord_sf(xlim = c(st_bbox(DRCprovgad1)['xmin'],
+                    st_bbox(DRCprovgad1)['xmax']),
+           ylim = c(st_bbox(DRCprovgad1)['ymin'],
+                    st_bbox(DRCprovgad1)['ymax']),
            datum = NA),
   theme(panel.background = element_rect(fill = "#9ecae1"),
         panel.grid = element_line(colour="transparent"),
@@ -120,13 +128,33 @@ prettybasemap_nodrc_nonorth_dark <- list(
 )
 
 
-
+#..............................................................
+# simple background
+#..............................................................
+smpl_base_map <- list(
+  coord_sf(xlim = c(st_bbox(DRCprovgad1)['xmin'],
+                    st_bbox(DRCprovgad1)['xmax']),
+           ylim = c(st_bbox(DRCprovgad1)['ymin'],
+                    st_bbox(DRCprovgad1)['ymax']),
+           datum = NA),
+  theme(plot.title = element_text(family = "Helvetica", face = "bold", hjust = 0.5, size = 14),
+        legend.position = "bottom",
+        legend.title = element_text(family = "Helvetica", face = "bold", vjust = 0.85, size = 12),
+        legend.text = element_text(family = "Helvetica", hjust = 0.5, vjust = 0.5, angle = 0, size = 10),
+        plot.background = element_rect(fill = "transparent"),
+        panel.border = element_blank(),
+        panel.background = element_rect(fill = "transparent"),
+        panel.grid = element_line(colour="transparent"),
+        axis.text = element_blank(),
+        axis.title = element_blank()) # overwrite vivid theme
+)
 
 
 #............................................................-------------------
 # Save Objects & Write out
 #............................................................-------------------
-save(prettybasemap_nodrc,
+save(smpl_base_map,
+     prettybasemap_nodrc,
      prettybasemap_nodrc_nonorth,
      prettybasemap_nodrc_dark,
      prettybasemap_nodrc_nonorth_dark,

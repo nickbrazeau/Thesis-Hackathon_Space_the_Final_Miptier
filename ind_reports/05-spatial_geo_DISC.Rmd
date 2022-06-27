@@ -1,0 +1,369 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Spatial DISC Results
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
+                      fig.align = 'center', fig.width = 8, fig.height = 8)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r}
+library(tidyverse)
+library(sf)
+library(raster)
+library(cowplot)
+library(PrevMap)
+source("R/themes.R")
+source("R/basics.R")
+
+```
+
+```{r}
+#......................
+# read in mapping  
+#......................
+# load pretty map aesthetics 
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+load("data/map_bases/space_mips_maps_bases.rda")
+drccites <- readr::read_csv("data/map_bases/DRC_city_coordinates.csv") %>%
+  dplyr::filter(population > 350000)
+ge <- readRDS("data/derived_data/spacemips_GE.rds") %>% 
+  dplyr::mutate(hv001 = as.character(hv001)) %>% 
+  dplyr::select(-c("geometry"))
+
+#......................
+# read results
+#......................
+all_disc <- readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "allsmpls")
+coi_1_disc <-readRDS("results/cluster_inbreed_ests/min_cost_inbreedingresults/min_cost_inbreedingresults.RDS") %>% 
+  dplyr::filter(datalvl == "coione")
+
+# bring together
+disc <- dplyr::bind_rows(all_disc, coi_1_disc)
+
+#......................
+# tidy param results
+#......................
+disc <- disc %>% 
+  dplyr::group_by(distlvl, datalvl) %>% 
+  dplyr::mutate(inbreed_ests = purrr::map(discentret, nick),
+                m = purrr::map(discentret, "Final_m")) 
+```
+
+## Parameter Estimates
+### F Values
+```{r, results='asis'}
+disc %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(c("datalvl", "distlvl", "inbreed_ests")) %>% 
+  tidyr::unnest(cols = "inbreed_ests") %>% 
+  dplyr::mutate(newcol = paste0(distlvl, "-", datalvl)) %>% 
+  dplyr::select(c("newcol", "param", "est")) %>% 
+  tidyr::pivot_wider(data = ., names_from = "newcol", values_from = "est") %>% 
+  dplyr::mutate_if(is.numeric, round, 4) %>%
+  DT::datatable(., 
+                rownames = F,
+                extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 20,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+### M Values
+```{r, results='asis'}
+disc %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(c("datalvl", "distlvl", "inbreed_ests")) %>% 
+  tidyr::unnest(cols = "inbreed_ests") %>% 
+  dplyr::filter(param == "m") %>% 
+  dplyr::mutate(newcol = paste0(distlvl, "-", datalvl)) %>% 
+  dplyr::select(c("newcol", "param", "est")) %>% 
+  tidyr::pivot_wider(data = ., names_from = "newcol", values_from = "est") %>% 
+  dplyr::mutate_if(is.numeric, formatC, format = "e", digits = 3) %>%
+  DT::datatable(., 
+                rownames = F,
+                extensions='Buttons',
+                options = list(
+                  searching = T,
+                  pageLength = 1,
+                  dom = 'Bfrtip',
+                  buttons = c('csv')))
+
+```
+
+## Maps
+```{r}
+#' @title Raw Map Point Process
+make_spat_raw_map <- function(clst_inbdset, ge, DRCprov) {
+  # process
+  clst_inbdset <- clst_inbdset %>%
+    dplyr::filter(param != "m") %>%
+    dplyr::rename(hv001 = param,
+                  Finbd = est)
+  clst_inbdset <- dplyr::left_join(clst_inbdset, ge, by = "hv001")
+  # plot
+  plotObj <- clst_inbdset %>%
+    ggplot() +
+    geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
+    geom_point(aes(x = longnum, y = latnum, color = Finbd), 
+               size = 1.5, alpha = 0.9) +
+    scale_color_viridis_c("Inbreeding", option="plasma", direction = 1) +  
+    map_theme +
+    theme(axis.title = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0),"cm")) +
+    coord_sf(datum = NA)
+  
+  return(plotObj)
+}
+
+disc$pointmaps <- purrr::map(disc$inbreed_ests, make_spat_raw_map,
+                             ge = ge, DRCprov = DRCprov)
+
+
+```
+
+```{r}
+#' @title Wrapper for Prevmap MLE-Linear Model 
+prevmap_elogit_lin_wrap <- function(clst_inbdset, ge, empirical_logit_tol = 1e-3) {
+  # process
+  clst_inbdset <- clst_inbdset %>%
+    dplyr::filter(param != "m") %>%
+    dplyr::rename(hv001 = param,
+                  Finbd = est) %>% 
+    dplyr::mutate(Findb_logit = logit(Finbd, tol = empirical_logit_tol))
+  clst_inbdset <- dplyr::left_join(clst_inbdset, ge, by = "hv001")
+  # prevmap fit
+  ret <- PrevMap::linear.model.MLE(formula = as.formula("Findb_logit ~ 1"), 
+                                   coords = as.formula("~longnum + latnum"), 
+                                   data = clst_inbdset, 
+                                   start.cov.pars = c(1, 1),
+                                   kappa = 0.5)
+  return(ret)
+}
+
+#' @title Smooth Predictions from Prevmap Fit
+smooth_preds_prevmap_mlelin <- function(prevmapfit, 
+                                        predgrid,
+                                        maskobj, alpha = 0.8) {
+  # fit pred
+  ret <- PrevMap::spatial.pred.linear.MLE(prevmapfit,
+                                          grid.pred = predgrid,
+                                          scale.predictions = "prevalence",
+                                          n.sim.prev = 1e2, 
+                                          standard.errors = T)
+  # make raster
+  ret.rstr <- raster::rasterFromXYZ(cbind(ret$grid.pred[,1],
+                                          ret$grid.pred[,2],
+                                          ret$prevalence$predictions),
+                                    crs="+proj=longlat +datum=WGS84")
+  
+  # mask raster
+  ret.rstr <- raster::mask(x = ret.rstr, mask = maskobj)
+  
+  # plot out
+  ret.smrstr.m.plot <- ggplot() +
+    ggspatial::layer_spatial(data = ret.rstr, 
+                             aes(fill = stat(band1)),
+                             alpha = alpha) + 
+    scale_fill_viridis_b("DISC", na.value = NA) +
+    map_theme +
+    theme(axis.title = element_blank(),
+          plot.margin = unit(c(0, 0, 0, 0),"cm"))
+  
+  # return
+  out <- list(rstr = ret.rstr,
+              plotObj = ret.smrstr.m.plot)
+  return(out)
+  
+}
+
+
+#......................
+# run prevmap fits 
+#......................
+disc$prevmapfit <- purrr::map(disc$inbreed_ests, prevmap_elogit_lin_wrap, ge = ge)
+
+#......................
+# run prevmap preds
+#......................
+# get gred pred from DRC
+poly <- cbind(c(17,32,32,12,12), c(-14,-14,6,6,-14))
+grid.pred <- splancs::gridpts(poly, xs=0.05, ys=0.05)
+colnames(grid.pred) <- c("long","lat")
+# predictions 
+disc$predmap <- purrr::map(disc$prevmapfit, smooth_preds_prevmap_mlelin, 
+                           predgrid = grid.pred,
+                           maskobj = DRCprov,
+                           alpha = 0.8)
+# pull pieces out
+disc$predmap_plot <- purrr::map(disc$predmap, "plotObj")
+disc$predmap_rstr <- purrr::map(disc$predmap, "rstr")
+```
+
+### All Samples
+```{r}
+#......................
+# make plots
+#......................
+left <- cowplot::plot_grid(disc$pointmaps[[1]], disc$pointmaps[[2]], disc$pointmaps[[3]], nrow = 1, align = "hv", labels = c("(A)", "(B)", "(C)"))
+right <- cowplot::plot_grid(disc$predmap_plot[[1]], disc$predmap_plot[[2]], disc$predmap_plot[[3]], nrow = 1)
+mainfig <- cowplot::plot_grid(left, right, nrow = 2)
+# plot out
+jpeg("results/figures/allsmpls_DISC_results_mapped.jpg",
+     width = 8, height = 11, units = "in", res = 800)
+plot(mainfig)
+graphics.off()
+```
+
+```{r, results='asis', width = 11, height = 8}
+plot(mainfig)
+```
+
+### Monoclonal Samples
+```{r}
+#......................
+# make plots
+#......................
+left <- cowplot::plot_grid(disc$pointmaps[[4]], disc$pointmaps[[5]], disc$pointmaps[[6]], nrow = 1, align = "hv", labels = c("(A)", "(B)", "(C)"))
+right <- cowplot::plot_grid(disc$predmap_plot[[4]], disc$predmap_plot[[5]], disc$predmap_plot[[6]], nrow = 1)
+mainfig <- cowplot::plot_grid(left, right, nrow = 2)
+# plot out
+jpeg("results/figures/monoclonal_DISC_results_mapped.jpg",
+     width = 8, height = 11, units = "in", res = 800)
+plot(mainfig)
+graphics.off()
+```
+
+```{r, results='asis', width = 11, height = 8}
+plot(mainfig)
+```
+
+
+## Spatial Correlations
+### Spatial Covariates
+```{r}
+#......................
+# point
+#......................
+covarpt <- readRDS("data/derived_data/covar_rasterstack_samplinglocations_raw.RDS")
+
+#......................
+# raster
+#......................
+covarrstrstack <- readRDS("data/derived_data/covar_rasterstack_raw.RDS")
+urbanrstr <- covarrstrstack[["urban"]]
+pfincidence <- covarrstrstack[["incidence"]]
+```
+
+### Point Correlations
+```{r}
+
+get_pt_corr <- function(clst_inbdset, covardf) {
+  clst_inbdset <- clst_inbdset %>% 
+    dplyr::filter(param != "m") %>% 
+    dplyr::mutate(hv001 = as.numeric(param))
+  df <- dplyr::left_join(clst_inbdset, covarpt)
+  df %>% 
+    tidyr::pivot_longer(data = ., cols = c("incidence", "urban"),
+                        names_to = "covarlvl", values_to = "covar") %>% 
+    dplyr::mutate(covarlvl = factor(covarlvl, levels = c("incidence", "urban"),
+                                    labels = c("Incidence", "Urbanicity"))) %>% 
+    ggplot() +
+    geom_point(aes(x = covar, y = est)) +
+    geom_smooth(aes(x = covar, y = est)) + 
+    xlab("") + ylab("DISC Estimates") +
+    facet_wrap(~covarlvl, scales = "free") + 
+    plot_theme
+}
+
+allsmpls_covars <- disc %>% 
+  dplyr::filter(datalvl == "allsmpls") %>% 
+  dplyr::select(c("distlvl", "inbreed_ests")) %>% 
+  dplyr::mutate(covarplots = purrr::map(inbreed_ests, get_pt_corr, covardf = covarpt))
+
+
+```
+```{r, results='asis'}
+cowplot::plot_grid(allsmpls_covars$covarplots[[1]],
+                   allsmpls_covars$covarplots[[2]],
+                   allsmpls_covars$covarplots[[3]],
+                   labels = c("(A)", "(B)", "(C)"),
+                   nrow = 1)
+```
+
+### Raster Correlations
+#### Urbanicity
+```{r}
+urbanrstPlotObj <- ggplot() +
+  ggspatial::layer_spatial(data = urbanrstr, aes(fill = stat(band1))) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  smpl_base_map +
+  scale_fill_distiller("Urbanicity", type = "div", palette = "RdYlBu",
+                       na.value = NA) +
+  geom_point(data = drccites, 
+             aes(x = longnum, y=latnum)) +
+  ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.3, 
+                           fontface = "bold", color = "#bdbdbd") 
+```
+
+```{r, results='asis'}
+plot(urbanrstPlotObj)
+```
+
+#### Incidence
+```{r}
+pfincidencePlotObj <- ggplot() +
+  ggspatial::layer_spatial(data = pfincidence, aes(fill = stat(band1))) +
+  geom_sf(data = DRCprov, color = "#737373", fill = NA, size = 0.05) +
+  smpl_base_map +
+  scale_fill_distiller("Pf Incidence", type = "div", palette = "RdYlBu", na.value = NA) +
+  geom_point(data = drccites, 
+             aes(x = longnum, y=latnum)) +
+  ggrepel::geom_text_repel(data = drccites, aes(label = city, x = longnum, y=latnum), 
+                           hjust = 0.5, vjust = 0.5, nudge_y = 0.3, 
+                           fontface = "bold", color = "#bdbdbd") 
+
+```
+```{r, results='asis'}
+plot(pfincidencePlotObj)
+```
+
+```{r}
+
+rstcompr <- function(xrstr, yrstr) {
+  if( !raster::compareRaster(xrstr, yrstr, stopiffalse = F) ) {
+    xrstr <- raster::crop(xrstr, raster::extent(yrstr))
+    yrstr <- raster::crop(yrstr, raster::extent(xrstr))
+  }
+  stck <- raster::stack(xrstr, yrstr)
+  out <- raster::layerStats(stck, 'pearson', na.rm=T)
+  out <- out$`pearson correlation coefficient`[lower.tri(out$`pearson correlation coefficient`)]
+  return(out)
+}
+
+#......................
+# all samples only
+#......................
+allsmplsrstr <- disc %>% 
+  dplyr::filter(datalvl == "allsmpls") %>% 
+  dplyr::select(c("distlvl", "predmap_rstr"))
+
+allsmplsrstr$urban_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, yrstr = urbanrstr)
+allsmplsrstr$incid_corr <- purrr::map_dbl(allsmplsrstr$predmap_rstr, rstcompr, yrstr = pfincidence)
+```
+
+```{r, results='asis'}
+allsmplsrstr %>% 
+  dplyr::select(c("distlvl", "urban_corr", "incid_corr")) %>% 
+  pretty_DT_tab()
+
+```

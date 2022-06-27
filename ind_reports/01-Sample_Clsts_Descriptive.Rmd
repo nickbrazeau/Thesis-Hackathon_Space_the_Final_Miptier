@@ -4,7 +4,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Sample and Study Site Overview 
+# Sample/Study Overview & Geodistnaces
 Basic descriptive data for samples and study location. 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = T, warning = F, message = F, eval = T, results = 'hide',
@@ -20,6 +20,13 @@ source("R/basics.R")
 ## Sample Characteristics
 Samples are combination of adults, children with a full DHS line, and children that were "accidentally" sampled (i.e. not a full DHS line -- occurred when child was slightly older than 5 yrs but a DBS was still taken). 
 ```{r}
+#..............................................................
+# import for plotting
+#..............................................................
+DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
+ge <- readRDS("data/derived_data/spacemips_GE.rds")
+load("data/map_bases/space_mips_maps_bases.rda")
+
 # read base data
 drcsmpls <- readRDS("data/derived_data/sample_metadata.rds") %>% 
   dplyr::select(c("barcode", "hv001"))
@@ -28,12 +35,6 @@ drcsmpls <- readRDS("data/derived_data/sample_metadata.rds") %>%
 
 ## Sampling Locations
 ```{r}
-#..............................................................
-# import for plotting
-#..............................................................
-DRCprov <- sf::st_as_sf(readRDS("data/map_bases/gadm/gadm36_COD_1_sp.rds"))
-ge <- readRDS("data/derived_data/spacemips_GE.rds")
-load("data/map_bases/space_mips_maps_bases.rda")
 
 #..............................................................
 # wrangle for plot
@@ -84,108 +85,45 @@ jpgsnapshot(outpath = "results/figures/smplocations_clster.jpg",
 ```{r, results='asis'}
 plot(smplocations)
 ```
-##### Road Network & Migration Rates
-Addding in the road netwrok and migration rates
+
+## Road Netwok and Airports
 ```{r}
 #.............................. 
 # road network
 #............................... 
 roadnetworkplotObj <- readRDS("data/distance_data/roadnetworkplotObj.RDS") +
   theme(plot.margin = unit(c(0.05, 0.05, 0, 0.05),"cm"))
-#.............................. 
-#  Visulatization of migratin rate Flows
-#............................... 
-flows <- readRDS("data/distance_data/voroni_migration_flows_fromworldpop.RDS")
-vrdf <- readRDS("data/distance_data/voroni_base.RDS")
 
-# get nearest neighbor from original
-newcentroids <- vrdf %>%
-  dplyr::mutate(centroid = sf::st_centroid(x))
-#  get new centroid for voroni tesselations
-newcentroidsplotdf <- newcentroids %>%
-  dplyr::mutate(long = sf::st_coordinates(centroid)[,1],
-                lat = sf::st_coordinates(centroid)[,2]) %>%
-  dplyr::select(-c("x", "centroid"))
-st_geometry(newcentroidsplotdf) <- NULL
-#  make flows simpler for plotting
-flowsPlotDat <- flows %>%
-  dplyr:::mutate(poly_cent_from = sf::st_centroid(poly_from),
-                 poly_cent_to = sf::st_centroid(poly_to),
-                 longfr = sf::st_coordinates(poly_cent_from)[,1],
-                 latfr = sf::st_coordinates(poly_cent_from)[,2],
-                 longto = sf::st_coordinates(poly_cent_to)[,1],
-                 latto = sf::st_coordinates(poly_cent_to)[,2]) %>% 
-  dplyr::select(c("longfr", "latfr", "longto", "latto", "PrdMIG_scaled"))
-
-# unionize drc
-DRCprov_union <- sf::st_union(DRCprov)
-all_flows_plotObj <- flowsPlotDat %>%
-  ggplot() +
-  geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
-  geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = newcentroidsplotdf,
-             aes(x = long, y = lat),
-             show.legend = F, shape = 21,
-             fill = "#ffffff", color = "#000000" ) +
-  geom_curve(aes(x = longfr, y = latfr,
-                 xend = longto, yend = latto,
-                 color = PrdMIG_scaled),
-             arrow = arrow(length = unit(0.02, "npc")),
-             alpha = 0.2) +
-  scale_color_viridis_c("Migration Rates", option="plasma", direction = 1) +
-  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
-
-# downsize
-highflow <- quantile(flows$PrdMIG_scaled, 0.95)
-high_flows_plotObj <- flowsPlotDat %>% 
-  dplyr::filter(PrdMIG_scaled > highflow[[1]]) %>%
-  ggplot() +
-  geom_sf(data = DRCprov_union, color = "#000000", size = 0.05) +
-  geom_sf(data = vrdf, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = newcentroidsplotdf,
-             aes(x = long, y = lat),
-             show.legend = F, shape = 21,
-             fill = "#ffffff", color = "#000000" ) +
-  geom_curve(aes(x = longfr, y = latfr,
-                 xend = longto, yend = latto,
-                 color = PrdMIG_scaled),
-             arrow = arrow(length = unit(0.02, "npc")),
-             alpha = 0.5) +
-  scale_color_viridis_c("Migration Rates", option="plasma", direction = 1) +
-  theme(plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
 
 #.............................. 
-#  make sampling locations lighter
+# airport locations
 #............................... 
+airports <- readr::read_csv("data/raw_data/flight_data/hotosm_cd-airports.csv") %>%
+  dplyr::filter(type %in% c("large_airport", "medium_airport")) %>%
+  dplyr::select(c("name", "longitude_deg", "latitude_deg")) %>% 
+  dplyr::mutate(longitude_deg = as.numeric(longitude_deg),
+                latitude_deg = as.numeric(latitude_deg))
 
-smplocations.nolegend <- ggplot() +
+airportplotObj <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
   prettybasemap_nodrc_nonorth_dark +
-  geom_point(data = ge.plotpts, 
-             aes(x = longnum, y = latnum, size = n, color = factor(smpls), shape = factor(smpls)), 
-             alpha = 0.8) +
-  scale_color_manual("DHS \n Cluster", values = c("#a6bddb", "#ef3b2c")) +
-  scale_size("Cluster \n Size", range = c(1, 4)) +
-  theme(
-    legend.position = "none",
-    legend.title = element_text(face = "bold", size = 12, vjust = 0.5, hjust = 0.5),
-    legend.text = element_text(face = "bold", size = 11),
-    plot.margin = unit(c(0.05, 0.05, 0, 1.5),"cm"))
+  geom_point(data = airports, aes(x = longitude_deg, y = latitude_deg), 
+             color = "#a6bddb") + 
+  ggrepel::geom_text_repel(data = airports, 
+                           aes(x = longitude_deg, y = latitude_deg, label = name),
+                           size = 2.5, color = "#f0f0f0")
+plot(airportplotObj)
+
+```
 
 
+```{r, results='asis'}
 
-all_flows_plotObj_noleg <- all_flows_plotObj + theme(legend.position = "none")
-high_flows_plotObj_noleg <- high_flows_plotObj + theme(legend.position = "none")
-toprow <- cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, 
-                             all_flows_plotObj_noleg, high_flows_plotObj_noleg,
-                             nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
-legend <- cowplot::get_legend(all_flows_plotObj +
-                                theme(legend.position = "bottom",
-                                      plot.margin = unit(c(0.05, 0.05, 0.05, 0.05),"cm")))
+
 # bring together
-MainFig <- cowplot::plot_grid(toprow, legend, rel_heights = c(0.95, 0.5), ncol = 1)
+MainFig <- cowplot::plot_grid(roadnetworkplotObj, 
+                              airportplotObj,
+                              nrow = 1, ncol = 2, labels = c("(A)", "(B)"))
 
 jpeg("results/figures/drc_dists_combined_collated.jpg", width = 8, height = 11, units = "in", res = 500)
 plot(MainFig)
@@ -193,8 +131,7 @@ graphics.off()
 
 ```
 ```{r, results='asis'}
-cowplot::plot_grid(smplocations.nolegend, roadnetworkplotObj, all_flows_plotObj, high_flows_plotObj,
-                   nrow = 2, ncol = 2, labels = c("(A)", "(B)", "(C)", "(D)"))
+plot(MainFig)
 ```
 
 
@@ -212,7 +149,7 @@ ge.plotpts.onesample <- rbind.data.frame(drcsmpls.ge, ge.notsmpl) %>%
 #..............................................................
 smplocations.onesample <- ggplot() +
   geom_sf(data = DRCprov, color = "#737373", fill = "#525252", size = 0.05) +
-  prettybasemap_nodrc_dark +
+  prettybasemap_nodrc_nonorth_dark +
   geom_point(data = ge.plotpts.onesample, 
              aes(x = longnum, y = latnum, 
                  alpha = 0.8), color = "#ef3b2c", shape = 8) +
@@ -231,4 +168,44 @@ plot(smplocations.onesample)
 ```
 **Overall, there are `r nrow(ge.plotpts.onesample)` clusters that only have a single sample within the cluster.
 
+## Geodistances
+```{r}
+distancemat <- readRDS("data/distance_data/distancematrix_bycluster.rds")
 
+distmatplot <- distancemat %>% 
+  tidyr::pivot_longer(., cols = -c("hv001.x", "hv001.y"),
+                      names_to = "distlvl", values_to = "dist") %>% 
+  
+  dplyr::mutate(dist = dist/1e3,
+                hv001.x = forcats::fct_rev(forcats::fct_reorder(.f = hv001.x, 
+                                                                .x = hv001.x, 
+                                                                .fun = length)),
+                hv001.y = forcats::fct_rev(forcats::fct_reorder(.f = hv001.y, 
+                                                                .x = hv001.y, 
+                                                                .fun = length))) %>%
+  dplyr::mutate(distlvl = factor(distlvl, levels = c("gcdistance", "roaddistance", "airportdistance"), labels = c("GC Dist.", "Road Dist.", "Airport Dist."))) %>% 
+  ggplot() + 
+  geom_tile(aes(x = hv001.x, y = hv001.y, fill = dist)) +
+  scale_fill_viridis_c("Distance (km)") + 
+  xlab("DHS Cluster") + ylab("DHS Cluster") +
+  facet_wrap(. ~ distlvl, shrink=F, scales = "free") +
+  theme_minimal() + 
+  theme(
+    axis.title.y = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"), 
+    axis.title.x = element_text(vjust = 0.5, hjust = 0.5, size = 11, face = "bold"),
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "right",
+    legend.text = element_text(hjust = 0.5, vjust = 0.5, size = 8),
+    plot.background = element_blank(),
+    panel.grid = element_blank()
+  )
+
+# plot out
+jpeg("results/figures/geodistance_matrix_plots.jpg", width = 11, height = 8, units = "in", res = 800)
+plot(distmatplot)
+graphics.off()
+```
+```{r, results='asis'}
+plot(distmatplot)
+```

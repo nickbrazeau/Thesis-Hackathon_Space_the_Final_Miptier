@@ -16,12 +16,11 @@ data/
 rdhs.json
 sandbox/
 ignore/
+sharepoint/
 results/
-
-# old stuff I am looking at
-analyses/bayes_hierarch_spatial_mods/vivid_and_legacy-spatial_prediction/
-
-
+paramset/
+gendat/
+analyses/admixture/*.txt
 
 # RStudio files
 .Rproj.user/
