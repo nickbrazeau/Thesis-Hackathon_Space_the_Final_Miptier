@@ -13,7 +13,7 @@ source("R/space_functions.R")
 #............................................................
 # read in results
 #...........................................................
-simmap <- readRDS("results/sim_inbreed_ests/min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
+simmap <- readRDS("results/simulated_min_cost_inbreedingresults/sim_min_cost_inbreedingresults.RDS")
 locats <- readRDS("data/sim_data/lattice_model.rds") %>%
   dplyr::select(-c("migration"))
 
