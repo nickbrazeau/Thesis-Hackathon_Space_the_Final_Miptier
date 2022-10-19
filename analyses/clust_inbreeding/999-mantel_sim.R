@@ -45,7 +45,7 @@ make_symmat <- function(dist, var){
   dist.wide <- as.matrix( rbind(dist.wide, NA) )
   diag(dist.wide) <- 0
   # make symmetric matrix
-  dist.wide[ lower.tri(dist.wide) ] <- dist.wide[ upper.tri(dist.wide) ]
+  dist.wide[ lower.tri(dist.wide) ] <- t(dist.wide)[ upper.tri(dist.wide) ]
 
   return(dist.wide)
 }
